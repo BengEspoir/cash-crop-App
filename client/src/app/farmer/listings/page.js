@@ -83,7 +83,12 @@ export default function FarmerListingsPage() {
       <Reveal>
         <div className="rounded-[18px] border border-ink-100 bg-white p-4 shadow-soft">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <FilterTabs options={options} value={status} onChange={setStatus} />
+            <FilterTabs
+              options={options}
+              value={status}
+              onChange={setStatus}
+              ariaLabel="Filter listings by status"
+            />
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative w-full min-w-[220px] md:w-[260px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
@@ -92,13 +97,16 @@ export default function FarmerListingsPage() {
                   placeholder="Search crop or region"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
+                  aria-label="Search listings"
                 />
               </div>
-              <label className="inline-flex items-center gap-2 rounded-[10px] border border-ink-200 bg-white px-3 py-2 text-[12.5px] text-ink-700">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
+              <label className="inline-flex items-center gap-2 rounded-[10px] border border-ink-200 bg-white px-3 py-2 text-[12.5px] text-ink-700 focus-within:ring-4 focus-within:ring-green-800/15">
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">Sort listings</span>
                 <select
                   value={sort}
                   onChange={(event) => setSort(event.target.value)}
+                  aria-label="Sort listings"
                   className="bg-transparent text-[12.5px] text-ink-700 outline-none"
                 >
                   {SORTS.map((opt) => (
@@ -108,14 +116,20 @@ export default function FarmerListingsPage() {
                   ))}
                 </select>
               </label>
-              <div className="inline-flex overflow-hidden rounded-[10px] border border-ink-200 bg-white">
+              <div
+                role="group"
+                aria-label="Change layout"
+                className="inline-flex overflow-hidden rounded-[10px] border border-ink-200 bg-white"
+              >
                 {["list", "grid"].map((option) => (
                   <button
                     key={option}
                     type="button"
                     onClick={() => setLayout(option)}
+                    aria-pressed={layout === option}
+                    aria-label={`${option} layout`}
                     className={cn(
-                      "px-3 py-2 text-[12px] font-semibold capitalize transition",
+                      "focus-ring px-3 py-2 text-[12px] font-semibold capitalize transition",
                       layout === option ? "bg-green-700 text-white" : "text-ink-600 hover:bg-ink-50",
                     )}
                   >

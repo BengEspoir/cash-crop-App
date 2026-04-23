@@ -14,7 +14,7 @@ export function CropListRow({ listing, href }) {
         href={href ?? `/crops/${listing.id}`}
         className="flex flex-col gap-0 lg:flex-row lg:items-stretch"
       >
-        <div className="relative h-[160px] w-full overflow-hidden lg:h-auto lg:w-[220px] lg:flex-shrink-0">
+        <div className="relative h-[160px] w-full overflow-hidden bg-gradient-to-br from-ink-100 to-ink-200/60 lg:h-auto lg:w-[220px] lg:flex-shrink-0">
           <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.04]">
             <SmartImage
               src={image}

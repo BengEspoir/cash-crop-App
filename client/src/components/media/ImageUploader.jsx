@@ -127,11 +127,23 @@ export function ImageUploader({
   return (
     <div className="space-y-3">
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={hasItems ? "Add more listing photos" : "Upload listing photos"}
+        aria-busy={busy}
+        aria-disabled={disabled || busy || remaining === 0}
         onDragOver={(event) => event.preventDefault()}
         onDrop={onDrop}
         onClick={() => !disabled && inputRef.current?.click()}
+        onKeyDown={(event) => {
+          if (disabled) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         className={cn(
-          "group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] border-2 border-dashed border-green-200 bg-green-50/40 px-6 py-7 text-center transition hover:border-green-400 hover:bg-green-50",
+          "focus-ring group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[16px] border-2 border-dashed border-green-200 bg-green-50/40 px-6 py-7 text-center transition hover:border-green-400 hover:bg-green-50",
           disabled && "pointer-events-none opacity-60",
           hasItems ? "py-5" : "py-8",
         )}
@@ -200,19 +212,21 @@ export function ImageUploader({
               <div className="flex items-center justify-between gap-1 px-2 py-2">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-green-800 hover:text-green-900 disabled:cursor-default disabled:text-ink-400"
+                  className="focus-ring inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-green-800 hover:text-green-900 disabled:cursor-default disabled:text-ink-400"
                   onClick={() => handleCover(index)}
                   disabled={index === 0}
+                  aria-label={index === 0 ? "Current cover image" : `Set photo ${index + 1} as cover`}
                 >
-                  <Star className="h-3 w-3" />
+                  <Star className="h-3 w-3" aria-hidden="true" />
                   {index === 0 ? "Cover" : "Set cover"}
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 text-[11px] font-medium text-red-600 hover:text-red-700"
+                  className="focus-ring inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-red-600 hover:text-red-700"
                   onClick={() => handleRemove(index)}
+                  aria-label={`Remove photo ${index + 1}`}
                 >
-                  <Trash2 className="h-3 w-3" /> Remove
+                  <Trash2 className="h-3 w-3" aria-hidden="true" /> Remove
                 </button>
               </div>
             </li>

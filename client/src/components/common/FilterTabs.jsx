@@ -6,18 +6,24 @@ import { cn } from "../../lib/utils";
  * Compact chip-style tab row for filtering collections.
  * Controlled: caller owns `value` and provides `onChange`.
  */
-export function FilterTabs({ options = [], value, onChange, className }) {
+export function FilterTabs({ options = [], value, onChange, className, ariaLabel = "Filter" }) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div
+      role="tablist"
+      aria-label={ariaLabel}
+      className={cn("flex flex-wrap items-center gap-2", className)}
+    >
       {options.map((option) => {
         const active = option.value === value;
         return (
           <button
             key={option.value}
             type="button"
+            role="tab"
+            aria-selected={active}
             onClick={() => onChange?.(option.value)}
             className={cn(
-              "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition",
+              "focus-ring inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition",
               active
                 ? "border-green-700 bg-green-700 text-white shadow-soft"
                 : "border-ink-200 bg-white text-ink-700 hover:border-green-300 hover:bg-green-50 hover:text-green-800",

@@ -87,40 +87,50 @@ export default function BrowsePage() {
               ))}
             </select>
 
-            <div className="inline-flex items-center overflow-hidden rounded-[10px] border border-ink-300 bg-white">
+            <div
+              role="group"
+              aria-label="Change layout"
+              className="inline-flex items-center overflow-hidden rounded-[10px] border border-ink-300 bg-white"
+            >
               <button
                 type="button"
                 aria-pressed={layout === "grid"}
                 onClick={() => setLayout("grid")}
                 className={cn(
-                  "inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors",
+                  "focus-ring inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors",
                   layout === "grid" && "bg-green-100 text-green-800",
                 )}
                 aria-label="Grid view"
               >
-                <Grid3x3 className="h-4 w-4" />
+                <Grid3x3 className="h-4 w-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 aria-pressed={layout === "list"}
                 onClick={() => setLayout("list")}
                 className={cn(
-                  "inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors",
+                  "focus-ring inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors",
                   layout === "list" && "bg-green-100 text-green-800",
                 )}
                 aria-label="List view"
               >
-                <List className="h-4 w-4" />
+                <List className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div
+          role="tablist"
+          aria-label="Filter listings by status"
+          className="mt-4 flex flex-wrap gap-2"
+        >
           {statusFilters.map((filter) => (
             <Button
               key={filter.value}
               type="button"
+              role="tab"
+              aria-selected={status === filter.value}
               variant={status === filter.value ? "primary" : "secondary"}
               className="h-8 px-3 text-[12px]"
               onClick={() => setStatus(filter.value)}

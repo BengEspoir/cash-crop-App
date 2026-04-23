@@ -13,7 +13,7 @@ export function CropCard({ listing, href }) {
   return (
     <Card interactive className="group overflow-hidden rounded-[14px] p-0">
       <Link href={target} className="block">
-        <div className="relative h-[180px] overflow-hidden">
+        <div className="relative h-[180px] overflow-hidden bg-gradient-to-br from-ink-100 to-ink-200/60">
           <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.04]">
             <SmartImage
               src={image}
