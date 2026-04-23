@@ -105,7 +105,7 @@ export function buildMetadata(key, overrides = {}) {
   const entry = seoCatalog[key] ?? {};
   const title =
     overrides.title ??
-    (entry.title === siteName || entry.title?.startsWith(`${siteName} `)
+    (entry.title === siteName || entry.title?.includes(siteName)
       ? entry.title
       : `${entry.title ?? siteName} | ${siteName}`);
   const description = overrides.description ?? entry.description ?? defaultDescription;
