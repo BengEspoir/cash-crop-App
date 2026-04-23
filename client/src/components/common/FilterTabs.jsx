@@ -9,7 +9,7 @@ import { cn } from "../../lib/utils";
 export function FilterTabs({ options = [], value, onChange, className, ariaLabel = "Filter" }) {
   return (
     <div
-      role="tablist"
+      role="group"
       aria-label={ariaLabel}
       className={cn("flex flex-wrap items-center gap-2", className)}
     >
@@ -19,8 +19,7 @@ export function FilterTabs({ options = [], value, onChange, className, ariaLabel
           <button
             key={option.value}
             type="button"
-            role="tab"
-            aria-selected={active}
+            aria-pressed={active}
             onClick={() => onChange?.(option.value)}
             className={cn(
               "focus-ring inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12.5px] font-medium transition",

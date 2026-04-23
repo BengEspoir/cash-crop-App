@@ -120,25 +120,26 @@ export default function BrowsePage() {
           </div>
         </div>
 
-        <div
-          role="tablist"
-          aria-label="Filter listings by status"
-          className="mt-4 flex flex-wrap gap-2"
-        >
-          {statusFilters.map((filter) => (
-            <Button
-              key={filter.value}
-              type="button"
-              role="tab"
-              aria-selected={status === filter.value}
-              variant={status === filter.value ? "primary" : "secondary"}
-              className="h-8 px-3 text-[12px]"
-              onClick={() => setStatus(filter.value)}
-            >
-              {filter.label}
-            </Button>
-          ))}
-          <span className="ml-auto self-center text-[12px] text-ink-500">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div
+            role="group"
+            aria-label="Filter listings by status"
+            className="flex flex-wrap gap-2"
+          >
+            {statusFilters.map((filter) => (
+              <Button
+                key={filter.value}
+                type="button"
+                aria-pressed={status === filter.value}
+                variant={status === filter.value ? "primary" : "secondary"}
+                className="h-8 px-3 text-[12px]"
+                onClick={() => setStatus(filter.value)}
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+          <span className="ml-auto self-center text-[12px] text-ink-500" aria-live="polite">
             {filtered.length} listing{filtered.length === 1 ? "" : "s"}
           </span>
         </div>
