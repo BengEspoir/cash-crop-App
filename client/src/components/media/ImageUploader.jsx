@@ -97,10 +97,10 @@ export function ImageUploader({
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
-      if (disabled) return;
+      if (disabled || busy) return;
       handleFiles(event.dataTransfer?.files);
     },
-    [disabled, handleFiles],
+    [disabled, busy, handleFiles],
   );
 
   const handleRemove = (index) => {
