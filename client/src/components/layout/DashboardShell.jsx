@@ -8,11 +8,18 @@ import { cn } from "../../lib/utils";
 import useAuth from "../../hooks/useAuth";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { DashboardTopBar } from "./DashboardTopBar";
+import { SkipToContent } from "../a11y/SkipToContent";
 
 export function SidebarPanel({ heading, navigation, pathname }) {
   return (
-    <aside className="rounded-[18px] border border-[#0F5132] bg-[#0D3D22] p-5 text-white">
-      <Link href="/" className="flex items-center gap-3">
+    <aside
+      aria-label={`${heading} sidebar`}
+      className="rounded-[18px] border border-[#0F5132] bg-[#0D3D22] p-5 text-white"
+    >
+      <Link
+        href="/"
+        className="focus-ring flex items-center gap-3 rounded-md focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D3D22]"
+      >
         <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-[#E8B84B]">
           <Leaf className="h-5 w-5" />
         </span>
@@ -22,15 +29,16 @@ export function SidebarPanel({ heading, navigation, pathname }) {
         </div>
       </Link>
 
-      <nav className="mt-6 space-y-2">
+      <nav aria-label="Workspace navigation" className="mt-6 space-y-2">
         {navigation.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-[12px] px-3 py-2 text-[13px] transition-colors",
+                "focus-ring flex items-center gap-3 rounded-[12px] px-3 py-2 text-[13px] transition-colors focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D3D22]",
                 active ? "bg-white text-[#0D3D22]" : "text-white/78 hover:bg-white/10 hover:text-white",
               )}
             >
@@ -109,9 +117,10 @@ export function DashboardShell({ heading, navigation, allowedRoles, authRedirect
 
   return (
     <div className="min-h-screen bg-[#F6F8F6]">
+      <SkipToContent />
       <div className="mx-auto grid max-w-[1440px] gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-6">
         <SidebarPanel heading={heading} navigation={navigation} pathname={pathname} />
-        <main className="space-y-6">
+        <main id="main-content" tabIndex={-1} className="space-y-6">
           <DashboardTopBar
             title={currentItem?.label || heading}
             description={description}

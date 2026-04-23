@@ -43,16 +43,17 @@ export function Header() {
             </span>
           </div>
 
-          <form className="flex flex-1 items-center rounded-full border border-ink-300 bg-ink-50 p-1 transition-colors duration-200 focus-within:border-green-800 focus-within:bg-white">
+          <form role="search" className="flex flex-1 items-center rounded-full border border-ink-300 bg-ink-50 p-1 transition-colors duration-200 focus-within:border-green-800 focus-within:bg-white">
             <div className="hidden items-center border-r border-ink-200 px-3 text-[12px] font-medium text-ink-700 lg:flex">
               <span>All crops</span>
-              <ChevronDown className="ml-2 h-3.5 w-3.5 text-ink-500" />
+              <ChevronDown className="ml-2 h-3.5 w-3.5 text-ink-500" aria-hidden="true" />
             </div>
             <div className="flex flex-1 items-center gap-2 px-3">
-              <Search className="h-4 w-4 text-ink-500" />
+              <Search className="h-4 w-4 text-ink-500" aria-hidden="true" />
               <input
                 type="search"
                 placeholder="Search crops, farmers, cooperatives"
+                aria-label="Search crops, farmers, cooperatives"
                 className="h-8 w-full border-0 bg-transparent p-0 text-[13px] text-ink-800 outline-none placeholder:text-ink-400"
               />
             </div>

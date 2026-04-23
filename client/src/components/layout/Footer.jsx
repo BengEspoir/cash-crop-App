@@ -66,7 +66,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="transition-colors duration-200 hover:text-gold-400"
+                    className="focus-ring rounded-sm transition-colors duration-200 hover:text-gold-400"
                   >
                     {item.label}
                   </Link>
@@ -80,9 +80,9 @@ export function Footer() {
         <div className="content-shell flex flex-col items-start justify-between gap-2 py-4 text-[12px] text-white/60 lg:flex-row lg:items-center">
           <p>© {new Date().getFullYear()} AgriculNet. Built for Cameroonian agriculture.</p>
           <div className="flex gap-4">
-            <Link href="/terms" className="hover:text-gold-400">Terms</Link>
-            <Link href="/privacy" className="hover:text-gold-400">Privacy</Link>
-            <Link href="/contact" className="hover:text-gold-400">Contact</Link>
+            <Link href="/terms" className="focus-ring rounded-sm hover:text-gold-400">Terms</Link>
+            <Link href="/privacy" className="focus-ring rounded-sm hover:text-gold-400">Privacy</Link>
+            <Link href="/contact" className="focus-ring rounded-sm hover:text-gold-400">Contact</Link>
           </div>
         </div>
       </div>

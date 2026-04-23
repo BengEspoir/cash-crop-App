@@ -95,4 +95,19 @@
   .body-copy {
     @apply text-[14px] leading-6 text-[#374151];
   }
+
+  .skip-to-content {
+    @apply sr-only absolute left-3 top-3 z-[100] rounded-[10px] bg-[var(--green-900)] px-4 py-2 text-sm font-semibold text-white shadow-soft focus:not-sr-only focus:outline-none focus:ring-4 focus:ring-green-800/30;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
