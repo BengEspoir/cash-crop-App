@@ -12,6 +12,7 @@ import { Label } from "../../../components/ui/label";
 import { PhoneInput } from "../../../components/auth/PhoneInput";
 import { PasswordInput } from "../../../components/auth/PasswordInput";
 import { RoleSwitcher } from "../../../components/auth/RoleSwitcher";
+import { Reveal, Stagger, StaggerItem } from "../../../components/motion/Reveal";
 import { signInSchema } from "../../../lib/validators";
 import useAuthStore from "../../../store/authStore";
 
@@ -73,22 +74,23 @@ export default function SignInPage() {
   };
 
   return (
-    <Card className="rounded-[20px] p-6 sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <Card elevated className="rounded-[22px] p-6 sm:p-8">
+      <Reveal inView={false} className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="section-eyebrow">Welcome Back</p>
-          <h1 className="mt-2 font-display text-[22px] leading-[1.15] text-[#111827]">Sign in to AgriculNet</h1>
-          <p className="mt-3 text-[14px] leading-6 text-[#374151]">Use phone or email to continue trading, sourcing, and tracking orders.</p>
+          <h1 className="mt-2 font-display text-[24px] leading-[1.15] text-ink-800">Sign in to AgriculNet</h1>
+          <p className="mt-3 text-[14px] leading-6 text-ink-700">Use phone or email to continue trading, sourcing, and tracking orders.</p>
         </div>
-        <p className="text-[13px] text-[#374151]">
+        <p className="text-[13px] text-ink-700">
           New here?{" "}
-          <Link href="/register" className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">
+          <Link href="/register" className="font-semibold text-green-800 hover:text-green-700">
             Register
           </Link>
         </p>
-      </div>
+      </Reveal>
 
-      <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
+      <Stagger as="form" className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)} delay={0.08}>
+        <StaggerItem>
         <RoleSwitcher
           value={mode}
           onChange={(nextMode) => {
@@ -100,7 +102,9 @@ export default function SignInPage() {
             { label: "Email Address", value: "email" },
           ]}
         />
+        </StaggerItem>
 
+        <StaggerItem>
         {mode === "phone" ? (
           <PhoneInput
             label="Phone Number"
@@ -115,22 +119,31 @@ export default function SignInPage() {
             {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
           </div>
         )}
+        </StaggerItem>
 
-        <PasswordInput label="Password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
+        <StaggerItem>
+          <PasswordInput label="Password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
+        </StaggerItem>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
-          <Link href="/forgot-password" className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">
+        <StaggerItem className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
+          <Link href="/forgot-password" className="font-semibold text-green-800 hover:text-green-700">
             Forgot your password?
           </Link>
-          <span className="text-[#6B7280]">Phone verification resumes automatically if needed.</span>
-        </div>
+          <span className="text-ink-500">Phone verification resumes automatically if needed.</span>
+        </StaggerItem>
 
-        {submitError ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitError}</p> : null}
+        {submitError ? (
+          <StaggerItem>
+            <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitError}</p>
+          </StaggerItem>
+        ) : null}
 
-        <Button type="submit" className="w-full" disabled={!isValid || isSubmitting}>
-          {isSubmitting ? "Signing In..." : "Sign In"}
-        </Button>
-      </form>
+        <StaggerItem>
+          <Button type="submit" className="h-11 w-full text-[14px]" disabled={!isValid || isSubmitting}>
+            {isSubmitting ? "Signing In..." : "Sign In"}
+          </Button>
+        </StaggerItem>
+      </Stagger>
     </Card>
   );
 }

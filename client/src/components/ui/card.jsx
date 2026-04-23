@@ -1,10 +1,11 @@
-﻿import { cn } from "../../lib/utils";
+import { cn } from "../../lib/utils";
 
-export function Card({ className, interactive = false, ...props }) {
+export function Card({ className, interactive = false, elevated = false, ...props }) {
   return (
     <div
       className={cn(
-        "rounded-[14px] border border-[#E5E7EB] bg-white",
+        "rounded-2xl border border-ink-200 bg-white transition-shadow duration-200",
+        elevated ? "shadow-lift" : "shadow-soft",
         interactive && "interactive-card",
         className,
       )}
