@@ -1,7 +1,10 @@
-﻿import { featuredListings } from "../../constants/crops";
+"use client";
+
+import { featuredListings } from "../../constants/crops";
 import { CropCard } from "../crops/CropCard";
 import { SectionHeader } from "../common/SectionHeader";
 import { CategorySidebar } from "./CategorySidebar";
+import { Stagger, StaggerItem } from "../motion/Reveal";
 
 export function CropGrid() {
   return (
@@ -18,11 +21,13 @@ export function CropGrid() {
         <div className="lg:col-span-3">
           <CategorySidebar />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-9 xl:grid-cols-4">
+        <Stagger className="grid gap-4 sm:grid-cols-2 lg:col-span-9 xl:grid-cols-4" stagger={0.05}>
           {featuredListings.map((listing) => (
-            <CropCard key={`${listing.crop}-${listing.location}`} listing={listing} />
+            <StaggerItem key={`${listing.crop}-${listing.location}`} className="h-full">
+              <CropCard listing={listing} />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </div>
     </section>
   );
