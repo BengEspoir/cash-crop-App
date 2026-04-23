@@ -1,6 +1,9 @@
 import { PageHeader } from "../../../components/common/PageHeader";
 import { FarmerMiniCard } from "../../../components/farmers/FarmerMiniCard";
 import { demoFarmers } from "../../../lib/demo-data";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("findFarmers");
 
 export default function FindFarmersPage() {
   return (

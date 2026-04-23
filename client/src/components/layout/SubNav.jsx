@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,27 +13,28 @@ const leftLinks = [
 ];
 
 const rightLinks = [
-  { label: "Help Center", href: "#" },
-  { label: "Sell on AgriculNet", href: "#" },
-  { label: "Mobile App", href: "#", accent: true },
+  { label: "Help Center", href: "/help" },
+  { label: "Sell on AgriculNet", href: "/sell" },
+  { label: "Mobile App", href: "/mobile", accent: true },
 ];
 
 export function SubNav() {
   const pathname = usePathname();
 
   return (
-    <div className="border-b border-[#F3F4F6] bg-white">
+    <div className="border-b border-ink-100 bg-white">
       <div className="content-shell flex min-h-[42px] flex-col gap-2 py-2 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:py-0">
-        <nav className="flex flex-wrap items-center gap-4 lg:gap-5">
+        <nav aria-label="Marketplace" className="flex flex-wrap items-center gap-4 lg:gap-5">
           {leftLinks.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-[42px] items-center border-b-2 border-transparent text-[12px] font-medium text-[#374151] transition-colors",
-                  active && "border-[#1A6B3C] text-[#1A6B3C]",
+                  "focus-ring inline-flex min-h-[42px] items-center border-b-2 border-transparent text-[12px] font-medium text-ink-700 transition-colors duration-200 hover:text-green-800",
+                  active && "border-green-800 text-green-800",
                 )}
               >
                 {item.label}
@@ -42,19 +43,23 @@ export function SubNav() {
           })}
         </nav>
 
-        <nav className="flex flex-wrap items-center gap-4 lg:gap-5">
-          {rightLinks.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                "inline-flex min-h-[42px] items-center text-[12px] font-medium text-[#374151] transition-colors hover:text-[#1A6B3C]",
-                item.accent && "text-[#1A6B3C]",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav aria-label="Support" className="flex flex-wrap items-center gap-4 lg:gap-5">
+          {rightLinks.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "focus-ring inline-flex min-h-[42px] items-center text-[12px] font-medium text-ink-700 transition-colors hover:text-green-800",
+                  item.accent && "text-green-800",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </div>

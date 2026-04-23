@@ -112,6 +112,22 @@ export const cropImagery = {
 
 export const cropFallback = u("1543362906-acfc16c67564", { w: 1200 });
 
+// Static pages — keyed by route slug.
+export const pageImagery = {
+  help: { src: u("1523712999610-f77fbcfc3843", { w: 1600 }), alt: "Cooperative member checking crop readiness" },
+  sell: { src: u("1594026112284-02bb6f3352fe", { w: 1600 }), alt: "Farmer hands holding freshly harvested produce" },
+  mobile: { src: u("1488409976300-5c4c3f36b99c", { w: 1600 }), alt: "Farmer using a mobile phone in the field" },
+  pricing: { src: u("1464226184884-fa280b87c399", { w: 1600 }), alt: "Workers weighing export-ready lots" },
+  terms: { src: u("1554224155-6726b3ff858f", { w: 1600 }), alt: "Folder of signed cooperative agreements" },
+  privacy: { src: u("1582213782179-e0d53f98f2ca", { w: 1600 }), alt: "Secure workspace for trade documentation" },
+  contact: { src: u("1519452575417-564c1401ecc0", { w: 1600 }), alt: "Bustling Cameroonian market at golden hour" },
+  verification: { src: u("1567306226416-28f0efdc88ce", { w: 1600 }), alt: "Inspection team verifying sorted beans" },
+  "trade-support": { src: u("1504593811423-6dd665756598", { w: 1600 }), alt: "Trader reviewing documents before shipment" },
+  "inspections-info": { src: u("1570145820404-cf22b115b06f", { w: 1600 }), alt: "Inspector reviewing crop lots at sunrise" },
+  "logistics-info": { src: u("1601600395232-95dce02d8b1f", { w: 1600 }), alt: "Containers and pallets preparing for export" },
+  "documentation-info": { src: u("1554224155-6726b3ff858f", { w: 1600 }), alt: "Document set for cross-border trade" },
+};
+
 // Default farmer avatars indexed by id. Used when a user has no profile photo.
 export const farmerAvatars = {
   "jean-ngum": u("1567306226416-28f0efdc88ce", { w: 400, fit: "facearea" }),
@@ -119,6 +135,26 @@ export const farmerAvatars = {
   "paul-meka": u("1594026112284-02bb6f3352fe", { w: 400, fit: "facearea" }),
   "sarah-ndzi": u("1570145820404-cf22b115b06f", { w: 400, fit: "facearea" }),
 };
+
+// Workspace cover imagery — surfaces a ribbon hero on dashboards & role pages.
+export const workspaceImagery = {
+  farmer: {
+    src: u("1500937386664-56d1dfef3854", { w: 1800 }),
+    alt: "Lush Cameroonian farmland at sunrise",
+  },
+  buyer: {
+    src: u("1519452575417-564c1401ecc0", { w: 1800 }),
+    alt: "Bustling West African trade market",
+  },
+  admin: {
+    src: u("1567306226416-28f0efdc88ce", { w: 1800 }),
+    alt: "Inspection and sorting station for export-ready produce",
+  },
+};
+
+export function resolveWorkspaceImagery(role = "farmer") {
+  return workspaceImagery[role] ?? workspaceImagery.farmer;
+}
 
 export function resolveBrandImagery(pathname) {
   const map = {

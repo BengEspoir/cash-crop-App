@@ -1,5 +1,6 @@
 ﻿export const featuredListings = [
   {
+    id: "cocoa-kumba-premium",
     crop: "Cocoa Beans",
     quantity: "2,000 kg available",
     location: "Kumba, South West",
@@ -8,6 +9,7 @@
     imageClass: "bg-[linear-gradient(135deg,#5B3A1D,#C08A46)]",
   },
   {
+    id: "coffee-bafoussam-arabica",
     crop: "Arabica Coffee",
     quantity: "800 kg available",
     location: "Bafoussam, West",
@@ -16,6 +18,7 @@
     imageClass: "bg-[linear-gradient(135deg,#3F5F3B,#B79A64)]",
   },
   {
+    id: "maize-garoua-white",
     crop: "White Maize",
     quantity: "5,000 kg available",
     location: "Garoua, North",
@@ -24,6 +27,7 @@
     imageClass: "bg-[linear-gradient(135deg,#E6C96F,#F7EDD5)]",
   },
   {
+    id: "penja-pepper-signature",
     crop: "Penja Pepper",
     quantity: "300 kg available",
     location: "Penja, Littoral",
@@ -32,6 +36,7 @@
     imageClass: "bg-[linear-gradient(135deg,#2E2E2E,#9A7445)]",
   },
   {
+    id: "plantain-ebolowa",
     crop: "Plantain",
     quantity: "1,200 bunches available",
     location: "Ebolowa, South",
@@ -40,6 +45,7 @@
     imageClass: "bg-[linear-gradient(135deg,#4E7D2E,#D4B74A)]",
   },
   {
+    id: "palm-oil-eseka",
     crop: "Palm Oil",
     quantity: "500 litres available",
     location: "Eseka, Centre",
@@ -48,6 +54,7 @@
     imageClass: "bg-[linear-gradient(135deg,#6B3E1F,#D8903C)]",
   },
   {
+    id: "cassava-bamenda-flour",
     crop: "Cassava Flour",
     quantity: "1,500 kg available",
     location: "Bamenda, North West",
@@ -56,6 +63,7 @@
     imageClass: "bg-[linear-gradient(135deg,#E6D8B2,#F9F1DD)]",
   },
   {
+    id: "banana-mundemba-export",
     crop: "Export Banana",
     quantity: "10 tonnes available",
     location: "Mundemba, South West",
@@ -67,6 +75,7 @@
 
 export const featuredFarmers = [
   {
+    id: "jean-ngum",
     initials: "JN",
     name: "Jean Ngum",
     location: "Kumba, South West",
@@ -80,6 +89,7 @@ export const featuredFarmers = [
     ],
   },
   {
+    id: "amina-kofi",
     initials: "AK",
     name: "Amina Kofi",
     location: "Bafoussam, West",
@@ -93,6 +103,7 @@ export const featuredFarmers = [
     ],
   },
   {
+    id: "paul-meka",
     initials: "PM",
     name: "Paul Meka",
     location: "Penja, Littoral",
@@ -106,6 +117,7 @@ export const featuredFarmers = [
     ],
   },
   {
+    id: "sarah-ndzi",
     initials: "SN",
     name: "Sarah Ndzi",
     location: "Bamenda, North West",
@@ -122,6 +134,7 @@ export const featuredFarmers = [
 
 export const regionHighlights = [
   {
+    slug: "south-west",
     name: "South West",
     crops: ["Cocoa", "Banana", "Plantain"],
     emphasis: "Export clusters",
@@ -129,6 +142,7 @@ export const regionHighlights = [
     tradeSignal: "12 active clusters",
   },
   {
+    slug: "west",
     name: "West",
     crops: ["Coffee", "Irish Potato", "Beans"],
     emphasis: "Highland growers",
@@ -136,6 +150,7 @@ export const regionHighlights = [
     tradeSignal: "8 cooperative hubs",
   },
   {
+    slug: "littoral",
     name: "Littoral",
     crops: ["Penja Pepper", "Palm Oil", "Cassava"],
     emphasis: "Port access",
@@ -143,6 +158,7 @@ export const regionHighlights = [
     tradeSignal: "4 fast routes",
   },
   {
+    slug: "centre",
     name: "Centre",
     crops: ["Palm Oil", "Maize", "Groundnut"],
     emphasis: "Buyer logistics hub",

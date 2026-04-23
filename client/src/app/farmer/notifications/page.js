@@ -1,5 +1,8 @@
+"use client";
+
 import { PageHeader } from "@/components/common/PageHeader";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { Reveal } from "@/components/motion/Reveal";
 import { Card } from "@/components/ui/card";
 import { demoNotifications } from "@/lib/demo-data";
 
@@ -8,28 +11,34 @@ export default function FarmerNotificationsPage() {
     <section className="space-y-6">
       <PageHeader
         eyebrow="Farmer notifications"
-        title="Inspection, payout, and buyer updates"
-        description="Use this stream to preview how the farmer workspace handles next steps without leaving the main dashboard shell."
+        title="Trade signals and readiness updates"
+        description="Keep buyers moving quickly by acting on inspection, pricing, and dispatch notifications."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <ActivityFeed items={demoNotifications} />
-
-        <Card className="rounded-[18px] p-5">
-          <h2 className="font-display text-[22px] text-[#111827]">Notification preferences</h2>
-          <div className="mt-5 space-y-3">
-            {[
-              "SMS for new buyer inquiries",
-              "Email for document approvals",
-              "Urgent alerts for inspection schedule changes",
-            ].map((item) => (
-              <label key={item} className="flex items-center gap-3 rounded-[12px] bg-[#F9FAFB] px-4 py-3">
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-[#1A6B3C]" />
-                <span className="text-[13px] text-[#374151]">{item}</span>
-              </label>
-            ))}
-          </div>
-        </Card>
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Reveal>
+          <ActivityFeed items={demoNotifications} />
+        </Reveal>
+        <Reveal delay={0.08}>
+          <Card className="rounded-[18px] p-5 shadow-soft">
+            <h2 className="font-display text-[22px] text-ink-900">Notification preferences</h2>
+            <p className="mt-2 text-[13px] text-ink-700">
+              Real-time alerts keep your protected orders moving. Adjust channels from the settings page.
+            </p>
+            <ul className="mt-4 space-y-3 text-[13px]">
+              {[
+                ["SMS", "On — critical updates and dispatch alerts"],
+                ["Email", "On — weekly payout digest"],
+                ["In-app", "On — full activity stream"],
+              ].map(([label, value]) => (
+                <li key={label} className="rounded-[12px] bg-ink-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">{label}</p>
+                  <p className="mt-1.5 text-ink-900">{value}</p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </Reveal>
       </div>
     </section>
   );
