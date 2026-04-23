@@ -1,5 +1,8 @@
 import { Card } from "../../../components/ui/card";
 import { PageHeader } from "../../../components/common/PageHeader";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("buyerProtection");
 
 const checkpoints = [
   "Identity and role verification for marketplace participants",

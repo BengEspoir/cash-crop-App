@@ -3,6 +3,9 @@ import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { FAQ } from "../../../components/common/FAQ";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("help");
 
 const categories = [
   { title: "Getting started", body: "Create your account, verify identity, and complete your first listing or purchase order.", icon: BookOpen },

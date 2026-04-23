@@ -1,6 +1,9 @@
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { Prose } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("privacy");
 
 export default function PrivacyPage() {
   return (

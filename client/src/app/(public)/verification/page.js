@@ -2,6 +2,9 @@ import { BadgeCheck, FileCheck2, HandCoins, ScanSearch } from "lucide-react";
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("verification");
 
 const benefits = [
   { title: "Trusted buyer signal", body: "Verified farmers get a badge on listings, increasing buyer confidence and shortening sales cycles.", icon: BadgeCheck },
