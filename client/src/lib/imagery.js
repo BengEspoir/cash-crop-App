@@ -136,6 +136,26 @@ export const farmerAvatars = {
   "sarah-ndzi": u("1570145820404-cf22b115b06f", { w: 400, fit: "facearea" }),
 };
 
+// Workspace cover imagery — surfaces a ribbon hero on dashboards & role pages.
+export const workspaceImagery = {
+  farmer: {
+    src: u("1500937386664-56d1dfef3854", { w: 1800 }),
+    alt: "Lush Cameroonian farmland at sunrise",
+  },
+  buyer: {
+    src: u("1519452575417-564c1401ecc0", { w: 1800 }),
+    alt: "Bustling West African trade market",
+  },
+  admin: {
+    src: u("1567306226416-28f0efdc88ce", { w: 1800 }),
+    alt: "Inspection and sorting station for export-ready produce",
+  },
+};
+
+export function resolveWorkspaceImagery(role = "farmer") {
+  return workspaceImagery[role] ?? workspaceImagery.farmer;
+}
+
 export function resolveBrandImagery(pathname) {
   const map = {
     "/sign-in": "sign-in",
