@@ -2,6 +2,9 @@ import { Clipboard, Microscope, PackageSearch, ShieldCheck } from "lucide-react"
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("inspectionsInfo");
 
 const areas = [
   { title: "Quality checks", body: "Moisture, foreign matter, size grading, and packaging quality assessed against buyer specs.", icon: Microscope },

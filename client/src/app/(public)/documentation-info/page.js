@@ -2,6 +2,9 @@ import { FileStack, Globe2, Receipt, Stamp } from "lucide-react";
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("documentationInfo");
 
 const docs = [
   { title: "Invoices & receipts", body: "Auto-generated invoices and settlement receipts for every protected order.", icon: Receipt },

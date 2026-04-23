@@ -1,6 +1,9 @@
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { Prose } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("terms");
 
 export default function TermsPage() {
   return (

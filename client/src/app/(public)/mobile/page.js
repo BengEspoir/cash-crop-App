@@ -2,6 +2,9 @@ import { Bell, Download, Signal, Smartphone } from "lucide-react";
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("mobile");
 
 const features = [
   { title: "Optimised for low bandwidth", body: "Core flows work on 3G connections with aggressive caching for listing images and order history.", icon: Signal },

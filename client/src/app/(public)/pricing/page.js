@@ -5,6 +5,9 @@ import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
 import { cn } from "../../../lib/utils";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("pricing");
 
 const plans = [
   {

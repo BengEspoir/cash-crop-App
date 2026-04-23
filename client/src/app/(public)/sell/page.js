@@ -4,6 +4,9 @@ import { Button } from "../../../components/ui/button";
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("sell");
 
 const benefits = [
   { title: "Verified buyer demand", body: "Our buyer network is screened for payment reliability and export seriousness before they can place protected orders.", icon: BadgeCheck },

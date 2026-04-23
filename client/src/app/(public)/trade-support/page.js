@@ -2,6 +2,9 @@ import { Headphones, LifeBuoy, Scale, Users } from "lucide-react";
 import { HeroBanner } from "../../../components/common/HeroBanner";
 import { ContentSection, FeatureGrid } from "../../../components/common/ContentSection";
 import { pageImagery } from "../../../lib/imagery";
+import { buildMetadata } from "../../../lib/seo";
+
+export const metadata = buildMetadata("tradeSupport");
 
 const pillars = [
   { title: "Dedicated desk", body: "A multilingual trade desk helps farmers and cooperatives navigate their first few orders with ease.", icon: Headphones },
