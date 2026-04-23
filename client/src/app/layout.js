@@ -1,5 +1,6 @@
 ﻿import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
+import { buildMetadata } from "../lib/seo";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -12,9 +13,16 @@ const dmSerif = DM_Serif_Display({
   variable: "--font-display",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://agriculnet.example.com";
+
 export const metadata = {
-  title: "AgriculNet | Agricultural Trade Platform",
-  description: "AgriculNet connects Cameroonian farms with local and international markets.",
+  metadataBase: new URL(siteUrl),
+  ...buildMetadata("home"),
+  applicationName: "AgriculNet",
+  themeColor: "#0D3D22",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }) {

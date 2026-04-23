@@ -1,32 +1,57 @@
+"use client";
+
+import { useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { FilterTabs } from "@/components/common/FilterTabs";
 import { CropCard } from "@/components/crops/CropCard";
 import { FarmerMiniCard } from "@/components/farmers/FarmerMiniCard";
-import { Card } from "@/components/ui/card";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
 import { demoFarmers, demoListings } from "@/lib/demo-data";
 
+const OPTIONS = [
+  { value: "listings", label: "Listings" },
+  { value: "farmers", label: "Farmers" },
+];
+
 export default function BuyerSavedPage() {
+  const [tab, setTab] = useState("listings");
+
+  const options = OPTIONS.map((opt) => ({
+    ...opt,
+    count: opt.value === "listings" ? demoListings.length : demoFarmers.length,
+  }));
+
   return (
     <section className="space-y-6">
       <PageHeader
         eyebrow="Saved supply"
         title="Listings and farmers worth revisiting"
-        description="This saved view is demo-backed and meant to help you preview the complete buyer journey in the browser."
+        description="Shortlist crops and suppliers so your protected sourcing playbook always has a warm pipeline."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {demoListings.map((listing) => (
-          <CropCard key={listing.id} listing={listing} />
-        ))}
-      </div>
-
-      <Card className="rounded-[18px] p-5">
-        <h2 className="font-display text-[22px] text-[#111827]">Pinned farmers</h2>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {demoFarmers.slice(0, 2).map((farmer) => (
-            <FarmerMiniCard key={farmer.id} farmer={farmer} />
-          ))}
+      <Reveal>
+        <div className="rounded-[18px] border border-ink-100 bg-white p-4 shadow-soft">
+          <FilterTabs options={options} value={tab} onChange={setTab} />
         </div>
-      </Card>
+      </Reveal>
+
+      {tab === "listings" ? (
+        <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {demoListings.map((listing) => (
+            <StaggerItem key={listing.id}>
+              <CropCard listing={listing} />
+            </StaggerItem>
+          ))}
+        </Stagger>
+      ) : (
+        <Stagger className="grid gap-4 lg:grid-cols-2">
+          {demoFarmers.map((farmer) => (
+            <StaggerItem key={farmer.id}>
+              <FarmerMiniCard farmer={farmer} />
+            </StaggerItem>
+          ))}
+        </Stagger>
+      )}
     </section>
   );
 }

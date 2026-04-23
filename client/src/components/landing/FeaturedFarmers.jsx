@@ -1,6 +1,9 @@
-﻿import { featuredFarmers } from "../../constants/crops";
+"use client";
+
+import { featuredFarmers } from "../../constants/crops";
 import { FarmerCard } from "../farmers/FarmerCard";
 import { SectionHeader } from "../common/SectionHeader";
+import { Stagger, StaggerItem } from "../motion/Reveal";
 
 export function FeaturedFarmers() {
   return (
@@ -13,11 +16,13 @@ export function FeaturedFarmers() {
         actionHref="/find-farmers"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <Stagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" stagger={0.05}>
         {featuredFarmers.map((farmer) => (
-          <FarmerCard key={farmer.name} farmer={farmer} />
+          <StaggerItem key={farmer.name} className="h-full">
+            <FarmerCard farmer={farmer} />
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
     </section>
   );
 }
