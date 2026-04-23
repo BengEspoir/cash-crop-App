@@ -69,11 +69,19 @@
   }
 
   .surface-card {
-    @apply rounded-[14px] border border-[#E5E7EB] bg-white;
+    @apply rounded-2xl border border-ink-200 bg-white shadow-soft;
   }
 
   .interactive-card {
-    @apply transition-all duration-200 hover:-translate-y-[2px] hover:border-[#1A6B3C] hover:shadow-[0_4px_20px_rgba(26,107,60,0.15)];
+    @apply transition-all duration-200 hover:-translate-y-[2px] hover:border-green-800 hover:shadow-glow;
+  }
+
+  .glass-surface {
+    @apply border border-white/15 bg-white/10 backdrop-blur-md;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-800/15;
   }
 
   .section-eyebrow {
