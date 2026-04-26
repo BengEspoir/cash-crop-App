@@ -1,32 +1,137 @@
-﻿import { Label } from "../ui/label";
+﻿"use client";
 
-export function PhoneInput({ label = "Phone Number", value, onChange, error, helper, placeholder = "6XX XXX XXX" }) {
-  const formattedValue = String(value || "")
-    .replace(/\D/g, "")
-    .slice(0, 9)
-    .replace(/(\d{3})(\d{0,3})(\d{0,3})/, (_, first, second, third) =>
-      [first, second, third].filter(Boolean).join(" ")
-    )
-    .trim();
+import { useState, useEffect, useRef } from "react";
+import { Label } from "../ui/label";
+import { ChevronDown } from "lucide-react";
+import { getCountryByCode, getInternationalCountries, getLocalCountry, getPhonePlaceholder } from "../../lib/countries";
 
-  const handleChange = (event) => {
-    const digits = event.target.value.replace(/\D/g, "").slice(0, 9);
-    const formatted = digits.replace(/(\d{3})(\d{0,3})(\d{0,3})/, (_, first, second, third) => [first, second, third].filter(Boolean).join(" "));
-    onChange(formatted.trim());
+export function PhoneInput({ 
+  label = "Phone Number", 
+  value, 
+  onChange, 
+  error, 
+  helper, 
+  placeholder,
+  countryCode = "CM",
+  onCountryChange,
+  showCountrySelector = false,
+  disabled = false
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(() => getCountryByCode(countryCode) || getLocalCountry());
+  const dropdownRef = useRef(null);
+
+  // Update selected country when prop changes
+  useEffect(() => {
+    const country = getCountryByCode(countryCode);
+    if (country) {
+      setSelectedCountry(country);
+    }
+  }, [countryCode]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Get max length based on country
+  const getMaxLength = () => {
+    const format = selectedCountry?.phoneFormat?.source || /\d{9}/;
+    const match = format.toString().match(/\{(\d+)(?:,(\d+))?\}/);
+    return match ? parseInt(match[2] || match[1]) : 15;
   };
 
+  // Format value based on country
+  const formatValue = (val) => {
+    const digits = String(val || "").replace(/\D/g, "").slice(0, getMaxLength());
+    
+    // Cameroon format: XXX XXX XXX
+    if (selectedCountry?.code === "CM") {
+      return digits.replace(/(\d{3})(\d{0,3})(\d{0,3})/, (_, first, second, third) =>
+        [first, second, third].filter(Boolean).join(" ")
+      ).trim();
+    }
+    
+    // Generic international format
+    return digits;
+  };
+
+  const formattedValue = formatValue(value);
+
+  const handleChange = (event) => {
+    const digits = event.target.value.replace(/\D/g, "").slice(0, getMaxLength());
+    const formatted = formatValue(digits);
+    onChange(formatted);
+  };
+
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country);
+    onCountryChange?.(country.code);
+    setIsOpen(false);
+    // Clear phone when country changes
+    onChange("");
+  };
+
+  const countries = showCountrySelector ? getInternationalCountries() : [];
+  const phonePlaceholder = placeholder || getPhonePlaceholder(selectedCountry?.code);
+
   return (
-    <div>
+    <div ref={dropdownRef}>
       <Label>{label}</Label>
       <div className="flex overflow-hidden rounded-[8px] border border-[#D1D5DB] bg-white transition-colors duration-200 focus-within:[border-width:1.5px] focus-within:border-[#1A6B3C]">
-        <span className="inline-flex items-center border-r border-[#E5E7EB] bg-[#F9FAFB] px-3 text-[13px] font-semibold text-[#374151]">+237</span>
+        {/* Country Code Display / Selector */}
+        <button
+          type="button"
+          onClick={() => showCountrySelector && !disabled && setIsOpen(!isOpen)}
+          disabled={!showCountrySelector || disabled}
+          className={`inline-flex items-center gap-1 border-r border-[#E5E7EB] bg-[#F9FAFB] px-3 text-[13px] font-semibold text-[#374151] ${
+            showCountrySelector && !disabled ? "cursor-pointer hover:bg-[#F3F4F6]" : "cursor-default"
+          }`}
+        >
+          <span>{selectedCountry?.flag}</span>
+          <span>{selectedCountry?.dialCode}</span>
+          {showCountrySelector && !disabled && (
+            <ChevronDown className="h-3 w-3 text-[#9CA3AF]" />
+          )}
+        </button>
+
+        {/* Phone Input */}
         <input
           value={formattedValue}
           onChange={handleChange}
-          placeholder={placeholder}
-          className="h-10 w-full border-0 bg-white px-3 text-[14px] text-[#111827] outline-none placeholder:text-[#9CA3AF]"
+          placeholder={phonePlaceholder}
+          disabled={disabled}
+          className="h-10 w-full border-0 bg-white px-3 text-[14px] text-[#111827] outline-none placeholder:text-[#9CA3AF] disabled:bg-[#F9FAFB] disabled:text-[#6B7280]"
         />
       </div>
+
+      {/* Country Dropdown */}
+      {isOpen && showCountrySelector && (
+        <div className="absolute z-50 mt-1 max-h-60 w-72 overflow-auto rounded-lg border border-[#E5E7EB] bg-white shadow-lg">
+          <div className="sticky top-0 bg-white px-3 py-2 text-xs font-semibold text-[#6B7280] border-b border-[#E5E7EB]">
+            Select Country
+          </div>
+          {countries.map((country) => (
+            <button
+              key={country.code}
+              type="button"
+              onClick={() => handleCountrySelect(country)}
+              className="flex w-full items-center gap-3 px-3 py-2 text-left text-[14px] hover:bg-[#F3F4F6]"
+            >
+              <span className="text-lg">{country.flag}</span>
+              <span className="flex-1 text-[#111827]">{country.name}</span>
+              <span className="text-[#6B7280]">{country.dialCode}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {helper ? <p className="mt-2 text-[12px] text-[#6B7280]">{helper}</p> : null}
       {error ? <p className="mt-2 text-[12px] text-[#922B21]">{error}</p> : null}
     </div>

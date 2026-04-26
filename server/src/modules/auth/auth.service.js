@@ -190,7 +190,17 @@ const registerFarmer = async (data, req) => {
 };
 
 const registerBuyer = async (data, req) => {
-  const phone = helpers.normalizePhone(data.phone);
+  // Handle phone normalization based on buyer type
+  let phone;
+  if (data.buyerType === BUYER_TYPES.INTERNATIONAL && data.countryCode) {
+    // Use new phone validator for international numbers
+    const { formatPhoneInternational } = require('../../utils/phoneValidator');
+    phone = formatPhoneInternational(data.phone, data.countryCode);
+  } else {
+    // Use legacy helper for local buyers (Cameroon)
+    phone = helpers.normalizePhone(data.phone);
+  }
+  
   const email = data.email.toLowerCase();
   const existingPhone = await repository.findUserByPhone(phone);
   if (existingPhone) {

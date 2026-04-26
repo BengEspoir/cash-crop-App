@@ -63,6 +63,7 @@ const shouldAdvanceToActive = (user) => {
 };
 
 const shouldAdvanceToPendingReview = (user) => {
+  // Farmers need manual review, buyers get auto-approved
   return user.role === USER_ROLES.FARMER && user.phone_verified && user.email_verified;
 };
 

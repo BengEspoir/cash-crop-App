@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,32 @@ import { PasswordInput } from "../../../../components/auth/PasswordInput";
 import { RoleSwitcher } from "../../../../components/auth/RoleSwitcher";
 import { StepIndicator } from "../../../../components/auth/StepIndicator";
 import { registerBuyerUnifiedSchema } from "../../../../lib/validators";
+import { getInternationalCountries, getLocalCountry, getCountryByCode } from "../../../../lib/countries";
 import useAuthStore from "../../../../store/authStore";
+
+// Country Select Component for International Buyers
+function CountrySelect({ value, onChange, error }) {
+  const countries = getInternationalCountries();
+  
+  return (
+    <div>
+      <Label>Country *</Label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-full rounded-[8px] border border-[#D1D5DB] bg-white px-3 text-[14px] text-[#111827] outline-none focus:border-[#1A6B3C]"
+      >
+        <option value="">Select a country</option>
+        {countries.map((country) => (
+          <option key={country.code} value={country.name}>
+            {country.flag} {country.name} ({country.dialCode})
+          </option>
+        ))}
+      </select>
+      {error ? <p className="mt-2 text-[12px] text-[#922B21]">{error}</p> : null}
+    </div>
+  );
+}
 
 const steps = ["Buyer Profile", "Sourcing Preferences"];
 
@@ -22,6 +47,8 @@ export default function RegisterBuyerPage() {
   const { registerBuyer } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitState, setSubmitState] = useState({ error: "" });
+  const [selectedCountryCode, setSelectedCountryCode] = useState("CM");
+  
   // Use unified schema to prevent data loss between steps
   const {
     register,
@@ -38,6 +65,7 @@ export default function RegisterBuyerPage() {
       companyName: "",
       contactName: "",
       country: "Cameroon",
+      countryCode: "CM",
       phone: "",
       email: "",
       password: "",
@@ -48,6 +76,46 @@ export default function RegisterBuyerPage() {
       agreedToPolicy: false,
     },
   });
+
+  const buyerType = watch("buyerType");
+  const selectedCountry = watch("country");
+
+  // Handle buyer type change
+  useEffect(() => {
+    if (buyerType === "local") {
+      setValue("country", "Cameroon");
+      setValue("countryCode", "CM");
+      setSelectedCountryCode("CM");
+    } else {
+      // Clear country for international buyers
+      setValue("country", "");
+      setValue("countryCode", "");
+      setSelectedCountryCode("");
+      setValue("phone", "");
+    }
+  }, [buyerType, setValue]);
+
+  // Handle country selection change
+  const handleCountryChange = (countryName) => {
+    const country = getInternationalCountries().find(c => c.name === countryName);
+    if (country) {
+      setValue("country", country.name);
+      setValue("countryCode", country.code);
+      setSelectedCountryCode(country.code);
+      setValue("phone", ""); // Clear phone when country changes
+    }
+  };
+
+  const handlePhoneCountryChange = (countryCode) => {
+    const country = getCountryByCode(countryCode);
+    if (country) {
+      setSelectedCountryCode(countryCode);
+      if (buyerType === "international") {
+        setValue("country", country.name);
+        setValue("countryCode", countryCode);
+      }
+    }
+  };
 
   const validateStep = async (stepNum) => {
     // Define which fields belong to each step
@@ -126,16 +194,33 @@ export default function RegisterBuyerPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Country *</Label>
-                <Input placeholder="Cameroon" {...register("country")} />
-                {errors.country ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.country.message}</p> : null}
-              </div>
+              {buyerType === "local" ? (
+                <div>
+                  <Label>Country *</Label>
+                  <Input 
+                    value="Cameroon" 
+                    disabled 
+                    className="bg-[#F9FAFB] text-[#6B7280]"
+                  />
+                  <input type="hidden" {...register("country")} value="Cameroon" />
+                  <input type="hidden" {...register("countryCode")} value="CM" />
+                </div>
+              ) : (
+                <CountrySelect
+                  value={selectedCountry}
+                  onChange={handleCountryChange}
+                  error={errors.country?.message}
+                />
+              )}
               <PhoneInput
                 label="Phone Number *"
                 value={watch("phone")}
                 onChange={(nextPhone) => setValue("phone", nextPhone, { shouldValidate: true })}
                 error={errors.phone?.message}
+                countryCode={selectedCountryCode}
+                onCountryChange={handlePhoneCountryChange}
+                showCountrySelector={buyerType === "international"}
+                disabled={buyerType === "international" && !selectedCountry}
               />
             </div>
 

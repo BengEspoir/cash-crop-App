@@ -149,6 +149,12 @@ export const registerBuyerSchemas = [
   }),
 ];
 
+// International phone validator - allows digits and spaces
+const internationalPhoneValidator = z.string()
+  .min(7, "Phone number is too short")
+  .max(15, "Phone number is too long")
+  .regex(/^[\d\s]+$/, "Phone number must contain only digits and spaces");
+
 // Unified schema for buyer registration - prevents data loss between steps
 export const registerBuyerUnifiedSchema = z.object({
   // Step 1: Buyer Profile (Required on step 1)
@@ -156,7 +162,8 @@ export const registerBuyerUnifiedSchema = z.object({
   companyName: z.string().min(2, "Enter your company or buyer name."),
   contactName: z.string().min(2, "Enter a contact name."),
   country: z.string().min(2, "Enter your country."),
-  phone: farmerPhoneValidator,
+  countryCode: z.string().optional(),
+  phone: z.string(), // Will be validated below
   email: z.string().email("Enter a valid email address."),
   password: passwordSchema,
   confirmPassword: z.string().min(8, "Confirm your password."),
@@ -166,7 +173,36 @@ export const registerBuyerUnifiedSchema = z.object({
   monthlyVolume: z.string().optional(),
   destination: z.string().optional(),
   agreedToPolicy: z.boolean().optional(),
-}).refine((value) => value.password === value.confirmPassword, {
-  path: ["confirmPassword"],
-  message: "Passwords do not match.",
+}).superRefine((value, ctx) => {
+  // Password match validation
+  if (value.password !== value.confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["confirmPassword"],
+      message: "Passwords do not match.",
+    });
+  }
+  
+  // Phone validation based on buyer type
+  if (value.buyerType === "local") {
+    // Local buyers must have Cameroon phone
+    const cleanPhone = (value.phone || "").replace(/\s+/g, "");
+    if (!/^6\d{8}$/.test(cleanPhone)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["phone"],
+        message: "Enter a valid Cameroon phone number starting with 6 (e.g., 6XX XXX XXX).",
+      });
+    }
+  } else {
+    // International buyers
+    const cleanPhone = (value.phone || "").replace(/\s+/g, "");
+    if (cleanPhone.length < 7 || cleanPhone.length > 15) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["phone"],
+        message: "Enter a valid phone number for your country.",
+      });
+    }
+  }
 });

@@ -199,10 +199,14 @@ const useAuthStore = create(
         set({ isLoading: true });
 
         try {
-          const payload = {
-            ...buyerData,
-            phone: normalizeCameroonPhone(buyerData.phone),
-          };
+          // Prepare payload with proper phone formatting
+          const payload = { ...buyerData };
+          
+          // For local buyers, use Cameroon phone normalization
+          // For international buyers, keep as-is (server will handle)
+          if (buyerData.buyerType === "local") {
+            payload.phone = normalizeCameroonPhone(buyerData.phone);
+          }
 
           const { data } = await api.post("/auth/register/buyer", payload);
           get().setOnboarding({

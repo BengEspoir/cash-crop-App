@@ -51,18 +51,26 @@ module.exports = {
   BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
 
   // Email
+  EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'smtp',
   SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
   SMTP_PORT: parseInt(process.env.SMTP_PORT, 10) || 587,
   SMTP_SECURE: process.env.SMTP_SECURE === 'true',
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
   EMAIL_FROM: process.env.EMAIL_FROM || 'AgriculNet <no-reply@agriculnet.cm>',
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
+  MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || '',
+  MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || '',
 
   // SMS
+  SMS_PRIMARY_PROVIDER: process.env.SMS_PRIMARY_PROVIDER || 'africastalking',
   AT_API_KEY: process.env.AT_API_KEY || '',
   AT_USERNAME: process.env.AT_USERNAME || '',
   AT_SENDER_ID: process.env.AT_SENDER_ID || 'AgriculNet',
   AT_SANDBOX: process.env.AT_SANDBOX !== 'false',
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
+  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '',
 
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,

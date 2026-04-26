@@ -1,57 +1,8 @@
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('./email/index');
 const env = require('../config/env');
 
-const getTransporter = () => nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_SECURE,
-  auth: {
-    user: env.SMTP_USER,
-    pass: env.SMTP_PASS
-  }
-});
-
-const sendEmail = async ({ to, subject, html, devHints }) => {
-  if (!env.SMTP_USER || !env.SMTP_PASS) {
-    if (env.ALLOW_DEV_DELIVERY_FALLBACK) {
-      return {
-        success: true,
-        delivered: false,
-        provider: 'development-fallback',
-        devHints: env.EXPOSE_DEV_AUTH_HINTS ? devHints : null
-      };
-    }
-
-    throw new Error('SMTP credentials are not configured');
-  }
-
-  try {
-    await getTransporter().sendMail({
-      from: env.EMAIL_FROM,
-      to,
-      subject,
-      html
-    });
-
-    return {
-      success: true,
-      delivered: true,
-      provider: 'smtp',
-      devHints: env.EXPOSE_DEV_AUTH_HINTS ? devHints : null
-    };
-  } catch (error) {
-    if (env.ALLOW_DEV_DELIVERY_FALLBACK) {
-      return {
-        success: true,
-        delivered: false,
-        provider: 'development-fallback',
-        error: error.message,
-        devHints: env.EXPOSE_DEV_AUTH_HINTS ? devHints : null
-      };
-    }
-
-    throw error;
-  }
+const sendEmailWithDevHints = async ({ to, subject, html, devHints }) => {
+  return sendEmail({ to, subject, html, devHints });
 };
 
 const sendVerificationEmail = async (email, firstName, verifyLink) => {
@@ -76,7 +27,7 @@ const sendVerificationEmail = async (email, firstName, verifyLink) => {
     </div>
   `;
 
-  return sendEmail({
+  return sendEmailWithDevHints({
     to: email,
     subject: 'Verify your AgriculNet email address',
     html,
@@ -109,7 +60,7 @@ const sendPasswordResetEmail = async (email, firstName, resetLink) => {
     </div>
   `;
 
-  return sendEmail({
+  return sendEmailWithDevHints({
     to: email,
     subject: 'Reset your AgriculNet password',
     html,
@@ -150,7 +101,7 @@ const sendWelcomeEmail = async (email, firstName, role) => {
     </div>
   `;
 
-  return sendEmail({
+  return sendEmailWithDevHints({
     to: email,
     subject: `Welcome to AgriculNet, ${firstName}!`,
     html,
@@ -161,8 +112,57 @@ const sendWelcomeEmail = async (email, firstName, role) => {
   });
 };
 
+const sendAccountApprovedEmail = async (email, firstName, role) => {
+  let roleText = '';
+  let dashboardUrl = env.CLIENT_URL;
+  
+  if (role === 'farmer') {
+    roleText = 'Your farmer profile is now visible to buyers worldwide.';
+    dashboardUrl = `${env.CLIENT_URL}/farmer/dashboard`;
+  } else if (role.includes('buyer')) {
+    roleText = 'You can now browse verified crop listings and connect with farmers.';
+    dashboardUrl = `${env.CLIENT_URL}/buyer/dashboard`;
+  }
+
+  const html = `
+    <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1A6B3C 0%, #0D3D22 100%); padding: 30px; text-align: center;">
+        <h1 style="color: #E8B84B; margin: 0; font-family: 'DM Serif Display', serif;">AgriculNet</h1>
+      </div>
+      <div style="padding: 30px; background: #fff;">
+        <h2 style="color: #111827;">Welcome, ${firstName}!</h2>
+        <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+          Great news! Your AgriculNet account has been approved and activated. ${roleText}
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${env.CLIENT_URL}/sign-in" style="background: #1A6B3C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+            Sign In to Your Account
+          </a>
+        </div>
+        <p style="color: #374151; font-size: 14px; line-height: 1.6;">
+          Sign in with your email or phone number and the password you created during registration.
+        </p>
+        <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
+          If you have any questions, our support team is here to help.
+        </p>
+      </div>
+    </div>
+  `;
+
+  return sendEmailWithDevHints({
+    to: email,
+    subject: 'Your AgriculNet account is now active!',
+    html,
+    devHints: {
+      approvedEmail: email,
+      signInLink: `${env.CLIENT_URL}/sign-in`
+    }
+  });
+};
+
 module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
-  sendWelcomeEmail
+  sendWelcomeEmail,
+  sendAccountApprovedEmail
 };
