@@ -4,6 +4,19 @@ import api from "@/lib/axios";
 import { maskIdentifier, normalizeCameroonPhone } from "@/lib/formatters";
 
 const onboardingStorageKey = "agriculnet-onboarding";
+const normalizeAuthIdentifier = (identifier = "") => {
+  const normalized = String(identifier).trim();
+
+  if (!normalized) {
+    return normalized;
+  }
+
+  if (normalized.includes("@") || normalized.startsWith("+")) {
+    return normalized;
+  }
+
+  return normalizeCameroonPhone(normalized);
+};
 
 const readOnboardingState = () => {
   if (typeof window === "undefined") {
@@ -31,12 +44,18 @@ const writeOnboardingState = (value) => {
   window.sessionStorage.setItem(onboardingStorageKey, JSON.stringify(value));
 };
 
-const getErrorPayload = (error, fallbackMessage) => ({
-  success: false,
-  error: error.response?.data?.message || fallbackMessage,
-  errorCode: error.response?.data?.error?.code,
-  details: error.response?.data?.error?.details,
-});
+const getErrorPayload = (error, fallbackMessage) => {
+  const response = error.response?.data;
+  const details = response?.error?.details;
+  const deliveryMessage = details?.smsDelivery?.message || details?.emailDelivery?.message;
+
+  return {
+    success: false,
+    error: deliveryMessage || response?.message || fallbackMessage,
+    errorCode: response?.error?.code,
+    details,
+  };
+};
 
 const useAuthStore = create(
   persist(
@@ -96,15 +115,29 @@ const useAuthStore = create(
         set({ isLoading: true });
 
         try {
+          const formattedIdentifier = normalizeAuthIdentifier(identifier);
+
           const { data } = await api.post("/auth/login", {
-            identifier: identifier.includes("@") ? identifier : normalizeCameroonPhone(identifier),
+            identifier: formattedIdentifier,
             password,
             rememberMe,
           });
 
           const { accessToken, refreshToken, user } = data.data;
           get().setTokens(accessToken, refreshToken);
-          get().clearOnboarding();
+          if (data.data.nextStep && data.data.nextStep !== "dashboard") {
+            get().setOnboarding({
+              userId: user.id,
+              role: user.role,
+              phone: data.data.phone,
+              email: data.data.email,
+              identifier: formattedIdentifier,
+              nextStep: data.data.nextStep,
+              devHints: data.data.devHints || null,
+            });
+          } else {
+            get().clearOnboarding();
+          }
           set({ user, isLoading: false, isAuthenticated: true });
           return { success: true, data: data.data };
         } catch (error) {
@@ -184,6 +217,8 @@ const useAuthStore = create(
             email: data.data.user.email ? maskIdentifier(data.data.user.email) : null,
             identifier: data.data.user.email || normalizeCameroonPhone(farmerData.phone),
             nextStep: data.data.nextStep,
+            emailDelivery: data.data.emailDelivery || null,
+            smsDelivery: data.data.smsDelivery || null,
             devHints: data.data.devHints || null,
           });
 
@@ -216,6 +251,8 @@ const useAuthStore = create(
             email: maskIdentifier(data.data.user.email),
             identifier: data.data.user.email,
             nextStep: data.data.nextStep,
+            emailDelivery: data.data.emailDelivery || null,
+            smsDelivery: data.data.smsDelivery || null,
             devHints: data.data.devHints || null,
           });
 
@@ -242,11 +279,13 @@ const useAuthStore = create(
           if (data.data.nextStep === "dashboard") {
             get().clearOnboarding();
           } else {
-            get().setOnboarding({
-              userId,
-              role: data.data.user?.role || get().onboarding?.role,
-              nextStep: data.data.nextStep,
-            });
+          get().setOnboarding({
+            userId,
+            role: data.data.user?.role || get().onboarding?.role,
+            nextStep: data.data.nextStep,
+            emailDelivery: data.data.emailDelivery || get().onboarding?.emailDelivery || null,
+            smsDelivery: data.data.smsDelivery || get().onboarding?.smsDelivery || null,
+          });
           }
 
           return { success: true, data: data.data };
@@ -259,8 +298,23 @@ const useAuthStore = create(
         try {
           const { data } = await api.post("/auth/verify-email", { token });
 
-          if (data.data.nextStep === "pending_review" || data.data.nextStep === "sign_in") {
+          if (data.data.accessToken && data.data.refreshToken) {
+            get().setTokens(data.data.accessToken, data.data.refreshToken);
+            set({ user: data.data.user, isAuthenticated: true });
+          }
+
+          if (data.data.nextStep === "dashboard" || data.data.nextStep === "sign_in") {
             get().clearOnboarding();
+          } else {
+            get().setOnboarding({
+              userId: data.data.user?.id || get().onboarding?.userId,
+              role: data.data.user?.role || get().onboarding?.role,
+              phone: data.data.phone || get().onboarding?.phone,
+              email: data.data.email || get().onboarding?.email,
+              nextStep: data.data.nextStep,
+              emailDelivery: data.data.emailDelivery || get().onboarding?.emailDelivery || null,
+              smsDelivery: data.data.smsDelivery || get().onboarding?.smsDelivery || null,
+            });
           }
 
           return { success: true, data: data.data };
@@ -271,8 +325,10 @@ const useAuthStore = create(
 
       resendVerification: async (type = "phone") => {
         const onboarding = get().onboarding;
+        const user = get().user;
+        const userId = onboarding?.userId || user?.id;
 
-        if (!onboarding?.userId) {
+        if (!userId) {
           return {
             success: false,
             error: "No onboarding session is available.",
@@ -281,13 +337,19 @@ const useAuthStore = create(
 
         try {
           const { data } = await api.post("/auth/resend-verification", {
-            userId: onboarding.userId,
+            userId,
             type,
           });
 
           get().setOnboarding({
+            userId,
+            role: onboarding?.role || user?.role,
+            phone: onboarding?.phone || data.data.phone || user?.phone,
+            email: onboarding?.email || data.data.email || user?.email,
+            emailDelivery: data.data.emailDelivery || onboarding?.emailDelivery || null,
+            smsDelivery: data.data.smsDelivery || onboarding?.smsDelivery || null,
             devHints: data.data.devHints || null,
-            nextStep: data.data.nextStep || onboarding.nextStep,
+            nextStep: data.data.nextStep || onboarding?.nextStep,
           });
 
           return { success: true, data: data.data };
@@ -298,15 +360,21 @@ const useAuthStore = create(
 
       forgotPassword: async ({ identifier, method }) => {
         try {
+          const formattedIdentifier = method === "email"
+            ? identifier
+            : normalizeAuthIdentifier(identifier);
+
           const { data } = await api.post("/auth/forgot-password", {
-            identifier: method === "email" ? identifier : normalizeCameroonPhone(identifier),
+            identifier: formattedIdentifier,
             method,
           });
 
           get().setOnboarding({
-            identifier,
+            identifier: formattedIdentifier,
             recoveryMethod: method,
             nextStep: data.data.nextStep,
+            emailDelivery: data.data.emailDelivery || null,
+            smsDelivery: data.data.smsDelivery || null,
             devHints: data.data.devHints || null,
           });
 
@@ -329,7 +397,7 @@ const useAuthStore = create(
           payload.otp = code;
           payload.identifier = onboarding?.identifier?.includes("@")
             ? onboarding.identifier
-            : normalizeCameroonPhone(onboarding?.identifier || "");
+            : normalizeAuthIdentifier(onboarding?.identifier || "");
         }
 
         try {
@@ -345,6 +413,7 @@ const useAuthStore = create(
         try {
           const { data } = await api.post("/auth/verify-phone/send", { userId, purpose });
           get().setOnboarding({
+            smsDelivery: data.data.smsDelivery || null,
             devHints: data.data.devHints || null,
           });
           return { success: true, data: data.data };

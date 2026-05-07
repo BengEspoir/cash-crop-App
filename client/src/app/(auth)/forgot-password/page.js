@@ -12,6 +12,7 @@ import { Label } from "../../../components/ui/label";
 import { PhoneInput } from "../../../components/auth/PhoneInput";
 import { RoleSwitcher } from "../../../components/auth/RoleSwitcher";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
+import { formatPhoneInternational } from "../../../lib/countries";
 import { forgotPasswordSchema } from "../../../lib/validators";
 import useAuthStore from "../../../store/authStore";
 
@@ -19,6 +20,7 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const { forgotPassword, onboarding } = useAuthStore();
   const [mode, setMode] = useState("phone");
+  const [selectedCountry, setSelectedCountry] = useState("CM");
   const [feedback, setFeedback] = useState({ error: "", success: "" });
   const {
     register,
@@ -35,7 +37,13 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (values) => {
     setFeedback({ error: "", success: "" });
 
-    const identifier = values.mode === "phone" ? values.phone : values.email;
+    let identifier = values.email;
+    if (values.mode === "phone") {
+      identifier = selectedCountry === "CM"
+        ? values.phone
+        : formatPhoneInternational(values.phone, selectedCountry);
+    }
+
     const method = values.mode === "phone" ? "sms" : "email";
     const result = await forgotPassword({ identifier, method });
 
@@ -73,11 +81,15 @@ export default function ForgotPasswordPage() {
             value={watch("phone")}
             onChange={(nextPhone) => setValue("phone", nextPhone, { shouldValidate: true })}
             error={errors.phone?.message}
+            countryCode={selectedCountry}
+            onCountryChange={setSelectedCountry}
+            showCountrySelector={true}
+            includeAllCountries={true}
           />
         ) : (
           <div>
             <Label>Email Address</Label>
-            <Input placeholder="name@example.com" {...register("email")} />
+            <Input placeholder="example@gmail.com" autoComplete="email" {...register("email")} />
             {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
           </div>
         )}

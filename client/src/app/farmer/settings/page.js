@@ -8,7 +8,7 @@ export default function FarmerSettingsPage() {
       <PageHeader
         eyebrow="Farmer settings"
         title="Workflow preferences and account controls"
-        description="Authentication is real-backed locally. Listing, order, and payout surfaces on this page stay demo-backed while keeping the full browser journey intact."
+        description="Account preferences are ready for live data and will stay empty until saved by the farmer."
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -33,15 +33,15 @@ export default function FarmerSettingsPage() {
           <div className="mt-5 grid gap-4">
             <label className="space-y-2">
               <span className="text-[13px] font-medium text-[#374151]">Preferred payout phone</span>
-              <Input defaultValue="+237670000111" />
+              <Input placeholder="+2376..." autoComplete="tel" />
             </label>
             <label className="space-y-2">
               <span className="text-[13px] font-medium text-[#374151]">Fallback account name</span>
-              <Input defaultValue="Jean Ngum" />
+              <Input placeholder="Account holder name" autoComplete="name" />
             </label>
             <label className="space-y-2">
               <span className="text-[13px] font-medium text-[#374151]">Inspection routing</span>
-              <Input defaultValue="AgriculNet coordinated" />
+              <Input placeholder="Preferred inspection route" />
             </label>
           </div>
         </Card>

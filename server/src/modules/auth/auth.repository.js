@@ -298,6 +298,32 @@ const logAuditEvent = async (userId, event, req, metadata = {}) => {
   if (error) console.error('Audit log error:', error);
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const logActivityEvent = async (userId, eventType, req, metadata = {}) => {
+  const entityId = metadata.entityId && UUID_PATTERN.test(String(metadata.entityId))
+    ? metadata.entityId
+    : null;
+
+  const { error } = await supabaseAdmin
+    .from('activity_events')
+    .insert({
+      user_id: userId,
+      role: metadata.role || null,
+      event_type: eventType,
+      path: req.originalUrl,
+      entity_type: metadata.entityType || null,
+      entity_id: entityId,
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'],
+      metadata
+    });
+
+  if (error && !['PGRST205', '42P01'].includes(error.code)) {
+    console.error('Activity log error:', error);
+  }
+};
+
 const getFarmerProfile = async (userId) => {
   const { data, error } = await supabaseAdmin
     .from('farmer_profiles')
@@ -318,15 +344,31 @@ const getBuyerProfile = async (userId) => {
   return data;
 };
 
+const updateFarmerProfile = async (userId, updateData) => {
+  return updateWithMissingColumnFallback('farmer_profiles', userId, updateData);
+};
+
+const findUsersByStatus = async (status) => {
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('*, farmer_profiles(*), buyer_profiles(*)')
+    .eq('status', status)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
 module.exports = {
   findUserByPhone,
   findUserByEmail,
   findUserById,
   findUserByIdentifier,
+  findUsersByStatus,
   createUser,
   createFarmerProfile,
   createBuyerProfile,
   updateUser,
+  updateFarmerProfile,
   incrementFailedAttempts,
   resetFailedAttempts,
   lockUserAccount,
@@ -341,6 +383,7 @@ module.exports = {
   markOtpVerified,
   deleteUserOtps,
   logAuditEvent,
+  logActivityEvent,
   getFarmerProfile,
   getBuyerProfile
 };

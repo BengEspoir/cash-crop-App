@@ -1,30 +1,29 @@
+"use client";
+
 import { PageHeader } from "@/components/common/PageHeader";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { ConversationList } from "@/components/messages/ConversationList";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Card } from "@/components/ui/card";
-import { demoConversations, demoNotifications } from "@/lib/demo-data";
+import { ConversationList } from "@/components/messages/ConversationList";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 export default function FarmerMessagesPage() {
+  const { data, isLoading } = useDashboardData("farmer");
+  const conversations = data?.conversations || [];
+
   return (
     <section className="space-y-6">
       <PageHeader
         eyebrow="Farmer messages"
-        title="Buyer follow-ups and trade clarifications"
-        description="Use the messaging area to preview how farmer-side communication stays connected to listings and order activity."
+        title="Live buyer conversations"
+        description="Only real conversations connected to your account are shown here."
       />
-
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <ConversationList items={demoConversations} basePath="/farmer/messages" />
-        <div className="space-y-6">
-          <ActivityFeed items={demoNotifications} />
-          <Card className="rounded-[18px] p-5">
-            <h2 className="font-display text-[22px] text-[#111827]">Demo routing note</h2>
-            <p className="mt-3 body-copy">
-              Messaging stays local to the frontend preview right now, but the protected layouts, detail routes, and listing context have all been completed.
-            </p>
-          </Card>
-        </div>
-      </div>
+      {isLoading ? (
+        <Card className="rounded-[16px] p-8 text-center text-ink-500">Loading live conversations...</Card>
+      ) : conversations.length ? (
+        <ConversationList items={conversations} basePath="/farmer/messages" />
+      ) : (
+        <EmptyState title="No live conversations yet" description="Buyer conversations will appear once messaging activity starts." />
+      )}
     </section>
   );
 }

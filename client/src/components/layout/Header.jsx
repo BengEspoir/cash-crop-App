@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronDown, Leaf, Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
+import { BrandLogo } from "../common/BrandLogo";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
 
@@ -26,14 +27,8 @@ export function Header() {
       <div className="content-shell py-4 lg:py-0">
         <div className="flex min-h-[68px] flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
           <div className="flex flex-wrap items-center justify-between gap-3 lg:w-[300px] lg:flex-nowrap">
-            <Link href="/" className="group flex items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-800 transition-all duration-200 group-hover:bg-green-800 group-hover:text-white group-hover:shadow-glow">
-                <Leaf className="h-5 w-5 transition-transform duration-200 group-hover:rotate-[12deg]" />
-              </span>
-              <span className="font-display text-[22px] leading-none">
-                <span className="text-green-800">Agricul</span>
-                <span className="text-gold-700">Net</span>
-              </span>
+            <Link href="/" className="group flex items-center">
+              <BrandLogo className="h-11 w-[150px]" priority />
             </Link>
 
             <span className="inline-flex items-center gap-2 rounded-full border border-ink-200 bg-ink-50 px-3 py-1 text-[12px] font-medium text-ink-700">

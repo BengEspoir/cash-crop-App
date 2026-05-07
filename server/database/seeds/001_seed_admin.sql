@@ -1,35 +1,52 @@
 -- AgriculNet — Seed default super admin account
--- Password: Admin@AgriculNet2025!
--- Hash generated with bcrypt 12 rounds — replace if needed
+-- Password: set a private admin password and paste its bcrypt hash below.
+-- Generate a hash with your preferred bcrypt tooling before running this seed.
 -- Run AFTER running all migration files
 
+-- Update admin password if exists
+UPDATE users 
+SET 
+  password_hash = 'replace-with-bcrypt-hash',
+  phone = '683077263',
+  status = 'active',
+  phone_verified = TRUE,
+  email_verified = TRUE
+WHERE email = 'mbengespoir@gmail.com';
+
+-- Or if the user doesn't exist, insert fresh:
 INSERT INTO users (
-  id,
-  role,
-  status,
-  first_name,
-  last_name,
-  phone,
-  email,
-  password_hash,
-  phone_verified,
-  email_verified,
-  country
+  id, 
+  role, 
+  status, 
+  first_name, 
+  last_name, 
+  phone, 
+  email, 
+  password_hash, 
+  phone_verified, 
+  email_verified, 
+  country,
+  region,
+  city
 ) VALUES (
   uuid_generate_v4(),
   'super_admin',
   'active',
-  'AgriculNet',
-  'Admin',
-  '+237600000000',
-  'admin@agriculnet.cm',
-  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQyCZmQjWCxQjQ3zEqyP4bIPW',
+  'Espoir',
+  'Mbeng',
+  '683077263',
+  'mbengespoir@gmail.com',
+  'replace-with-bcrypt-hash',
   TRUE,
   TRUE,
-  'Cameroon'
-) ON CONFLICT (email) DO NOTHING;
+  'Cameroon',
+  'Littoral',
+  'Douala'
+) ON CONFLICT (email) DO UPDATE SET 
+  password_hash = EXCLUDED.password_hash,
+  phone = EXCLUDED.phone,
+  status = EXCLUDED.status,
+  phone_verified = EXCLUDED.phone_verified,
+  email_verified = EXCLUDED.email_verified;
 
--- NOTE: The password hash above is for: Admin@AgriculNet2025!
--- IMPORTANT: Change this password immediately after first login
--- Generate a new hash with:
--- node -e "const b=require('bcryptjs');b.hash('YourNewPass',12).then(console.log)"
+-- NOTE: Never commit a real production admin password or reusable admin hash.

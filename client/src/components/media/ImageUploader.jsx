@@ -20,9 +20,9 @@ import { cn } from "../../lib/utils";
  *  - If Cloudinary is configured (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME +
  *    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET) we upload the File directly and
  *    store the secure_url + public_id.
- *  - If Cloudinary is NOT configured we generate a local object URL so the
- *    preview still works end-to-end in demo mode. The URL is memory-only; the
- *    caller is expected to re-upload on submit in production.
+ *  - If Cloudinary is NOT configured we generate a local object URL for preview.
+ *    The URL is memory-only; the caller is expected to upload before treating it
+ *    as a durable database value.
  *
  *  - The first image is treated as the cover. "Set as cover" promotes any
  *    image; "Remove" drops it and revokes the blob URL.
@@ -167,7 +167,7 @@ export function ImageUploader({
             {hint ??
               (cloudinaryReady
                 ? "High-quality JPG or PNG up to ~10MB. First image becomes the cover."
-                : "Demo mode — previews are local. Wire Cloudinary env vars to persist.")}
+                : "Local previews only. Configure Cloudinary env vars to persist uploads.")}
           </p>
           {error ? <p className="text-[12px] font-medium text-red-600">{error}</p> : null}
         </div>

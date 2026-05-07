@@ -3,11 +3,104 @@ import { z } from "zod";
 const cameroonPhone = /^6[\d\s]{8,11}$/;
 const farmerPhoneValidator = z.string().regex(cameroonPhone, "Enter a valid Cameroon phone number starting with 6.");
 const emailSchema = z.string().email("Enter a valid email address.");
-const emailSchemaOptional = z.string().email("Enter a valid email address.").or(z.literal(""));
 const passwordSchema = z.string()
   .min(8, "At least 8 characters")
   .regex(/[A-Z]/, "One uppercase letter")
   .regex(/\d/, "One number");
+
+// International phone validator - accepts 7-15 digits
+const internationalPhone = /^[\d\s]{7,15}$/;
+const cameroonNationalPhone = /^6\d{8}$/;
+
+const stripPhone = (value = "") => String(value).replace(/\s+/g, "");
+
+const validateFlexiblePhone = (value, ctx, path = ["phone"]) => {
+  const cleanPhone = stripPhone(value);
+  const isValidCameroon = cameroonPhone.test(cleanPhone);
+  const isValidInternational = internationalPhone.test(cleanPhone);
+
+  if (!isValidCameroon && !isValidInternational) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path,
+      message: "Enter a valid phone number.",
+    });
+  }
+};
+
+const validateBuyerStepOne = (value, ctx) => {
+  const cleanPhone = stripPhone(value.phone);
+  const country = String(value.country || "").trim().toLowerCase();
+  const countryCode = String(value.countryCode || "").trim().toUpperCase();
+
+  if (value.password !== value.confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["confirmPassword"],
+      message: "Passwords do not match.",
+    });
+  }
+
+  if (value.buyerType === "local") {
+    if (!cameroonNationalPhone.test(cleanPhone)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["phone"],
+        message: "Enter a valid Cameroon phone number starting with 6 (e.g., 6XX XXX XXX).",
+      });
+    }
+
+    if (country !== "cameroon") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["country"],
+        message: "Local buyers must register from Cameroon.",
+      });
+    }
+
+    if (countryCode && countryCode !== "CM") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["countryCode"],
+        message: "Local buyers must use country code CM.",
+      });
+    }
+
+    return;
+  }
+
+  if (!countryCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["countryCode"],
+      message: "Select the country code for this phone number.",
+    });
+  }
+
+  if (country === "cameroon" || countryCode === "CM") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["country"],
+      message: "Use Local Buyer for Cameroon registrations.",
+    });
+  }
+
+  if (cameroonNationalPhone.test(cleanPhone)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["phone"],
+      message: "Cameroon phone numbers are only allowed for local buyers.",
+    });
+  }
+
+  if (cleanPhone.length < 7 || cleanPhone.length > 15) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["phone"],
+      message: "Enter a valid phone number for your country.",
+    });
+  }
+};
 
 export const signInSchema = z.object({
   mode: z.enum(["phone", "email"]),
@@ -15,12 +108,8 @@ export const signInSchema = z.object({
   email: z.string().optional(),
   password: z.string().min(8, "Password must be at least 8 characters."),
 }).superRefine((value, ctx) => {
-  if (value.mode === "phone" && !cameroonPhone.test((value.phone || "").replace(/\s+/g, ""))) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["phone"],
-      message: "Enter a valid Cameroon phone number.",
-    });
+  if (value.mode === "phone") {
+    validateFlexiblePhone(value.phone, ctx);
   }
 
   if (value.mode === "email" && (!value.email || !emailSchema.safeParse(value.email).success)) {
@@ -37,12 +126,8 @@ export const forgotPasswordSchema = z.object({
   phone: z.string().optional(),
   email: z.string().optional(),
 }).superRefine((value, ctx) => {
-  if (value.mode === "phone" && !cameroonPhone.test((value.phone || "").replace(/\s+/g, ""))) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["phone"],
-      message: "Enter a valid Cameroon phone number.",
-    });
+  if (value.mode === "phone") {
+    validateFlexiblePhone(value.phone, ctx);
   }
 
   if (value.mode === "email" && (!value.email || !emailSchema.safeParse(value.email).success)) {
@@ -72,7 +157,7 @@ export const registerFarmerSchemas = [
     firstName: z.string().min(2, "First name is required."),
     lastName: z.string().min(2, "Last name is required."),
     phone: farmerPhoneValidator,
-    email: emailSchemaOptional,
+    email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(8, "Confirm your password."),
     region: z.string().min(2, "Select your region."),
@@ -103,7 +188,7 @@ export const registerFarmerUnifiedSchema = z.object({
   firstName: z.string().min(2, "First name is required."),
   lastName: z.string().min(2, "Last name is required."),
   phone: farmerPhoneValidator,
-  email: emailSchemaOptional,
+  email: emailSchema,
   password: passwordSchema,
   confirmPassword: z.string().min(8, "Confirm your password."),
   region: z.string().min(2, "Select your region."),
@@ -133,13 +218,13 @@ export const registerBuyerSchemas = [
     companyName: z.string().min(2, "Enter your company or buyer name."),
     contactName: z.string().min(2, "Enter a contact name."),
     country: z.string().min(2, "Enter your country."),
-    phone: farmerPhoneValidator,
+    countryCode: z.string().optional(),
+    phone: z.string(),
     email: z.string().email("Enter a valid email address."),
     password: passwordSchema,
     confirmPassword: z.string().min(8, "Confirm your password."),
-  }).refine((value) => value.password === value.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
+  }).superRefine((value, ctx) => {
+    validateBuyerStepOne(value, ctx);
   }),
   z.object({
     buyingFocus: z.string().min(2, "Tell us what you source most often."),
@@ -148,12 +233,6 @@ export const registerBuyerSchemas = [
     agreedToPolicy: z.boolean().refine(Boolean, "You must accept the buyer terms."),
   }),
 ];
-
-// International phone validator - allows digits and spaces
-const internationalPhoneValidator = z.string()
-  .min(7, "Phone number is too short")
-  .max(15, "Phone number is too long")
-  .regex(/^[\d\s]+$/, "Phone number must contain only digits and spaces");
 
 // Unified schema for buyer registration - prevents data loss between steps
 export const registerBuyerUnifiedSchema = z.object({
@@ -174,35 +253,5 @@ export const registerBuyerUnifiedSchema = z.object({
   destination: z.string().optional(),
   agreedToPolicy: z.boolean().optional(),
 }).superRefine((value, ctx) => {
-  // Password match validation
-  if (value.password !== value.confirmPassword) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["confirmPassword"],
-      message: "Passwords do not match.",
-    });
-  }
-  
-  // Phone validation based on buyer type
-  if (value.buyerType === "local") {
-    // Local buyers must have Cameroon phone
-    const cleanPhone = (value.phone || "").replace(/\s+/g, "");
-    if (!/^6\d{8}$/.test(cleanPhone)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["phone"],
-        message: "Enter a valid Cameroon phone number starting with 6 (e.g., 6XX XXX XXX).",
-      });
-    }
-  } else {
-    // International buyers
-    const cleanPhone = (value.phone || "").replace(/\s+/g, "");
-    if (cleanPhone.length < 7 || cleanPhone.length > 15) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["phone"],
-        message: "Enter a valid phone number for your country.",
-      });
-    }
-  }
+  validateBuyerStepOne(value, ctx);
 });

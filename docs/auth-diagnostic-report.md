@@ -117,8 +117,8 @@ BASE_URL=http://localhost:5000
 
 ## Supabase (Verified Correct)
 SUPABASE_URL=https://jftggxxzqtmmqktvnlwc.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmdGdneHh6cXRtbXFrdHZubHdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDc0MTgsImV4cCI6MjA5MDE4MzQxOH0.sK6EantJqLj7XrkF8BWAO4U94O57TCrusYSHtOe5nmk
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmdGdneHh6cXRtbXFrdHZubHdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDc0MTgsImV4cCI6MjA5MDE4MzQxOH0.sK6EantJqLj7XrkF8BWAO4U94O57TCrusYSHtOe5nmk
+SUPABASE_ANON_KEY=replace-with-your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=replace-with-your-supabase-service-role-key
 
 ## JWT (Generate new secrets!)
 JWT_ACCESS_SECRET=generate-a-64-char-random-hex-string-here-for-access-tokens
@@ -149,7 +149,7 @@ EMAIL_VERIFY_URL=http://localhost:3000/verify-email
 PASSWORD_RESET_URL=http://localhost:3000/reset-password
 
 ## Admin
-ADMIN_ROUTE_SECRET=agriculnet-admin-secret-2025
+ADMIN_ROUTE_SECRET=replace-with-strong-admin-route-secret
 
 ## Development helpers
 ALLOW_DEV_DELIVERY_FALLBACK=true
@@ -166,10 +166,10 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
 
 ## Supabase (Verified Correct)
 NEXT_PUBLIC_SUPABASE_URL=https://jftggxxzqtmmqktvnlwc.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmdGdneHh6cXRtbXFrdHZubHdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDc0MTgsImV4cCI6MjA5MDE4MzQxOH0.sK6EantJqLj7XrkF8BWAO4U94O57TCrusYSHtOe5nmk
+NEXT_PUBLIC_SUPABASE_ANON_KEY=replace-with-your-supabase-anon-key
 
 ## Admin
-NEXT_PUBLIC_ADMIN_KEY=agriculnet-admin-secret-2025
+NEXT_PUBLIC_ADMIN_KEY=replace-with-admin-route-secret
 
 ## App
 NEXT_PUBLIC_APP_NAME=AgriculNet

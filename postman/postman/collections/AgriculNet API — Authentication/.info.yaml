@@ -20,5 +20,11 @@ variables:
     value: ''
     type: string
   - key: admin_key
-    value: agriculnet-admin-secret-2025
+    value: ''
+    type: string
+  - key: admin_identifier
+    value: ''
+    type: string
+  - key: admin_password
+    value: ''
     type: string

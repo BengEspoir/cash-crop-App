@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Globe2, ShieldCheck, Sprout, WalletCards } from "lucide-react";
+import { BrandLogo } from "../common/BrandLogo";
 import { SmartImage } from "../media/SmartImage";
 import { Reveal, Stagger, StaggerItem } from "../motion/Reveal";
 import { cn } from "../../lib/utils";
@@ -57,10 +58,9 @@ export function BrandPanel({
           <Reveal inView={false} delay={0.05}>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 font-display text-[22px] leading-none text-white"
+              className="inline-flex rounded-[10px] bg-white px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
             >
-              <span>Agricul</span>
-              <span className="text-gold-400">Net</span>
+              <BrandLogo className="h-10 w-[150px]" priority />
             </Link>
           </Reveal>
 

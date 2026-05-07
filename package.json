@@ -8,5 +8,8 @@
     "start:client": "npm --prefix client run start",
     "start:server": "npm --prefix server run start",
     "lint:client": "npm --prefix client run lint"
+  },
+  "devDependencies": {
+    "supabase": "^2.95.4"
   }
 }

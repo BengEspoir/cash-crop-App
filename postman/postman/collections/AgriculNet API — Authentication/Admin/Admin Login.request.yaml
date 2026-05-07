@@ -11,8 +11,8 @@ body:
   type: json
   content: |-
     {
-      "identifier": "admin@agriculnet.cm",
-      "password": "Admin@AgriculNet2025!"
+      "identifier": "{{admin_identifier}}",
+      "password": "{{admin_password}}"
     }
 scripts:
   - type: afterResponse

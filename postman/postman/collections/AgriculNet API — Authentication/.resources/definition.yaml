@@ -15,4 +15,8 @@ variables:
   - key: buyer_id
     value: ''
   - key: admin_key
-    value: agriculnet-admin-secret-2025
+    value: ''
+  - key: admin_identifier
+    value: ''
+  - key: admin_password
+    value: ''

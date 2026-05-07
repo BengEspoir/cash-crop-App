@@ -14,29 +14,16 @@ import { PasswordInput } from "../../../components/auth/PasswordInput";
 import { RoleSwitcher } from "../../../components/auth/RoleSwitcher";
 import { Reveal, Stagger, StaggerItem } from "../../../components/motion/Reveal";
 import { signInSchema } from "../../../lib/validators";
+import { formatPhoneInternational } from "../../../lib/countries";
+import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
-
-const getDashboardRoute = (user, nextStep) => {
-  if (nextStep === "pending_review" || user?.status === "pending_review") {
-    return "/pending";
-  }
-
-  switch (user?.role) {
-    case "farmer":
-      return "/farmer/dashboard";
-    case "local_buyer":
-    case "international_buyer":
-      return "/buyer/dashboard";
-    default:
-      return "/";
-  }
-};
 
 export default function SignInPage() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [mode, setMode] = useState("phone");
   const [submitError, setSubmitError] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState("CM");
   const {
     register,
     handleSubmit,
@@ -57,20 +44,26 @@ export default function SignInPage() {
   const onSubmit = async (values) => {
     setSubmitError("");
 
-    const identifier = values.mode === "phone" ? values.phone : values.email;
+    let identifier;
+    if (values.mode === "phone") {
+      // Format phone with country code for international numbers
+      if (selectedCountry === "CM") {
+        identifier = values.phone; // Cameroon uses local format
+      } else {
+        identifier = formatPhoneInternational(values.phone, selectedCountry);
+      }
+    } else {
+      identifier = values.email;
+    }
+    
     const result = await login(identifier, values.password);
 
     if (!result.success) {
-      if (result.errorCode === "PHONE_NOT_VERIFIED") {
-        router.push("/verify-phone");
-        return;
-      }
-
       setSubmitError(result.error);
       return;
     }
 
-    router.push(getDashboardRoute(result.data.user, result.data.nextStep));
+    router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
   };
 
   return (
@@ -111,18 +104,22 @@ export default function SignInPage() {
             value={watch("phone")}
             onChange={(nextPhone) => setValue("phone", nextPhone, { shouldValidate: true })}
             error={errors.phone?.message}
+            countryCode={selectedCountry}
+            onCountryChange={setSelectedCountry}
+            showCountrySelector={true}
+            includeAllCountries={true}
           />
         ) : (
           <div>
             <Label>Email Address</Label>
-            <Input placeholder="name@example.com" {...register("email")} />
+            <Input placeholder="example@gmail.com" autoComplete="email" {...register("email")} />
             {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
           </div>
         )}
         </StaggerItem>
 
         <StaggerItem>
-          <PasswordInput label="Password" placeholder="Enter your password" error={errors.password?.message} {...register("password")} />
+          <PasswordInput label="Password" placeholder="Enter your password" autoComplete="current-password" error={errors.password?.message} {...register("password")} />
         </StaggerItem>
 
         <StaggerItem className="flex flex-wrap items-center justify-between gap-3 text-[13px]">

@@ -8,6 +8,8 @@ const { generalLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./modules/auth/auth.routes');
 const adminAuthRoutes = require('./modules/admin/admin.auth.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
+const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
 
 const app = express();
 
@@ -38,6 +40,9 @@ app.use('/api/v1/auth', authRoutes);
 
 // Admin hidden route — mounted at unpredictable path
 app.use('/api/v1/x-secure/admin-access', adminAuthRoutes);
+
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

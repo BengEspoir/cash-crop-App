@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "../ui/button";
 
-export function ChatInput() {
+export function ChatInput({ disabled = false }) {
   const [value, setValue] = useState("");
 
   return (
@@ -11,12 +11,13 @@ export function ChatInput() {
       <textarea
         value={value}
         onChange={(event) => setValue(event.target.value)}
+        disabled={disabled}
         rows={3}
-        placeholder="Demo-only message composer"
-        className="w-full resize-none border-0 text-[13px] text-[#111827] outline-none"
+        placeholder={disabled ? "Live message sending is not enabled yet" : "Type a message"}
+        className="w-full resize-none border-0 text-[13px] text-[#111827] outline-none disabled:bg-white disabled:text-[#6B7280]"
       />
       <div className="mt-3 flex justify-end">
-        <Button type="button" onClick={() => setValue("")}>Clear</Button>
+        <Button type="button" disabled={disabled} onClick={() => setValue("")}>Clear</Button>
       </div>
     </div>
   );

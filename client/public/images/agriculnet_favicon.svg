@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="AgriculNet favicon">
+  <defs>
+    <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E7D32"/>
+      <stop offset="1" stop-color="#1B5E20"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFD766"/>
+      <stop offset="1" stop-color="#F4B400"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="212" fill="#F7FBF5" stroke="#E4EFE2" stroke-width="14"/>
+  <path d="M118 278 H394 L366 392 Q361 416 333 416 H179 Q151 416 146 392 Z" fill="#FFFFFF" stroke="#1B5E20" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M183 276 C194 207 237 172 256 172 C275 172 318 207 329 276" fill="none" stroke="#1B5E20" stroke-width="24" stroke-linecap="round"/>
+  <path d="M265 74 C383 76 443 158 433 256 C328 252 258 197 265 74 Z" fill="url(#leafGrad)"/>
+  <path d="M265 74 C268 159 316 208 433 256" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+  <path d="M253 126 C163 140 115 205 124 286 C209 286 263 230 253 126 Z" fill="url(#goldGrad)"/>
+  <path d="M253 126 C235 193 191 243 124 286" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+  <g fill="#F4B400" stroke="#FFFFFF" stroke-width="9">
+    <circle cx="355" cy="116" r="21"/>
+    <circle cx="436" cy="202" r="20"/>
+    <circle cx="335" cy="306" r="19"/>
+  </g>
+  <g stroke="#F4B400" stroke-width="12" stroke-linecap="round">
+    <path d="M355 116 L436 202"/>
+    <path d="M436 202 L335 306"/>
+  </g>
+</svg>

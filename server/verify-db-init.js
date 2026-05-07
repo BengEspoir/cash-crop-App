@@ -1,192 +1,208 @@
 #!/usr/bin/env node
 /**
- * Database Initialization Verification Script
- * Checks if all required tables and migrations have been run
+ * Verify the auth-critical Supabase schema used by the local AgriculNet app.
+ * This checks the real tables and columns referenced by the current auth code.
  */
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 const REQUIRED_TABLES = [
   'users',
   'farmer_profiles',
   'buyer_profiles',
-  'tokens_and_otps',
-  'listings',
-  'listing_images',
-  'inquiries',
-  'conversations_messages',
-  'orders',
-  'payments',
-  'inspections',
-  'logistics',
-  'export_documents',
-  'disputes',
-  'reviews',
-  'notifications',
-  'commissions',
-  'saved_listings',
-  'field_agents',
+  'tokens',
+  'otps',
   'audit_logs',
-  'profile_extensions'
+  'activity_events'
 ];
 
-async function verifyDatabase() {
-  console.log('\n🔍 Verifying AgriculNet Database Initialization...\n');
-  console.log('📡 Connecting to Supabase...');
+const REQUIRED_COLUMNS = [
+  ['users', 'reviewed_at', '023_auto_approval_setup.sql'],
+  ['users', 'banned_at', '024_enhanced_verification.sql'],
+  ['users', 'ban_reason', '024_enhanced_verification.sql'],
+  ['farmer_profiles', 'primary_crop', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'harvest_volume', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'export_ready', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'inspection_preference', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'payout_method', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'payout_account_name', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'payout_phone', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'notification_opt_in', '022_profile_extensions.sql'],
+  ['farmer_profiles', 'id_front_url', '024_enhanced_verification.sql'],
+  ['farmer_profiles', 'id_back_url', '024_enhanced_verification.sql'],
+  ['farmer_profiles', 'selfie_url', '024_enhanced_verification.sql'],
+  ['farmer_profiles', 'verification_submitted_at', '024_enhanced_verification.sql'],
+  ['buyer_profiles', 'destination_market', '022_profile_extensions.sql']
+];
 
-  try {
-    // Test connection
-    const { data: connectionTest, error: connError } = await supabase
-      .from('users')
-      .select('count', { count: 'exact' })
-      .limit(0);
+const REQUIRED_ENUM_VALUES = [
+  ['users', 'status', 'pending_identity_verification', '024_enhanced_verification.sql']
+];
 
-    if (connError && connError.code === 'PGRST116') {
-      console.log('❌ Database connection failed: Table "users" does not exist');
-      console.log('   This means migrations have NOT been run.\n');
-      return await reportMissingTables();
-    }
+const REQUIRED_MIGRATIONS = [
+  '001_enums_and_extensions.sql',
+  '002_users_table.sql',
+  '003_farmer_profiles.sql',
+  '004_buyer_profiles.sql',
+  '005_tokens_and_otps.sql',
+  '021_audit_logs.sql',
+  '022_profile_extensions.sql',
+  '023_auto_approval_setup.sql',
+  '024_enhanced_verification.sql',
+  '025_activity_events.sql'
+];
 
-    if (connError) {
-      console.log(`❌ Database connection error: ${connError.message}`);
-      return false;
-    }
+const OPTIONAL_SEEDS = [
+  'server/database/seeds/001_seed_admin.sql',
+  'server/database/seeds/002_seed_regions.sql',
+  'server/database/seeds/003_seed_crops.sql'
+];
 
-    console.log('✅ Connected to Supabase\n');
-
-    // Check for tables
-    console.log('📋 Checking for required tables...\n');
-
-    const { data: tables, error: tablesError } = await supabase
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
-      .in('table_type', ['BASE TABLE', 'TABLE']);
-
-    if (tablesError) {
-      console.log(`⚠️  Could not fetch table list: ${tablesError.message}`);
-      console.log('   Attempting alternative check...\n');
-      return await checkTablesIndividually();
-    }
-
-    const existingTables = tables.map(t => t.table_name);
-    let allExists = true;
-    let missingTables = [];
-
-    for (const table of REQUIRED_TABLES) {
-      const exists = existingTables.some(t => 
-        t === table || t === table.replace(/_/g, '_')
-      );
-
-      if (exists) {
-        console.log(`  ✅ ${table}`);
-      } else {
-        console.log(`  ❌ ${table}`);
-        allExists = false;
-        missingTables.push(table);
-      }
-    }
-
-    console.log('\n' + '='.repeat(60));
-
-    if (allExists) {
-      console.log('✅ DATABASE IS FULLY INITIALIZED');
-      console.log('   All required tables exist');
-      console.log('   You can proceed with testing the API\n');
-      return true;
-    } else {
-      console.log(`❌ DATABASE IS INCOMPLETE`);
-      console.log(`   Missing tables: ${missingTables.join(', ')}`);
-      console.log('\n📝 Next steps:');
-      console.log('   1. Open your Supabase dashboard');
-      console.log('   2. Go to SQL Editor');
-      console.log('   3. Run migration files in this order:');
-      console.log('      - 001_enums_and_extensions.sql');
-      console.log('      - 002_users_table.sql');
-      console.log('      - 003_farmer_profiles.sql through 022_profile_extensions.sql');
-      console.log('   4. Come back and run this script again\n');
-      return false;
-    }
-  } catch (error) {
-    console.log(`❌ Verification failed: ${error.message}\n`);
-    console.log('Possible issues:');
-    console.log('  • SUPABASE_URL is not set');
-    console.log('  • SUPABASE_SERVICE_ROLE_KEY is not configured');
-    console.log('  • Network connectivity issue\n');
-    return false;
-  }
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY in server/.env');
+  process.exit(1);
 }
 
-async function checkTablesIndividually() {
-  console.log('Checking tables individually...\n');
-  let foundTables = [];
-  let missingTables = [];
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
+
+const hasMissingTable = (error) => {
+  const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+  return (
+    error?.code === 'PGRST205' ||
+    message.includes('relation') ||
+    message.includes('does not exist')
+  );
+};
+
+const hasMissingColumn = (error) => {
+  const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+  return (
+    error?.code === '42703' ||
+    error?.code === 'PGRST204' ||
+    message.includes('column') ||
+    message.includes('could not find')
+  );
+};
+
+const checkTable = async (table) => {
+  const { error } = await supabase.from(table).select('*', { head: true, count: 'exact' });
+
+  if (!error) {
+    return { ok: true };
+  }
+
+  if (hasMissingTable(error)) {
+    return { ok: false, reason: 'missing-table' };
+  }
+
+  return { ok: false, reason: error.message || 'unknown-error' };
+};
+
+const checkColumn = async (table, column) => {
+  const { error } = await supabase.from(table).select(column).limit(1);
+
+  if (!error) {
+    return { ok: true };
+  }
+
+  if (hasMissingColumn(error)) {
+    return { ok: false, reason: 'missing-column' };
+  }
+
+  if (hasMissingTable(error)) {
+    return { ok: false, reason: 'missing-table' };
+  }
+
+  return { ok: false, reason: error.message || 'unknown-error' };
+};
+
+const checkEnumValue = async (table, column, value) => {
+  const { error } = await supabase.from(table).select(column).eq(column, value).limit(1);
+
+  if (!error) {
+    return { ok: true };
+  }
+
+  if (hasMissingColumn(error) || hasMissingTable(error)) {
+    return { ok: false, reason: error.message || 'missing schema' };
+  }
+
+  const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+  if (message.includes('invalid input value for enum')) {
+    return { ok: false, reason: 'missing-enum-value' };
+  }
+
+  return { ok: false, reason: error.message || 'unknown-error' };
+};
+
+async function verify() {
+  console.log('\nVerifying AgriculNet auth schema...\n');
+  console.log(`Supabase URL: ${supabaseUrl}`);
+  console.log('\nRequired migrations for auth-backed local flows:');
+  REQUIRED_MIGRATIONS.forEach((migration) => console.log(`  - ${migration}`));
+
+  console.log('\nChecking required tables:\n');
+  let hasFailures = false;
 
   for (const table of REQUIRED_TABLES) {
-    try {
-      const { error } = await supabase
-        .from(table)
-        .select('count', { count: 'exact' })
-        .limit(0);
-
-      if (!error) {
-        console.log(`  ✅ ${table}`);
-        foundTables.push(table);
-      } else if (error.code === 'PGRST116') {
-        console.log(`  ❌ ${table}`);
-        missingTables.push(table);
-      } else {
-        console.log(`  ⚠️  ${table} (error: ${error.code})`);
-      }
-    } catch (e) {
-      console.log(`  ❌ ${table}`);
-      missingTables.push(table);
+    const result = await checkTable(table);
+    if (result.ok) {
+      console.log(`  OK   ${table}`);
+      continue;
     }
+
+    hasFailures = true;
+    console.log(`  FAIL ${table} (${result.reason})`);
   }
 
-  console.log('\n' + '='.repeat(60));
-  console.log(`Found: ${foundTables.length}/${REQUIRED_TABLES.length} tables\n`);
+  console.log('\nChecking required columns from later auth migrations:\n');
+  for (const [table, column, migration] of REQUIRED_COLUMNS) {
+    const result = await checkColumn(table, column);
+    if (result.ok) {
+      console.log(`  OK   ${table}.${column}`);
+      continue;
+    }
 
-  if (missingTables.length === 0) {
-    console.log('✅ DATABASE IS FULLY INITIALIZED\n');
-    return true;
-  } else {
-    console.log(`❌ Missing ${missingTables.length} tables:\n   ${missingTables.join(', ')}\n`);
-    return false;
+    hasFailures = true;
+    console.log(`  FAIL ${table}.${column} (${migration}, ${result.reason})`);
   }
-}
 
-async function reportMissingTables() {
-  console.log('⚠️  Core "users" table is missing\n');
-  console.log('This indicates migrations have NOT been executed.\n');
-  console.log('📝 To initialize the database:\n');
-  console.log('1. Open Supabase Dashboard:');
-  console.log('   https://app.supabase.com/projects\n');
-  console.log('2. Select your project (jftggxxzqtmmqktvnlwc)\n');
-  console.log('3. Go to SQL Editor in the left sidebar\n');
-  console.log('4. For EACH migration file (in order):');
-  console.log('   - Open: server/database/migrations/NNN_name.sql');
-  console.log('   - Copy entire content');
-  console.log('   - Paste into SQL Editor');
-  console.log('   - Click "RUN" button\n');
-  console.log('5. Start with: 001_enums_and_extensions.sql (REQUIRED FIRST)\n');
-  console.log('6. Then run: 002_users_table.sql through 022_profile_extensions.sql\n');
-  console.log('7. Run this verification script again to confirm\n');
-  return false;
-}
+  console.log('\nChecking required enum values:\n');
+  for (const [table, column, value, migration] of REQUIRED_ENUM_VALUES) {
+    const result = await checkEnumValue(table, column, value);
+    if (result.ok) {
+      console.log(`  OK   ${table}.${column} includes ${value}`);
+      continue;
+    }
 
-// Run verification
-verifyDatabase()
-  .then(success => {
-    process.exit(success ? 0 : 1);
-  })
-  .catch(error => {
-    console.error('Fatal error:', error);
+    hasFailures = true;
+    console.log(`  FAIL ${table}.${column}=${value} (${migration}, ${result.reason})`);
+  }
+
+  console.log('\nOptional seeds:');
+  OPTIONAL_SEEDS.forEach((seed) => console.log(`  - ${seed}`));
+  console.log('    001_seed_admin.sql is needed for seeded admin login.');
+  console.log('    002_seed_regions.sql and 003_seed_crops.sql are marketplace data seeds, not auth prerequisites.');
+
+  if (hasFailures) {
+    console.log('\nResult: auth schema is incomplete for the current local app.');
+    console.log('Apply the missing migrations in Supabase SQL Editor, then re-run this script.\n');
     process.exit(1);
-  });
+  }
+
+  console.log('\nResult: auth schema is ready for local registration, verification, sign-in, and admin login.\n');
+}
+
+verify().catch((error) => {
+  console.error('\nVerification failed:', error.message);
+  process.exit(1);
+});

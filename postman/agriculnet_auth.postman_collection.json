@@ -11,7 +11,9 @@
     { "key": "refresh_token", "value": "", "type": "string" },
     { "key": "farmer_id", "value": "", "type": "string" },
     { "key": "buyer_id", "value": "", "type": "string" },
-    { "key": "admin_key", "value": "agriculnet-admin-secret-2025", "type": "string" }
+    { "key": "admin_key", "value": "", "type": "string" },
+    { "key": "admin_identifier", "value": "", "type": "string" },
+    { "key": "admin_password", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -34,7 +36,7 @@
         },
         {
           "name": "Register Buyer",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Alain\",\n  \"lastName\": \"Tabe\",\n  \"phone\": \"+237699000456\",\n  \"email\": \"alain@test.agriculnet.cm\",\n  \"password\": \"BuyerPass@2025\",\n  \"confirmPassword\": \"BuyerPass@2025\",\n  \"buyerType\": \"local\",\n  \"country\": \"Cameroon\",\n  \"city\": \"Douala\",\n  \"agreeToTerms\": true\n}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/register/buyer", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "register", "buyer"] } },
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Alain\",\n  \"lastName\": \"Tabe\",\n  \"phone\": \"+237699000456\",\n  \"email\": \"alain@test.agriculnet.cm\",\n  \"password\": \"BuyerPass@2025\",\n  \"confirmPassword\": \"BuyerPass@2025\",\n  \"buyerType\": \"local\",\n  \"country\": \"Cameroon\",\n  \"countryCode\": \"CM\",\n  \"city\": \"Douala\",\n  \"agreeToTerms\": true\n}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/register/buyer", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "register", "buyer"] } },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "const d = pm.response.json().data; if (d?.user) pm.collectionVariables.set('buyer_id', d.user.id);"], "type": "text/javascript" } }]
         }
       ]
@@ -83,7 +85,7 @@
       "item": [
         {
           "name": "Admin Login",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-admin-key", "value": "{{admin_key}}" }], "body": { "mode": "raw", "raw": "{\"identifier\":\"admin@agriculnet.cm\",\"password\":\"Admin@AgriculNet2025!\"}" }, "url": { "raw": "{{base_url}}/api/v1/x-secure/admin-access/authenticate", "host": ["{{base_url}}"], "path": ["api", "v1", "x-secure", "admin-access", "authenticate"] } },
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-admin-key", "value": "{{admin_key}}" }], "body": { "mode": "raw", "raw": "{\"identifier\":\"{{admin_identifier}}\",\"password\":\"{{admin_password}}\"}" }, "url": { "raw": "{{base_url}}/api/v1/x-secure/admin-access/authenticate", "host": ["{{base_url}}"], "path": ["api", "v1", "x-secure", "admin-access", "authenticate"] } },
           "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const role = pm.response.json().data?.user?.role; pm.expect(role).to.be.oneOf(['admin','super_admin']);"], "type": "text/javascript" } }]
         }
       ]

@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandLogo } from "@/components/common/BrandLogo";
 import axios from "axios";
 
 const adminLoginSchema = z.object({
@@ -36,7 +37,12 @@ export default function AdminPortalPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
-      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "agriculnet-admin-secret-2025";
+      const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
+
+      if (!adminKey) {
+        setSubmitError("Admin access key is not configured.");
+        return;
+      }
 
       const response = await axios.post(
         `${apiUrl}/x-secure/admin-access/authenticate`,
@@ -66,7 +72,9 @@ export default function AdminPortalPage() {
     <div className="min-h-screen bg-[#0D3D22] flex items-center justify-center px-4">
       <Card className="w-full max-w-md rounded-[20px] p-8 bg-white">
         <div className="text-center mb-8">
-          <h1 className="text-[#1A6B3C] text-2xl font-bold font-display">AgriculNet</h1>
+          <div className="mx-auto flex justify-center">
+            <BrandLogo className="h-12 w-[170px]" priority />
+          </div>
           <div className="mt-4 inline-block px-4 py-1 bg-[#FDECEA] text-[#922B21] rounded-full text-sm font-medium">
             Restricted Access
           </div>
@@ -77,6 +85,7 @@ export default function AdminPortalPage() {
             <Label>Email or Phone</Label>
             <Input
               placeholder="Enter your credentials"
+              autoComplete="username"
               {...register("identifier")}
             />
             {errors.identifier && (
@@ -89,6 +98,7 @@ export default function AdminPortalPage() {
             <Input
               type="password"
               placeholder="Enter your password"
+              autoComplete="current-password"
               {...register("password")}
             />
             {errors.password && (

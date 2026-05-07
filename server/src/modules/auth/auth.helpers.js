@@ -55,6 +55,8 @@ const toCropList = (value) => {
 };
 
 const shouldAdvanceToActive = (user) => {
+  // Only buyers (local and international) get auto-approved after verification
+  // Farmers must remain in PENDING_REVIEW for manual admin approval after ID submission
   return (
     (user.role === USER_ROLES.LOCAL_BUYER || user.role === USER_ROLES.INTERNATIONAL_BUYER) &&
     user.phone_verified &&
@@ -62,9 +64,14 @@ const shouldAdvanceToActive = (user) => {
   );
 };
 
-const shouldAdvanceToPendingReview = (user) => {
-  // Farmers need manual review, buyers get auto-approved
-  return user.role === USER_ROLES.FARMER && user.phone_verified && user.email_verified;
+const shouldAdvanceToIdentityVerification = (user) => {
+  // Farmers move to identity verification after phone and email are verified
+  return (
+    user.role === USER_ROLES.FARMER && 
+    user.phone_verified && 
+    user.email_verified && 
+    user.status === USER_STATUS.PENDING_VERIFICATION
+  );
 };
 
 const getNextStatus = (user) => {
@@ -72,11 +79,19 @@ const getNextStatus = (user) => {
     return USER_STATUS.ACTIVE;
   }
 
-  if (shouldAdvanceToPendingReview(user)) {
-    return USER_STATUS.PENDING_REVIEW;
+  if (shouldAdvanceToIdentityVerification(user)) {
+    return USER_STATUS.PENDING_IDENTITY_VERIFICATION;
   }
 
   return user.status || USER_STATUS.PENDING_VERIFICATION;
+};
+
+const getNextStep = (user) => {
+  if (!user.email_verified) {
+    return 'verify_email';
+  }
+
+  return 'dashboard';
 };
 
 const sanitizeUser = (user) => {
@@ -93,7 +108,8 @@ module.exports = {
   splitContactName,
   toCropList,
   shouldAdvanceToActive,
-  shouldAdvanceToPendingReview,
+  shouldAdvanceToIdentityVerification,
   getNextStatus,
+  getNextStep,
   sanitizeUser
 };

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "../common/BrandLogo";
 
 const columns = [
   {
@@ -44,9 +45,8 @@ export function Footer() {
     <footer className="mt-16 bg-green-900 text-white">
       <div className="content-shell grid gap-10 py-12 lg:grid-cols-[1.15fr_repeat(4,1fr)]">
         <div className="space-y-4">
-          <Link href="/" className="inline-flex font-display text-[22px] leading-none">
-            <span className="text-white">Agricul</span>
-            <span className="text-gold-400">Net</span>
+          <Link href="/" className="inline-flex rounded-[10px] bg-white px-3 py-2">
+            <BrandLogo className="h-10 w-[150px]" />
           </Link>
           <p className="max-w-sm text-[14px] leading-6 text-white/84">
             Trusted crop sourcing for local and international buyers, with verified farmers, protected payments, and coordinated logistics.

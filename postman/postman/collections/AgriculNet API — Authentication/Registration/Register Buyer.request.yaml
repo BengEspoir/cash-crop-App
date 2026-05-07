@@ -17,6 +17,7 @@ body:
       "confirmPassword": "BuyerPass@2025",
       "buyerType": "local",
       "country": "Cameroon",
+      "countryCode": "CM",
       "city": "Douala",
       "agreeToTerms": true
     }

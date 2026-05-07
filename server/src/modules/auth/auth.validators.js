@@ -1,10 +1,21 @@
 const Joi = require('joi');
 const { CAMEROON_REGIONS, BUYER_TYPES } = require('../../config/constants');
+const { getCountryByCode, validatePhoneForCountry } = require('../../utils/countries');
 
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const phonePattern = /^\+237[0-9]{9}$/;
-const optionalEmail = Joi.string().email().allow('', null);
+const cameroonNationalPattern = /^6\d{8}$/;
 const acceptedTerms = Joi.boolean().valid(true);
+
+const normalizeCountryCode = (value = '') => String(value).trim().toUpperCase();
+
+const stripToDigits = (value = '') => String(value).replace(/\D/g, '');
+
+const looksLikeCameroonPhone = (value = '') => {
+  const digits = stripToDigits(value);
+  const nationalNumber = digits.startsWith('237') ? digits.slice(3) : digits;
+  return cameroonNationalPattern.test(nationalNumber);
+};
 
 const registerFarmerSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
@@ -12,7 +23,7 @@ const registerFarmerSchema = Joi.object({
   phone: Joi.string().pattern(phonePattern).required().messages({
     'string.pattern.base': 'Phone must be a valid Cameroon number (+237XXXXXXXXX)'
   }),
-  email: optionalEmail.optional(),
+  email: Joi.string().email().required(),
   password: Joi.string().min(8).max(128).pattern(passwordPattern).required().messages({
     'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
   }),
@@ -46,9 +57,7 @@ const registerBuyerSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).optional(),
   lastName: Joi.string().min(2).max(100).optional(),
   contactName: Joi.string().min(2).max(200).optional(),
-  phone: Joi.string().pattern(phonePattern).required().messages({
-    'string.pattern.base': 'Phone must be a valid Cameroon number (+237XXXXXXXXX)'
-  }),
+  phone: Joi.string().required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).max(128).pattern(passwordPattern).required().messages({
     'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
@@ -58,6 +67,7 @@ const registerBuyerSchema = Joi.object({
   }),
   buyerType: Joi.string().valid(...Object.values(BUYER_TYPES)).required(),
   country: Joi.string().min(2).max(100).required(),
+  countryCode: Joi.string().length(2).optional(),
   companyName: Joi.string().max(200).allow('', null).optional(),
   preferredCrops: Joi.array().items(Joi.string()).optional(),
   buyingFocus: Joi.string().max(255).allow('', null).optional(),
@@ -71,6 +81,63 @@ const registerBuyerSchema = Joi.object({
     if (!value.contactName && !hasExplicitName) {
       return helpers.error('any.custom', { message: 'Provide a contact name or separate first and last names' });
     }
+
+    const countryCode = normalizeCountryCode(value.countryCode);
+
+    if (value.buyerType === BUYER_TYPES.LOCAL || value.buyerType === BUYER_TYPES.BUSINESS) {
+      if (!phonePattern.test(value.phone)) {
+        return helpers.error('any.custom', {
+          message: 'Local buyers must use a valid Cameroon phone number (+237XXXXXXXXX)'
+        });
+      }
+
+      if (countryCode && countryCode !== 'CM') {
+        return helpers.error('any.custom', {
+          message: 'Local buyers must use countryCode CM'
+        });
+      }
+
+      return value;
+    }
+
+    if (!countryCode) {
+      return helpers.error('any.custom', {
+        message: 'countryCode is required for international buyers'
+      });
+    }
+
+    if (countryCode === 'CM' || String(value.country).trim().toLowerCase() === 'cameroon') {
+      return helpers.error('any.custom', {
+        message: 'International buyers must choose a country other than Cameroon'
+      });
+    }
+
+    if (looksLikeCameroonPhone(value.phone)) {
+      return helpers.error('any.custom', {
+        message: 'Cameroon phone numbers are only allowed for local buyers'
+      });
+    }
+
+    const country = getCountryByCode(countryCode);
+    if (!country) {
+      return helpers.error('any.custom', {
+        message: 'countryCode is not supported'
+      });
+    }
+
+    let digits = stripToDigits(value.phone);
+    const dialDigits = stripToDigits(country.dialCode);
+    if (digits.startsWith(dialDigits)) {
+      digits = digits.slice(dialDigits.length);
+    }
+
+    const phoneCheck = validatePhoneForCountry(digits, countryCode);
+    if (!phoneCheck.valid) {
+      return helpers.error('any.custom', {
+        message: `Phone must be valid for ${country.name}`
+      });
+    }
+
     return value;
   })
   .or('agreedToPolicy', 'agreeToTerms')

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Leaf } from "lucide-react";
 import { cn } from "../../lib/utils";
 import useAuth from "../../hooks/useAuth";
+import { BrandLogo } from "../common/BrandLogo";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { DashboardTopBar } from "./DashboardTopBar";
 import { SkipToContent } from "../a11y/SkipToContent";
@@ -20,11 +20,10 @@ export function SidebarPanel({ heading, navigation, pathname }) {
         href="/"
         className="focus-ring flex items-center gap-3 rounded-md focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D3D22]"
       >
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-[#E8B84B]">
-          <Leaf className="h-5 w-5" />
-        </span>
         <div>
-          <p className="font-display text-[20px] leading-none">AgriculNet</p>
+          <span className="inline-flex rounded-[10px] bg-white px-2.5 py-1.5">
+            <BrandLogo className="h-9 w-[140px]" />
+          </span>
           <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#F7EDD5]">{heading}</p>
         </div>
       </Link>
@@ -94,8 +93,16 @@ export function DashboardShell({ heading, navigation, allowedRoles, authRedirect
 
     if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
       router.replace(redirectToDashboard());
+      return;
     }
-  }, [allowedRoles, authRedirect, ready, redirectToDashboard, router, user]);
+
+    if (user && !user.email_verified) {
+      const nextRoute = redirectToDashboard();
+      if (nextRoute !== pathname) {
+        router.replace(nextRoute);
+      }
+    }
+  }, [allowedRoles, authRedirect, pathname, ready, redirectToDashboard, router, user]);
 
   const currentItem = useMemo(
     () => navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)),

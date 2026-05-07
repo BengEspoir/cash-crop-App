@@ -12,9 +12,11 @@ import { PhoneInput } from "../../../../components/auth/PhoneInput";
 import { PasswordInput } from "../../../../components/auth/PasswordInput";
 import { RoleSwitcher } from "../../../../components/auth/RoleSwitcher";
 import { StepIndicator } from "../../../../components/auth/StepIndicator";
-import { registerBuyerUnifiedSchema } from "../../../../lib/validators";
-import { getInternationalCountries, getLocalCountry, getCountryByCode } from "../../../../lib/countries";
+import { registerBuyerSchemas, registerBuyerUnifiedSchema } from "../../../../lib/validators";
+import { getInternationalCountries, getCountryByCode } from "../../../../lib/countries";
+import { getAuthNextRoute } from "../../../../lib/authRoutes";
 import useAuthStore from "../../../../store/authStore";
+import toast from "react-hot-toast";
 
 // Country Select Component for International Buyers
 function CountrySelect({ value, onChange, error }) {
@@ -55,7 +57,9 @@ export default function RegisterBuyerPage() {
     handleSubmit,
     setValue,
     watch,
-    trigger,
+    setError,
+    clearErrors,
+    getValues,
     formState: { errors, isSubmitting, isValid },
   } = useForm({
     resolver: zodResolver(registerBuyerUnifiedSchema),
@@ -118,25 +122,37 @@ export default function RegisterBuyerPage() {
   };
 
   const validateStep = async (stepNum) => {
-    // Define which fields belong to each step
-    const step0Fields = ["companyName", "contactName", "country", "phone", "email", "password", "confirmPassword"];
+    const step0Fields = ["buyerType", "companyName", "contactName", "country", "countryCode", "phone", "email", "password", "confirmPassword"];
     const step1Fields = ["buyingFocus", "monthlyVolume", "destination", "agreedToPolicy"];
+    const fieldsToCheck = [step0Fields, step1Fields][stepNum] || [];
+    const stepSchema = registerBuyerSchemas[stepNum];
 
-    const fieldsToCheck = [step0Fields, step1Fields][stepNum];
+    clearErrors(fieldsToCheck);
 
-    // Trigger validation only for current step fields
-    const validationResults = await Promise.all(
-      fieldsToCheck.map((field) => trigger(field))
-    );
+    if (!stepSchema) {
+      return true;
+    }
 
-    return validationResults.every((result) => result === true);
+    const result = stepSchema.safeParse(getValues());
+    if (result.success) {
+      return true;
+    }
+
+    result.error.issues.forEach((issue) => {
+      const field = issue.path[0];
+      if (typeof field === "string") {
+        setError(field, { type: "manual", message: issue.message });
+      }
+    });
+
+    return false;
   };
 
   const submitStep = async (values) => {
     setSubmitState({ error: "" });
     
     // Validate current step before proceeding
-    const isStepValid = await validateStep(currentStep, values);
+    const isStepValid = await validateStep(currentStep);
     if (!isStepValid) {
       return; // Validation failed, stay on current step
     }
@@ -153,7 +169,14 @@ export default function RegisterBuyerPage() {
       return;
     }
 
-    router.push("/verify-phone");
+    if (result.data.emailDelivery?.status === "failed") {
+      toast.error(result.data.emailDelivery.message || "Account created, but verification email could not be sent.", {
+        duration: 8000,
+      });
+    } else {
+      toast.success("Account created. Verify your email to enter your dashboard.");
+    }
+    router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
   };
 
   return (
@@ -183,12 +206,12 @@ export default function RegisterBuyerPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Company or Buyer Name *</Label>
-                <Input placeholder="Agri Export Ltd." {...register("companyName")} />
+                <Input placeholder="Agri Export Ltd." autoComplete="organization" {...register("companyName")} />
                 {errors.companyName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.companyName.message}</p> : null}
               </div>
               <div>
                 <Label>Contact Name *</Label>
-                <Input placeholder="Amina Kofi" {...register("contactName")} />
+                <Input placeholder="Amina Kofi" autoComplete="name" {...register("contactName")} />
                 {errors.contactName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.contactName.message}</p> : null}
               </div>
             </div>
@@ -227,7 +250,7 @@ export default function RegisterBuyerPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Email Address *</Label>
-                <Input placeholder="buyer@example.com" {...register("email")} />
+                <Input placeholder="example@yahoo.com" autoComplete="email" {...register("email")} />
                 {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
               </div>
               <div className="rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-4 text-[13px] leading-6 text-[#374151]">
@@ -236,8 +259,8 @@ export default function RegisterBuyerPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <PasswordInput label="Password *" placeholder="Minimum 8 characters" error={errors.password?.message} {...register("password")} />
-              <PasswordInput label="Confirm Password *" placeholder="Repeat password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+              <PasswordInput label="Password *" placeholder="Minimum 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
+              <PasswordInput label="Confirm Password *" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
             </div>
           </>
         ) : null}

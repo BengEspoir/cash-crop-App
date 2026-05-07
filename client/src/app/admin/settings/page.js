@@ -8,7 +8,7 @@ export default function AdminSettingsPage() {
       <PageHeader
         eyebrow="Admin settings"
         title="Operational controls and environment notes"
-        description="This settings surface closes the admin route group and documents the local hybrid setup: auth is real-backed, broader operations are demo-backed."
+        description="Admin controls are connected to the authenticated backend and show operational data only when records exist."
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -17,7 +17,7 @@ export default function AdminSettingsPage() {
           <div className="mt-5 grid gap-4">
             <label className="space-y-2">
               <span className="text-[13px] font-medium text-[#374151]">Admin route secret label</span>
-              <Input defaultValue="x-secure/admin-access" />
+              <Input placeholder="Configured server route" autoComplete="off" />
             </label>
             <label className="flex items-center gap-3 rounded-[12px] bg-[#F9FAFB] px-4 py-3">
               <input type="checkbox" defaultChecked className="h-4 w-4 accent-[#1A6B3C]" />
@@ -30,9 +30,9 @@ export default function AdminSettingsPage() {
           <h2 className="font-display text-[22px] text-[#111827]">Local preview boundary</h2>
           <div className="mt-5 space-y-3">
             {[
-              "Authentication and admin-auth routes use the backend locally.",
-              "Orders, listings, messages, logistics, and analytics render from centralized demo data.",
-              "This keeps the whole frontend previewable while unfinished backend domains stay explicit.",
+              "Authentication, admin review, and dashboard routes use the backend locally.",
+              "Orders, listings, messages, logistics, and analytics render from database-backed dashboard endpoints.",
+              "Empty states mean no live records have been captured yet.",
             ].map((item) => (
               <div key={item} className="rounded-[12px] bg-[#F9FAFB] px-4 py-3 text-[13px] leading-6 text-[#374151]">
                 {item}

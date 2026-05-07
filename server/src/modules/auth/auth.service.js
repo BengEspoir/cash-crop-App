@@ -57,7 +57,11 @@ const createOtpForUser = async (user, purpose) => {
     expires_at: expiresAt.toISOString()
   });
 
-  return sms.sendOtpSms(user.phone, otpCode);
+  const delivery = await sms.sendOtpSms(user.phone, otpCode);
+  if (delivery?.devHints) {
+    delivery.devHints.otpCode = otpCode;
+  }
+  return delivery;
 };
 
 const createEmailVerificationForUser = async (user) => {
@@ -118,6 +122,120 @@ const createSession = async (user, rememberMe = false) => {
   };
 };
 
+const runDelivery = async (label, task) => {
+  try {
+    return await task();
+  } catch (err) {
+    console.error(`${label} delivery error:`, err.message);
+    return {
+      success: false,
+      delivered: false,
+      provider: 'unavailable',
+      error: err.message
+    };
+  }
+};
+
+const sanitizeDeliveryError = (message = '', channel = 'delivery') => {
+  if (/535-5\.7\.8|Username and Password not accepted|Invalid login/i.test(message)) {
+    return 'Gmail rejected the configured SMTP credentials. Update SMTP_PASS to a valid Gmail App Password and restart the server.';
+  }
+
+  if (/No email provider configured/i.test(message)) {
+    return 'No email provider is configured for verification emails.';
+  }
+
+  if (/No SMS provider configured/i.test(message)) {
+    return 'No SMS provider is configured for verification codes.';
+  }
+
+  if (/InvalidSenderId/i.test(message)) {
+    return 'Africa\'s Talking rejected the SMS sender ID. Keep AT_SENDER_ID blank until AgriculNet is approved, then restart the server.';
+  }
+
+  if (/Insufficient|balance|credit/i.test(message)) {
+    return 'Africa\'s Talking could not send the SMS because the wallet balance or SMS credit is insufficient.';
+  }
+
+  if (/InvalidPhoneNumber|Invalid phone|not a valid phone/i.test(message)) {
+    return 'Africa\'s Talking rejected the phone number. Use international format, for example +2376XXXXXXXX.';
+  }
+
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT/i.test(message)) {
+    return `${channel === 'email' ? 'Email' : 'SMS'} provider could not be reached. Check network access and provider credentials.`;
+  }
+
+  return message || `${channel === 'email' ? 'Email' : 'SMS'} delivery failed.`;
+};
+
+const buildDeliveryStatus = (delivery, channel) => {
+  if (!delivery) {
+    return {
+      channel,
+      status: 'failed',
+      delivered: false,
+      provider: 'unknown',
+      message: `${channel === 'email' ? 'Email' : 'SMS'} delivery status is unavailable.`
+    };
+  }
+
+  if (delivery.success === false) {
+    return {
+      channel,
+      status: 'failed',
+      delivered: false,
+      provider: delivery.provider || 'unknown',
+      message: sanitizeDeliveryError(delivery.error, channel)
+    };
+  }
+
+  if (delivery.provider === 'development-fallback') {
+    return {
+      channel,
+      status: 'development-fallback',
+      delivered: false,
+      provider: delivery.provider || 'development-fallback',
+      message: `${channel === 'email' ? 'Email' : 'SMS'} was not delivered by a live provider. Use the development hint to continue locally.`
+    };
+  }
+
+  if (delivery.delivered === false) {
+    return {
+      channel,
+      status: 'failed',
+      delivered: false,
+      provider: delivery.provider || 'unknown',
+      message: sanitizeDeliveryError(delivery.error || delivery.status, channel)
+    };
+  }
+
+  return {
+    channel,
+    status: 'delivered',
+    delivered: true,
+    provider: delivery.provider || 'unknown',
+    messageId: delivery.messageId || null,
+    fallback: Boolean(delivery.fallback)
+  };
+};
+
+const isDeliveryFailed = (status) => status?.status === 'failed';
+
+const buildAuthPayload = (user, extra = {}) => ({
+  user: helpers.sanitizeUser(user),
+  phone: helpers.maskPhone(user.phone),
+  email: user.email ? helpers.maskEmail(user.email) : null,
+  nextStep: helpers.getNextStep(user),
+  ...extra
+});
+
+const formatUserName = (user) => {
+  return [user.first_name, user.last_name].filter(Boolean).join(' ') ||
+    user.email ||
+    user.phone ||
+    'Unknown user';
+};
+
 const syncUserStatus = async (user) => {
   const nextStatus = helpers.getNextStatus(user);
 
@@ -130,17 +248,15 @@ const syncUserStatus = async (user) => {
 
 const registerFarmer = async (data, req) => {
   const phone = helpers.normalizePhone(data.phone);
-  const email = data.email ? data.email.toLowerCase() : null;
+  const email = data.email.toLowerCase();
   const existingPhone = await repository.findUserByPhone(phone);
   if (existingPhone) {
     throw new AppError('Phone number already registered', 409, ERROR_CODES.DUPLICATE_PHONE);
   }
 
-  if (email) {
-    const existingEmail = await repository.findUserByEmail(email);
-    if (existingEmail) {
-      throw new AppError('Email already registered', 409, ERROR_CODES.DUPLICATE_EMAIL);
-    }
+  const existingEmail = await repository.findUserByEmail(email);
+  if (existingEmail) {
+    throw new AppError('Email already registered', 409, ERROR_CODES.DUPLICATE_EMAIL);
   }
 
   const passwordHash = await bcrypt.hash(data.password, env.BCRYPT_SALT_ROUNDS);
@@ -154,7 +270,7 @@ const registerFarmer = async (data, req) => {
     email,
     password_hash: passwordHash,
     phone_verified: false,
-    email_verified: !email,
+    email_verified: false,
     region: data.region,
     city: data.city,
     country: 'Cameroon'
@@ -174,30 +290,44 @@ const registerFarmer = async (data, req) => {
     notification_opt_in: typeof data.notificationOptIn === 'boolean' ? data.notificationOptIn : true
   });
 
-  const smsDelivery = await createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION);
-  const emailDelivery = email ? await createEmailVerificationForUser(user) : null;
+  const smsDelivery = await runDelivery(
+    'Farmer registration SMS',
+    () => createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION)
+  );
+  const emailDelivery = await runDelivery(
+    'Farmer verification email',
+    () => createEmailVerificationForUser(user)
+  );
+  const smsDeliveryStatus = buildDeliveryStatus(smsDelivery, 'sms');
+  const emailDeliveryStatus = buildDeliveryStatus(emailDelivery, 'email');
 
   await repository.logAuditEvent(user.id, 'FARMER_REGISTERED', req, { phone, email });
+  await repository.logActivityEvent(user.id, 'FARMER_REGISTERED', req, {
+    role: user.role,
+    entityType: 'user',
+    entityId: user.id
+  });
 
   return withDevHints({
-    user: helpers.sanitizeUser(user),
-    message: email
-      ? 'Registration successful. Verify your phone first, then confirm your email.'
-      : 'Registration successful. Please verify your phone number.',
-    phone: helpers.maskPhone(phone),
-    nextStep: 'verify_phone'
+    ...buildAuthPayload(user, { nextStep: 'verify_email' }),
+    message: isDeliveryFailed(emailDeliveryStatus)
+      ? 'Registration successful, but verification email could not be sent.'
+      : 'Registration successful.',
+    emailDelivery: emailDeliveryStatus,
+    smsDelivery: smsDeliveryStatus
   }, smsDelivery, emailDelivery);
 };
 
 const registerBuyer = async (data, req) => {
-  // Handle phone normalization based on buyer type
+  const normalizedCountryCode = data.countryCode
+    ? String(data.countryCode).trim().toUpperCase()
+    : null;
+
   let phone;
-  if (data.buyerType === BUYER_TYPES.INTERNATIONAL && data.countryCode) {
-    // Use new phone validator for international numbers
+  if (data.buyerType === 'international' && normalizedCountryCode) {
     const { formatPhoneInternational } = require('../../utils/phoneValidator');
-    phone = formatPhoneInternational(data.phone, data.countryCode);
+    phone = formatPhoneInternational(data.phone, normalizedCountryCode);
   } else {
-    // Use legacy helper for local buyers (Cameroon)
     phone = helpers.normalizePhone(data.phone);
   }
   
@@ -217,9 +347,7 @@ const registerBuyer = async (data, req) => {
     ? helpers.splitContactName(data.contactName)
     : { firstName: data.firstName, lastName: data.lastName };
 
-  let role = USER_ROLES.LOCAL_BUYER;
-  if (data.buyerType === BUYER_TYPES.INTERNATIONAL) role = USER_ROLES.INTERNATIONAL_BUYER;
-  if (data.buyerType === BUYER_TYPES.BUSINESS) role = USER_ROLES.LOCAL_BUYER;
+  const role = data.buyerType === 'international' ? USER_ROLES.INTERNATIONAL_BUYER : USER_ROLES.LOCAL_BUYER;
 
   const user = await repository.createUser({
     role,
@@ -245,20 +373,36 @@ const registerBuyer = async (data, req) => {
     destination_market: data.destination || null
   });
 
-  const smsDelivery = await createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION);
-  const emailDelivery = await createEmailVerificationForUser(user);
+  const smsDelivery = await runDelivery(
+    'Buyer registration SMS',
+    () => createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION)
+  );
+  const emailDelivery = await runDelivery(
+    'Buyer verification email',
+    () => createEmailVerificationForUser(user)
+  );
+  const smsDeliveryStatus = buildDeliveryStatus(smsDelivery, 'sms');
+  const emailDeliveryStatus = buildDeliveryStatus(emailDelivery, 'email');
 
   await repository.logAuditEvent(user.id, 'BUYER_REGISTERED', req, {
     phone,
     email,
     buyerType: data.buyerType
   });
+  await repository.logActivityEvent(user.id, 'BUYER_REGISTERED', req, {
+    role: user.role,
+    entityType: 'user',
+    entityId: user.id,
+    buyerType: data.buyerType
+  });
 
   return withDevHints({
-    user: helpers.sanitizeUser(user),
-    message: 'Registration successful. Verify your phone first, then confirm your email.',
-    phone: helpers.maskPhone(phone),
-    nextStep: 'verify_phone'
+    ...buildAuthPayload(user, { nextStep: 'verify_email' }),
+    message: isDeliveryFailed(emailDeliveryStatus)
+      ? 'Registration successful, but verification email could not be sent.'
+      : 'Registration successful.',
+    emailDelivery: emailDeliveryStatus,
+    smsDelivery: smsDeliveryStatus
   }, smsDelivery, emailDelivery);
 };
 
@@ -293,32 +437,17 @@ const login = async (identifier, password, rememberMe, req) => {
   await repository.resetFailedAttempts(user.id);
   const refreshedUser = await repository.updateLastLogin(user.id);
 
-  if (!refreshedUser.phone_verified) {
-    const smsDelivery = await createOtpForUser(refreshedUser, OTP_PURPOSE.PHONE_VERIFICATION);
-
-    throw new AppError(
-      'Phone verification required',
-      403,
-      ERROR_CODES.PHONE_NOT_VERIFIED,
-      withDevHints({
-        userId: refreshedUser.id,
-        role: refreshedUser.role,
-        phone: helpers.maskPhone(refreshedUser.phone),
-        email: refreshedUser.email ? helpers.maskEmail(refreshedUser.email) : null,
-        nextStep: 'verify_phone'
-      }, smsDelivery)
-    );
-  }
-
   const session = await createSession(refreshedUser, rememberMe);
 
   await repository.logAuditEvent(refreshedUser.id, 'LOGIN_SUCCESS', req, { method: 'password' });
 
   return {
     user: helpers.sanitizeUser(refreshedUser),
+    phone: helpers.maskPhone(refreshedUser.phone),
+    email: refreshedUser.email ? helpers.maskEmail(refreshedUser.email) : null,
     accessToken: session.accessToken,
     refreshToken: session.refreshToken,
-    nextStep: refreshedUser.status === USER_STATUS.PENDING_REVIEW ? 'pending_review' : 'dashboard'
+    nextStep: helpers.getNextStep(refreshedUser)
   };
 };
 
@@ -354,6 +483,10 @@ const refreshAccessToken = async (rawRefreshToken) => {
     throw new AppError('User not found or inactive', 401, ERROR_CODES.UNAUTHORIZED);
   }
 
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    throw new AppError('Account temporarily locked', 403, ERROR_CODES.ACCOUNT_LOCKED);
+  }
+
   const newAccessToken = tokenHelper.generateAccessToken(user.id, user.role);
 
   return {
@@ -376,11 +509,22 @@ const verifyEmail = async (rawToken, req) => {
   const updatedUser = await syncUserStatus(await repository.findUserById(token.user_id));
   await repository.logAuditEvent(updatedUser.id, 'EMAIL_VERIFIED', req, {});
 
-  return {
+  const nextStep = helpers.getNextStep(updatedUser);
+  const payload = {
     message: 'Email verified successfully',
     user: helpers.sanitizeUser(updatedUser),
-    nextStep: updatedUser.status === USER_STATUS.PENDING_REVIEW ? 'pending_review' : 'sign_in'
+    phone: helpers.maskPhone(updatedUser.phone),
+    email: updatedUser.email ? helpers.maskEmail(updatedUser.email) : null,
+    nextStep
   };
+
+  if (nextStep === 'dashboard' || nextStep === 'verify_identity') {
+    const session = await createSession(updatedUser);
+    payload.accessToken = session.accessToken;
+    payload.refreshToken = session.refreshToken;
+  }
+
+  return payload;
 };
 
 const sendPhoneOtp = async (phone, userId, purpose, req) => {
@@ -396,7 +540,17 @@ const sendPhoneOtp = async (phone, userId, purpose, req) => {
     throw new AppError('User not found', 404, ERROR_CODES.ACCOUNT_NOT_FOUND);
   }
 
-  const smsDelivery = await createOtpForUser(user, purpose || OTP_PURPOSE.PHONE_VERIFICATION);
+  const smsDelivery = await runDelivery(
+    'Phone OTP SMS',
+    () => createOtpForUser(user, purpose || OTP_PURPOSE.PHONE_VERIFICATION)
+  );
+  const smsDeliveryStatus = buildDeliveryStatus(smsDelivery, 'sms');
+
+  if (isDeliveryFailed(smsDeliveryStatus)) {
+    throw new AppError(smsDeliveryStatus.message, 502, ERROR_CODES.SMS_DELIVERY_FAILED, {
+      smsDelivery: smsDeliveryStatus
+    });
+  }
 
   await repository.logAuditEvent(user.id, 'OTP_SENT', req, {
     purpose: purpose || OTP_PURPOSE.PHONE_VERIFICATION
@@ -405,7 +559,8 @@ const sendPhoneOtp = async (phone, userId, purpose, req) => {
   return withDevHints({
     success: true,
     phone: helpers.maskPhone(user.phone),
-    expiresIn: env.OTP_EXPIRES_MINUTES * 60
+    expiresIn: env.OTP_EXPIRES_MINUTES * 60,
+    smsDelivery: smsDeliveryStatus
   }, smsDelivery);
 };
 
@@ -441,7 +596,9 @@ const confirmPhoneOtp = async (userId, otpCode, req) => {
   const updatedUser = await syncUserStatus(await repository.findUserById(userId));
   await repository.logAuditEvent(userId, 'PHONE_VERIFIED', req, {});
 
-  if (updatedUser.status === USER_STATUS.ACTIVE) {
+  const nextStep = helpers.getNextStep(updatedUser);
+
+  if (nextStep === 'dashboard' || nextStep === 'verify_identity') {
     const session = await createSession(updatedUser);
 
     return {
@@ -450,17 +607,21 @@ const confirmPhoneOtp = async (userId, otpCode, req) => {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
       user: helpers.sanitizeUser(updatedUser),
-      nextStep: 'dashboard'
+      phone: helpers.maskPhone(updatedUser.phone),
+      email: updatedUser.email ? helpers.maskEmail(updatedUser.email) : null,
+      nextStep
     };
   }
 
   return {
     verified: true,
-    message: updatedUser.status === USER_STATUS.PENDING_REVIEW
+    message: nextStep === 'pending_review'
       ? 'Phone verified successfully. Your account is now under review.'
-      : 'Phone verified successfully. Please verify your email to continue.',
+      : 'Phone verified successfully. Please continue verification.',
     user: helpers.sanitizeUser(updatedUser),
-    nextStep: updatedUser.status === USER_STATUS.PENDING_REVIEW ? 'pending_review' : 'verify_email'
+    phone: helpers.maskPhone(updatedUser.phone),
+    email: updatedUser.email ? helpers.maskEmail(updatedUser.email) : null,
+    nextStep
   };
 };
 
@@ -474,12 +635,31 @@ const forgotPassword = async (identifier, method, req) => {
 
   let delivery = null;
   let target = null;
+  let deliveryStatus = null;
 
   if (method === 'sms') {
-    delivery = await createOtpForUser(user, OTP_PURPOSE.PASSWORD_RESET);
+    delivery = await runDelivery(
+      'Password reset SMS',
+      () => createOtpForUser(user, OTP_PURPOSE.PASSWORD_RESET)
+    );
+    deliveryStatus = buildDeliveryStatus(delivery, 'sms');
+    if (isDeliveryFailed(deliveryStatus)) {
+      throw new AppError(deliveryStatus.message, 502, ERROR_CODES.SMS_DELIVERY_FAILED, {
+        smsDelivery: deliveryStatus
+      });
+    }
     target = helpers.maskPhone(user.phone);
   } else if (method === 'email' && user.email) {
-    delivery = await createPasswordResetEmailForUser(user);
+    delivery = await runDelivery(
+      'Password reset email',
+      () => createPasswordResetEmailForUser(user)
+    );
+    deliveryStatus = buildDeliveryStatus(delivery, 'email');
+    if (isDeliveryFailed(deliveryStatus)) {
+      throw new AppError(deliveryStatus.message, 502, ERROR_CODES.EMAIL_DELIVERY_FAILED, {
+        emailDelivery: deliveryStatus
+      });
+    }
     target = helpers.maskEmail(user.email);
   }
 
@@ -490,6 +670,8 @@ const forgotPassword = async (identifier, method, req) => {
     identifier: normalizedIdentifier,
     method,
     target,
+    ...(method === 'sms' && deliveryStatus ? { smsDelivery: deliveryStatus } : {}),
+    ...(method === 'email' && deliveryStatus ? { emailDelivery: deliveryStatus } : {}),
     nextStep: 'reset_password'
   }, delivery);
 };
@@ -562,21 +744,45 @@ const resendVerification = async (userId, type, req) => {
       throw new AppError('No email address is available for this account', 400, ERROR_CODES.VALIDATION_ERROR);
     }
 
-    const emailDelivery = await createEmailVerificationForUser(user);
+    const emailDelivery = await runDelivery(
+      'Email verification resend',
+      () => createEmailVerificationForUser(user)
+    );
+    const emailDeliveryStatus = buildDeliveryStatus(emailDelivery, 'email');
+
+    if (isDeliveryFailed(emailDeliveryStatus)) {
+      throw new AppError(emailDeliveryStatus.message, 502, ERROR_CODES.EMAIL_DELIVERY_FAILED, {
+        emailDelivery: emailDeliveryStatus
+      });
+    }
+
     await repository.logAuditEvent(user.id, 'EMAIL_VERIFICATION_RESENT', req, {});
 
     return withDevHints({
       target: helpers.maskEmail(user.email),
-      nextStep: 'verify_email'
+      nextStep: 'verify_email',
+      emailDelivery: emailDeliveryStatus
     }, emailDelivery);
   }
 
-  const smsDelivery = await createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION);
+  const smsDelivery = await runDelivery(
+    'Phone verification resend',
+    () => createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION)
+  );
+  const smsDeliveryStatus = buildDeliveryStatus(smsDelivery, 'sms');
+
+  if (isDeliveryFailed(smsDeliveryStatus)) {
+    throw new AppError(smsDeliveryStatus.message, 502, ERROR_CODES.SMS_DELIVERY_FAILED, {
+      smsDelivery: smsDeliveryStatus
+    });
+  }
+
   await repository.logAuditEvent(user.id, 'PHONE_VERIFICATION_RESENT', req, {});
 
   return withDevHints({
     target: helpers.maskPhone(user.phone),
-    nextStep: 'verify_phone'
+    nextStep: 'verify_phone',
+    smsDelivery: smsDeliveryStatus
   }, smsDelivery);
 };
 
@@ -691,6 +897,99 @@ const deactivateAccount = async (userId, password, req) => {
   return { message: 'Account deactivated successfully' };
 };
 
+const submitIdentityVerification = async (userId, data, req) => {
+  const user = await repository.findUserById(userId);
+  if (!user || user.role !== USER_ROLES.FARMER) {
+    throw new AppError('Only farmers can submit identity verification', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const updates = {
+    id_front_url: data.idFrontUrl,
+    id_back_url: data.idBackUrl,
+    selfie_url: data.selfieUrl,
+    verification_submitted_at: new Date().toISOString()
+  };
+
+  await repository.updateFarmerProfile(userId, updates);
+  await repository.updateUser(userId, { status: USER_STATUS.PENDING_REVIEW });
+
+  await repository.logAuditEvent(userId, 'IDENTITY_VERIFICATION_SUBMITTED', req, {});
+
+  return {
+    message: 'Identity verification submitted successfully. Your account is now under review.',
+    status: USER_STATUS.PENDING_REVIEW,
+    nextStep: 'pending_review'
+  };
+};
+
+const adminReviewUser = async (adminId, userId, action, reason, req) => {
+  const user = await repository.findUserById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404, ERROR_CODES.ACCOUNT_NOT_FOUND);
+  }
+
+  let nextStatus;
+  switch (action) {
+    case 'approve':
+      nextStatus = USER_STATUS.ACTIVE;
+      break;
+    case 'reject':
+      nextStatus = USER_STATUS.REJECTED;
+      break;
+    case 'flag':
+      nextStatus = USER_STATUS.PENDING_IDENTITY_VERIFICATION;
+      break;
+    case 'ban':
+      nextStatus = USER_STATUS.SUSPENDED;
+      await repository.updateUser(userId, { 
+        banned_at: new Date().toISOString(),
+        ban_reason: reason || 'Banned by admin for misbehavior'
+      });
+      break;
+    default:
+      throw new AppError('Invalid review action', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const userUpdate = { status: nextStatus };
+  if (['approve', 'reject'].includes(action)) {
+    userUpdate.reviewed_at = new Date().toISOString();
+  }
+
+  await repository.updateUser(userId, userUpdate);
+  
+  if (action === 'approve') {
+    await repository.updateFarmerProfile(userId, { 
+      verified_by: adminId,
+      verified_at: new Date().toISOString()
+    });
+  }
+
+  await repository.logAuditEvent(userId, `USER_${action.toUpperCase()}`, req, { adminId, reason });
+  await repository.logActivityEvent(userId, `USER_${action.toUpperCase()}`, req, {
+    adminId,
+    reason,
+    role: user.role,
+    entityType: 'user',
+    entityId: userId
+  });
+
+  return {
+    message: `User ${action}ed successfully`,
+    status: nextStatus
+  };
+};
+
+const getPendingUsers = async () => {
+  const users = await repository.findUsersByStatus(USER_STATUS.PENDING_REVIEW);
+  return users
+    .filter((user) => user.role === USER_ROLES.FARMER)
+    .map((user) => ({
+      ...user,
+      name: formatUserName(user),
+      profile: Array.isArray(user.farmer_profiles) ? user.farmer_profiles[0] : user.farmer_profiles
+    }));
+};
+
 module.exports = {
   registerFarmer,
   registerBuyer,
@@ -705,5 +1004,8 @@ module.exports = {
   resendVerification,
   getMe,
   updateMe,
-  deactivateAccount
+  deactivateAccount,
+  submitIdentityVerification,
+  adminReviewUser,
+  getPendingUsers
 };

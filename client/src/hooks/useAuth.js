@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import useAuthStore from '@/store/authStore';
+import { getAuthNextRoute, getRoleDashboard } from '@/lib/authRoutes';
 
 const useAuth = () => {
   const store = useAuthStore();
@@ -13,24 +14,9 @@ const useAuth = () => {
   const redirectToDashboard = useCallback(() => {
     if (!store.user) return '/';
 
-    if (store.user.status === 'pending_review') {
-      return '/pending';
-    }
+    if (!store.user.email_verified) return getAuthNextRoute('verify_email', store.user);
 
-    switch (store.user.role) {
-      case 'admin':
-      case 'super_admin':
-        return '/admin/dashboard';
-      case 'farmer':
-        return '/farmer/dashboard';
-      case 'local_buyer':
-      case 'international_buyer':
-        return '/buyer/dashboard';
-      case 'field_agent':
-        return '/agent/dashboard';
-      default:
-        return '/';
-    }
+    return getRoleDashboard(store.user);
   }, [store.user]);
 
   return {

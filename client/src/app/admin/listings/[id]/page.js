@@ -1,61 +1,35 @@
-import { notFound } from "next/navigation";
+"use client";
+
 import { Breadcrumb } from "@/components/common/Breadcrumb";
+import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
-import { CropDetailGallery } from "@/components/crops/CropDetailGallery";
 import { CropSpecsTable } from "@/components/crops/CropSpecsTable";
-import { FarmerMiniCard } from "@/components/farmers/FarmerMiniCard";
-import { Card } from "@/components/ui/card";
-import { demoFarmers, getListingById } from "@/lib/demo-data";
+import { CropCard } from "@/components/crops/CropCard";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 export default function AdminListingDetailPage({ params }) {
-  const listing = getListingById(params.id);
+  const { data, isLoading } = useDashboardData("admin");
+  const listing = (data?.listings || []).find((item) => item.id === params.id);
 
-  if (!listing) {
-    notFound();
+  if (isLoading) {
+    return <EmptyState title="Loading live listing" description="Fetching listing details from the database." />;
   }
 
-  const farmer = demoFarmers.find((item) => item.id === listing.farmerId);
+  if (!listing) {
+    return <EmptyState title="Live listing not found" description="This listing is not present in the database response." />;
+  }
+
+  const specs = Array.isArray(listing.specs)
+    ? listing.specs
+    : Object.entries(listing.specs || {}).map(([label, value]) => ({ label, value }));
 
   return (
     <section className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Admin", href: "/admin/dashboard" },
-          { label: "Listings", href: "/admin/listings" },
-          { label: listing.crop },
-        ]}
-      />
-
-      <PageHeader
-        eyebrow="Listing detail"
-        title={`${listing.crop} operational card`}
-        description="Inspect inventory presentation, trade specifications, and the supplier record attached to this listing."
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <CropDetailGallery listing={listing} />
-        <Card className="rounded-[18px] p-5">
-          <h2 className="font-display text-[22px] text-[#111827]">Oversight snapshot</h2>
-          <div className="mt-5 space-y-3">
-            {[
-              ["Price", listing.price],
-              ["Quantity", listing.quantityLabel],
-              ["Location", listing.location],
-              ["Grade", listing.grade],
-              ["Delivery window", listing.deliveryWindow],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-[12px] bg-[#F9FAFB] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">{label}</p>
-                <p className="mt-2 text-[14px] font-medium text-[#111827]">{value}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <CropSpecsTable specs={listing.specs} />
-        {farmer ? <FarmerMiniCard farmer={farmer} /> : null}
+      <Breadcrumb items={[{ label: "Admin", href: "/admin/dashboard" }, { label: "Listings", href: "/admin/listings" }, { label: listing.crop }]} />
+      <PageHeader eyebrow="Listing detail" title={listing.crop} description={listing.summary} />
+      <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <CropCard listing={listing} href={`/admin/listings/${listing.id}`} />
+        <CropSpecsTable specs={specs} />
       </div>
     </section>
   );

@@ -1,56 +1,40 @@
-import { notFound } from "next/navigation";
-import { Breadcrumb } from "@/components/common/Breadcrumb";
+"use client";
+
+import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { ChatBubble } from "@/components/messages/ChatBubble";
 import { ChatInput } from "@/components/messages/ChatInput";
 import { ConversationList } from "@/components/messages/ConversationList";
-import { ListingContextBanner } from "@/components/messages/ListingContextBanner";
-import { Card } from "@/components/ui/card";
-import { demoConversations, demoFarmers, demoListings, getConversationById } from "@/lib/demo-data";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
-export default function BuyerConversationDetailPage({ params }) {
-  const conversation = getConversationById(params.conversationId);
+export default function BuyerConversationPage({ params }) {
+  const { data, isLoading } = useDashboardData("buyer");
+  const conversations = data?.conversations || [];
+  const conversation = conversations.find((item) => item.id === params.conversationId);
 
-  if (!conversation) {
-    notFound();
+  if (isLoading) {
+    return <EmptyState title="Loading live conversation" description="Fetching conversation details from the database." />;
   }
 
-  const listing = demoListings.find((item) => item.id === conversation.listingId);
-  const farmer = demoFarmers.find((item) => item.id === listing?.farmerId);
-  const currentUser = conversation.participant;
+  if (!conversation) {
+    return <EmptyState title="Live conversation not found" description="This conversation is not connected to your account." />;
+  }
 
   return (
-    <section className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Buyer", href: "/buyer/dashboard" },
-          { label: "Messages", href: "/buyer/messages" },
-          { label: conversation.participant },
-        ]}
-      />
-
-      <PageHeader
-        eyebrow="Conversation"
-        title={`Discussion with ${conversation.participant}`}
-        description="Use this preview screen to review thread layout, trade context, and protected buyer navigation."
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <ConversationList items={demoConversations} basePath="/buyer/messages" />
-
-        <div className="space-y-6">
-          <Card className="rounded-[18px] p-5">
-            <div className="space-y-4">
-              {conversation.messages.map((message) => (
-                <ChatBubble key={message.id} message={message} currentUser={currentUser} />
-              ))}
-            </div>
-            <div className="mt-5 border-t border-[#E5E7EB] pt-5">
-              <ChatInput />
-            </div>
-          </Card>
-
-          <ListingContextBanner listing={listing} farmer={farmer} />
+    <section className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <ConversationList items={conversations} basePath="/buyer/messages" />
+      <div className="space-y-4">
+        <PageHeader eyebrow="Conversation" title={conversation.participant} description={conversation.preview} />
+        <div className="rounded-[18px] border border-ink-100 bg-white p-5 shadow-soft">
+          <div className="space-y-3">
+            {(conversation.messages || []).map((message) => (
+              <ChatBubble key={message.id} message={message} />
+            ))}
+            {!(conversation.messages || []).length ? (
+              <p className="text-[14px] text-ink-500">No live messages have been stored for this conversation yet.</p>
+            ) : null}
+          </div>
+          <ChatInput disabled />
         </div>
       </div>
     </section>

@@ -27,7 +27,8 @@ const {
   resendVerification,
   getMe,
   updateMe,
-  deactivateAccount
+  deactivateAccount,
+  submitIdentityVerification
 } = require('./auth.controller');
 
 router.post('/register/farmer', authLimiter, validate(registerFarmerSchema), registerFarmer);
@@ -43,6 +44,7 @@ router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 router.post('/resend-verification', otpSendLimiter, resendVerification);
 router.get('/me', authenticate, getMe);
 router.patch('/me', authenticate, updateMe);
+router.post('/submit-identity', authenticate, submitIdentityVerification);
 router.delete('/me', authenticate, deactivateAccount);
 
 module.exports = router;

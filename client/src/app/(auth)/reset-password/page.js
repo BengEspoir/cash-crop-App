@@ -73,13 +73,13 @@ export default function ResetPasswordPage() {
         {!token ? (
           <div>
             <Label>Reset Code</Label>
-            <Input placeholder="Enter 6-digit code" {...register("code")} />
+            <Input placeholder="Enter 6-digit code" autoComplete="one-time-code" {...register("code")} />
             {errors.code ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.code.message}</p> : null}
           </div>
         ) : null}
 
-        <PasswordInput label="New Password" placeholder="At least 8 characters" error={errors.password?.message} {...register("password")} />
-        <PasswordInput label="Confirm Password" placeholder="Repeat password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+        <PasswordInput label="New Password" placeholder="At least 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
+        <PasswordInput label="Confirm Password" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
         <PasswordStrength password={watch("password") || ""} />
 
         {feedback.error ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{feedback.error}</p> : null}

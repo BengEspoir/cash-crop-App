@@ -8,12 +8,8 @@ import { Card } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { StatusBadge } from "../../../components/common/StatusBadge";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
+import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
-
-const getNextRoute = (nextStep) => {
-  if (nextStep === "pending_review") return "/pending";
-  return "/sign-in";
-};
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -22,6 +18,7 @@ export default function VerifyEmailPage() {
   const { onboarding, syncOnboarding, verifyEmail, resendVerification } = useAuthStore();
   const [state, setState] = useState({ status: token ? "processing" : "idle", error: "", success: "" });
   const hasVerificationLink = useMemo(() => Boolean(onboarding?.devHints?.verificationLink), [onboarding]);
+  const emailDelivery = onboarding?.emailDelivery;
 
   useEffect(() => {
     syncOnboarding();
@@ -46,7 +43,7 @@ export default function VerifyEmailPage() {
       }
 
       setState({ status: "success", error: "", success: result.data.message });
-      router.push(getNextRoute(result.data.nextStep));
+      router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
     };
 
     runVerification();
@@ -92,6 +89,17 @@ export default function VerifyEmailPage() {
         </p>
       </div>
 
+      {emailDelivery?.status === "failed" ? (
+        <p className="mt-5 rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] leading-5 text-[#922B21]">
+          Account created, but verification email could not be sent. {emailDelivery.message || "Check SMTP credentials, then resend the email."}
+        </p>
+      ) : null}
+      {emailDelivery?.status === "development-fallback" ? (
+        <p className="mt-5 rounded-[12px] bg-[#FFF7E0] px-4 py-3 text-[12px] leading-5 text-[#7A4B00]">
+          Email was not delivered by a live provider. Use the development verification link below, or configure SMTP and resend.
+        </p>
+      ) : null}
+
       {state.error ? <p className="mt-5 rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{state.error}</p> : null}
       {state.success ? <p className="mt-5 rounded-[12px] bg-[#D4EDDA] px-4 py-3 text-[12px] text-[#1A5C2E]">{state.success}</p> : null}
 
@@ -109,9 +117,6 @@ export default function VerifyEmailPage() {
           ) : null}
           <Button type="button" variant="outline" onClick={handleResend}>
             Resend Email
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/verify-phone">Back to Phone Step</Link>
           </Button>
         </div>
       </div>

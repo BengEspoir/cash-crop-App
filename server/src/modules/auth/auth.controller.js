@@ -81,6 +81,22 @@ const deactivateAccount = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Account deactivated successfully');
 });
 
+const submitIdentityVerification = asyncHandler(async (req, res) => {
+  const result = await authService.submitIdentityVerification(req.user.id, req.body, req);
+  sendSuccess(res, result, 'Identity verification submitted successfully');
+});
+
+const adminReviewUser = asyncHandler(async (req, res) => {
+  const { userId, action, reason } = req.body;
+  const result = await authService.adminReviewUser(req.user.id, userId, action, reason, req);
+  sendSuccess(res, result, `User ${action}ed successfully`);
+});
+
+const getPendingUsers = asyncHandler(async (req, res) => {
+  const result = await authService.getPendingUsers();
+  sendSuccess(res, result, 'Pending users retrieved successfully');
+});
+
 module.exports = {
   registerFarmer,
   registerBuyer,
@@ -95,5 +111,8 @@ module.exports = {
   resendVerification,
   getMe,
   updateMe,
-  deactivateAccount
+  deactivateAccount,
+  submitIdentityVerification,
+  adminReviewUser,
+  getPendingUsers
 };

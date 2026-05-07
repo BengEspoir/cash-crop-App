@@ -1,18 +1,45 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useState } from "react";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Card } from "@/components/ui/card";
-import { demoAdminUsers, demoFarmers } from "@/lib/demo-data";
+import { Button } from "@/components/ui/button";
+import { useAdminReviewUser, useDashboardData } from "@/hooks/useDashboardData";
+
+const REVIEW_ACTIONS = [
+  { action: "approve", label: "Approve" },
+  { action: "reject", label: "Reject" },
+  { action: "flag", label: "Request ID Again" },
+  { action: "ban", label: "Ban" },
+];
 
 export default function AdminUserDetailPage({ params }) {
-  const user = demoAdminUsers.find((item) => item.id === params.id);
+  const { data, isLoading } = useDashboardData("admin");
+  const reviewMutation = useAdminReviewUser();
+  const [reason, setReason] = useState("");
+  const users = [...(data?.users || []), ...(data?.pendingUsers || [])];
+  const user = users.find((item) => item.id === params.id);
+  const profile = user?.profile || user?.farmer_profiles?.[0] || user?.farmer_profiles || null;
 
-  if (!user) {
-    notFound();
+  const handleReview = (action) => {
+    reviewMutation.mutate({ userId: params.id, action, reason });
+  };
+
+  if (isLoading) {
+    return <Card className="rounded-[16px] p-8 text-center text-ink-500">Loading live user...</Card>;
   }
 
-  const farmerProfile = demoFarmers.find((item) => item.name === user.name);
+  if (!user) {
+    return (
+      <EmptyState
+        title="Live user not found"
+        description="This user is not present in the current database response."
+      />
+    );
+  }
 
   return (
     <section className="space-y-6">
@@ -27,7 +54,7 @@ export default function AdminUserDetailPage({ params }) {
       <PageHeader
         eyebrow="User detail"
         title={`${user.name} profile review`}
-        description="Inspect role, review status, and the supporting context behind this account."
+        description="Inspect live account status, verification uploads, and apply admin review decisions."
       />
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -38,17 +65,17 @@ export default function AdminUserDetailPage({ params }) {
               <h2 className="mt-2 font-display text-[24px] text-[#111827]">{user.name}</h2>
             </div>
             <StatusBadge
-              status={user.status === "active" ? "verified" : "pending"}
-              label={user.status.replace(/_/g, " ")}
+              status={user.status === "active" ? "verified" : user.status === "rejected" ? "rejected" : "pending"}
+              label={user.status?.replace(/_/g, " ")}
             />
           </div>
 
           <div className="mt-5 space-y-3">
             {[
-              ["Role", user.role.replace(/_/g, " ")],
-              ["Region", user.region],
-              ["Review lane", user.role === "farmer" ? "Field verification" : "Buyer compliance" ],
-              ["Current action", user.status === "active" ? "Monitor operations" : "Complete approval review"],
+              ["Role", user.role?.replace(/_/g, " ")],
+              ["Email", user.email || "Not provided"],
+              ["Phone", user.phone || "Not provided"],
+              ["Region", user.region || user.country || "Not provided"],
             ].map(([label, value]) => (
               <div key={label} className="rounded-[12px] bg-[#F9FAFB] px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">{label}</p>
@@ -59,30 +86,59 @@ export default function AdminUserDetailPage({ params }) {
         </Card>
 
         <Card className="rounded-[18px] p-5">
-          <h2 className="font-display text-[22px] text-[#111827]">Supporting context</h2>
-          {farmerProfile ? (
-            <div className="mt-5 space-y-3">
-              <p className="text-[13px] leading-6 text-[#374151]">{farmerProfile.bio}</p>
-              {farmerProfile.stats.map((stat) => (
-                <div key={stat.label} className="rounded-[12px] border border-[#E5E7EB] px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">{stat.label}</p>
-                  <p className="mt-2 text-[16px] font-semibold text-[#111827]">{stat.value}</p>
-                </div>
+          <h2 className="font-display text-[22px] text-[#111827]">Verification evidence</h2>
+          <div className="mt-5 grid gap-3">
+            {[
+              ["ID front", profile?.id_front_url],
+              ["ID back", profile?.id_back_url],
+              ["Selfie", profile?.selfie_url],
+              ["Submitted at", profile?.verification_submitted_at],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-[12px] border border-[#E5E7EB] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">{label}</p>
+                {value && String(value).startsWith("http") ? (
+                  <a href={value} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[13px] font-semibold text-green-800 hover:text-green-700">
+                    Open uploaded file
+                  </a>
+                ) : (
+                  <p className="mt-2 text-[14px] text-[#374151]">{value || "Not submitted"}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5">
+            <label className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">Review reason</label>
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="mt-2 min-h-[90px] w-full rounded-[12px] border border-[#D1D5DB] px-3 py-3 text-[14px] outline-none focus:border-[#1A6B3C]"
+              placeholder="Optional note for rejection, flagging, or banning"
+            />
+            <div className="mt-4 flex flex-wrap gap-3">
+              {REVIEW_ACTIONS.map((item) => (
+                <Button
+                  key={item.action}
+                  type="button"
+                  variant={item.action === "approve" ? "primary" : "outline"}
+                  disabled={reviewMutation.isPending}
+                  onClick={() => handleReview(item.action)}
+                >
+                  {item.label}
+                </Button>
               ))}
             </div>
-          ) : (
-            <div className="mt-5 space-y-3">
-              {[
-                "Buyer onboarding uses the real auth backend and now preserves country and destination details.",
-                "Non-auth operational data on this screen is intentionally demo-backed for local preview.",
-                "This route confirms the admin detail path compiles and renders cleanly.",
-              ].map((item) => (
-                <div key={item} className="rounded-[12px] border border-[#E5E7EB] px-4 py-3 text-[13px] leading-6 text-[#374151]">
-                  {item}
-                </div>
-              ))}
-            </div>
-          )}
+            {reviewMutation.isSuccess ? (
+              <p className="mt-3 rounded-[12px] bg-[#D4EDDA] px-4 py-3 text-[12px] text-[#1A5C2E]">
+                Review action saved.
+              </p>
+            ) : null}
+            {reviewMutation.isError ? (
+              <p className="mt-3 rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">
+                {reviewMutation.error?.response?.data?.message || "Review action failed."}
+              </p>
+            ) : null}
+          </div>
         </Card>
       </div>
     </section>

@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { supabaseAdmin } = require('../config/supabase');
 const env = require('../config/env');
 const { sendError } = require('../utils/response');
-const { ERROR_CODES } = require('../config/constants');
+const { ERROR_CODES, USER_STATUS } = require('../config/constants');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -25,7 +25,7 @@ const authenticate = async (req, res, next) => {
 
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, role, status')
+      .select('id, role, status, phone_verified, email_verified, locked_until')
       .eq('id', decoded.id)
       .single();
 
@@ -33,12 +33,20 @@ const authenticate = async (req, res, next) => {
       return sendError(res, 'User not found', 401, ERROR_CODES.UNAUTHORIZED);
     }
 
-    if (user.status === 'deactivated') {
+    if (user.status === USER_STATUS.DEACTIVATED) {
       return sendError(res, 'Account deactivated', 401, ERROR_CODES.UNAUTHORIZED);
     }
 
-    if (user.status === 'suspended') {
+    if (user.status === USER_STATUS.SUSPENDED) {
       return sendError(res, 'Account suspended', 403, ERROR_CODES.ACCOUNT_SUSPENDED);
+    }
+
+    if (user.status === USER_STATUS.REJECTED) {
+      return sendError(res, 'Account rejected', 403, ERROR_CODES.ACCOUNT_SUSPENDED);
+    }
+
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      return sendError(res, 'Account temporarily locked', 403, ERROR_CODES.ACCOUNT_LOCKED);
     }
 
     req.user = user;
@@ -46,6 +54,30 @@ const authenticate = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+const requireActiveAccount = (req, res, next) => {
+  if (!req.user) {
+    return sendError(res, 'Authentication required', 401, ERROR_CODES.UNAUTHORIZED);
+  }
+
+  if (req.user.status !== USER_STATUS.ACTIVE) {
+    return sendError(res, 'Account is not active yet', 403, ERROR_CODES.ACCOUNT_PENDING);
+  }
+
+  next();
+};
+
+const requireDashboardAccess = (req, res, next) => {
+  if (!req.user) {
+    return sendError(res, 'Authentication required', 401, ERROR_CODES.UNAUTHORIZED);
+  }
+
+  if (!req.user.email_verified) {
+    return sendError(res, 'Email verification required', 403, ERROR_CODES.EMAIL_NOT_VERIFIED);
+  }
+
+  next();
 };
 
 const authorize = (...roles) => {
@@ -60,6 +92,18 @@ const authorize = (...roles) => {
     
     next();
   };
+};
+
+const restrictUnverifiedFarmer = (req, res, next) => {
+  if (req.user.role === 'farmer' && req.user.status !== 'active') {
+    return sendError(
+      res, 
+      'please verify your profile, before performing any action', 
+      403, 
+      ERROR_CODES.FORBIDDEN
+    );
+  }
+  next();
 };
 
 const optionalAuth = async (req, res, next) => {
@@ -82,11 +126,16 @@ const optionalAuth = async (req, res, next) => {
 
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, role, status')
+      .select('id, role, status, phone_verified, email_verified, locked_until')
       .eq('id', decoded.id)
       .single();
 
-    if (error || !user || user.status === 'deactivated') {
+    if (
+      error ||
+      !user ||
+      [USER_STATUS.DEACTIVATED, USER_STATUS.SUSPENDED, USER_STATUS.REJECTED].includes(user.status) ||
+      (user.locked_until && new Date(user.locked_until) > new Date())
+    ) {
       req.user = null;
     } else {
       req.user = user;
@@ -102,5 +151,8 @@ const optionalAuth = async (req, res, next) => {
 module.exports = {
   authenticate,
   authorize,
+  requireActiveAccount,
+  requireDashboardAccess,
+  restrictUnverifiedFarmer,
   optionalAuth
 };

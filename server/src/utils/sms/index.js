@@ -4,28 +4,71 @@
  */
 
 const env = require('../../config/env');
-const { getCountryByDialCode } = require('../countries');
+const { countries } = require('../countries');
+
+const getAfricasTalkingUsername = () => (
+  env.AT_SANDBOX ? 'sandbox' : env.AT_USERNAME
+);
+
+const getRecipientStatus = (recipient = {}) => {
+  const status = String(recipient.status || '').toLowerCase();
+  if (!status) {
+    return 'unknown';
+  }
+
+  if (status.includes('success') || status.includes('sent') || status.includes('queued')) {
+    return 'accepted';
+  }
+
+  return 'rejected';
+};
 
 // Provider: Africa's Talking (primary for Africa)
 const sendAfricasTalking = async (phoneNumber, message) => {
   const AfricasTalking = require('africastalking');
+  const username = getAfricasTalkingUsername();
+
+  if (!env.AT_API_KEY) {
+    throw new Error('Africa\'s Talking API key not configured');
+  }
+
+  if (!username) {
+    throw new Error('Africa\'s Talking username not configured');
+  }
   
   const africasTalking = AfricasTalking({
     apiKey: env.AT_API_KEY,
-    username: env.AT_USERNAME
+    username
   });
 
-  const response = await africasTalking.SMS.send({
+  const options = {
     to: [phoneNumber],
-    message,
-    from: env.AT_SENDER_ID
-  });
+    message
+  };
+
+  if (env.AT_SENDER_ID && !env.AT_SANDBOX) {
+    options.from = env.AT_SENDER_ID;
+  }
+
+  const response = await africasTalking.SMS.send(options);
+  const recipients = response.SMSMessageData?.Recipients || [];
+  const rejectedRecipients = recipients.filter((recipient) => getRecipientStatus(recipient) === 'rejected');
+  const acceptedRecipients = recipients.filter((recipient) => getRecipientStatus(recipient) === 'accepted');
+  const firstRecipient = recipients[0] || {};
+  const delivered = recipients.length > 0
+    ? rejectedRecipients.length === 0 && acceptedRecipients.length > 0
+    : false;
 
   return {
-    success: true,
-    delivered: true,
+    success: delivered,
+    delivered,
     provider: 'africas-talking',
-    messageId: response.SMSMessageData?.Recipients?.[0]?.messageId
+    messageId: firstRecipient.messageId,
+    status: firstRecipient.status || response.SMSMessageData?.Message || null,
+    error: delivered ? null : (firstRecipient.status || response.SMSMessageData?.Message || 'SMS rejected by Africa\'s Talking'),
+    cost: firstRecipient.cost || null,
+    accepted: acceptedRecipients.length,
+    rejected: rejectedRecipients.length
   };
 };
 
@@ -52,25 +95,25 @@ const sendTwilio = async (phoneNumber, message) => {
 
 // Select provider based on country
 const selectProvider = (phoneNumber) => {
-  // Extract dial code
-  const match = phoneNumber.match(/^\+(\d+)/);
-  if (!match) return env.SMS_PRIMARY_PROVIDER || 'africastalking';
-  
-  const dialCode = `+${match[1]}`;
-  const country = getCountryByDialCode(dialCode);
-  
-  // Use Africa's Talking for African countries
-  const africanCountries = ['+237', '+234', '+233', '+254', '+255', '+256', '+250', '+254', '+27', '+212', '+213'];
-  if (africanCountries.includes(dialCode)) {
-    return 'africas talking';
+  if (!phoneNumber.startsWith('+')) {
+    return env.SMS_PRIMARY_PROVIDER || 'africastalking';
   }
-  
-  // Use Twilio for others (if configured)
+
+  const match = [...countries]
+    .sort((left, right) => right.dialCode.length - left.dialCode.length)
+    .find((country) => phoneNumber.startsWith(country.dialCode));
+
+  const dialCode = match?.dialCode;
+  const africanCountries = ['+237', '+234', '+233', '+254', '+255', '+256', '+250', '+27', '+212', '+213'];
+  if (dialCode && africanCountries.includes(dialCode)) {
+    return 'africastalking';
+  }
+
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN) {
     return 'twilio';
   }
-  
-  return env.SMS_PRIMARY_PROVIDER || 'africas talking';
+
+  return env.SMS_PRIMARY_PROVIDER || 'africastalking';
 };
 
 // Main send function
@@ -104,9 +147,9 @@ const sendSms = async (phoneNumber, message, options = {}) => {
         }
         result = await sendTwilio(phoneNumber, message);
         break;
-      case 'africas talking':
+      case 'africastalking':
       default:
-        if (!env.AT_API_KEY) {
+        if (!env.AT_API_KEY || (!env.AT_USERNAME && !env.AT_SANDBOX)) {
           throw new Error('Africa\'s Talking not configured');
         }
         result = await sendAfricasTalking(phoneNumber, message);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Label } from "../ui/label";
 import { ChevronDown } from "lucide-react";
-import { getCountryByCode, getInternationalCountries, getLocalCountry, getPhonePlaceholder } from "../../lib/countries";
+import { getCountryByCode, getInternationalCountries, getLocalCountry, getPhonePlaceholder, getAllCountries } from "../../lib/countries";
 
 export function PhoneInput({ 
   label = "Phone Number", 
@@ -15,6 +15,7 @@ export function PhoneInput({
   countryCode = "CM",
   onCountryChange,
   showCountrySelector = false,
+  includeAllCountries = false,
   disabled = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,9 +43,30 @@ export function PhoneInput({
 
   // Get max length based on country
   const getMaxLength = () => {
-    const format = selectedCountry?.phoneFormat?.source || /\d{9}/;
-    const match = format.toString().match(/\{(\d+)(?:,(\d+))?\}/);
-    return match ? parseInt(match[2] || match[1]) : 15;
+    // Hardcoded lengths based on country formats
+    const lengths = {
+      CM: 9,  // Cameroon: 6 + 8 digits = 9 total
+    };
+    
+    if (selectedCountry?.code && lengths[selectedCountry.code]) {
+      return lengths[selectedCountry.code];
+    }
+    
+    // Try to extract from regex pattern
+    const format = selectedCountry?.phoneFormat?.source;
+    if (format) {
+      const formatStr = format.toString();
+      // Match patterns like \d{8} or \d{8,11}
+      const match = formatStr.match(/\{(\d+)(?:,(\d+))?\}/);
+      if (match) {
+        const maxDigits = match[2] ? parseInt(match[2]) : parseInt(match[1]);
+        // Check for fixed prefix like "6" in /^6\d{8}$/
+        const hasPrefix = formatStr.includes('^') && !formatStr.includes('^\\d');
+        return hasPrefix ? maxDigits + 1 : maxDigits;
+      }
+    }
+    
+    return 15;
   };
 
   // Format value based on country
@@ -78,7 +100,9 @@ export function PhoneInput({
     onChange("");
   };
 
-  const countries = showCountrySelector ? getInternationalCountries() : [];
+  const countries = showCountrySelector 
+    ? (includeAllCountries ? getAllCountries() : getInternationalCountries()) 
+    : [];
   const phonePlaceholder = placeholder || getPhonePlaceholder(selectedCountry?.code);
 
   return (

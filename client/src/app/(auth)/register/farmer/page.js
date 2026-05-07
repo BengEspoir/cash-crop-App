@@ -14,9 +14,11 @@ import { PasswordInput } from "../../../../components/auth/PasswordInput";
 import { PasswordStrength } from "../../../../components/auth/PasswordStrength";
 import { RoleSwitcher } from "../../../../components/auth/RoleSwitcher";
 import { StepIndicator } from "../../../../components/auth/StepIndicator";
-import { registerFarmerUnifiedSchema } from "../../../../lib/validators";
+import { registerFarmerSchemas, registerFarmerUnifiedSchema } from "../../../../lib/validators";
 import { regions } from "../../../../constants/regions";
+import { getAuthNextRoute } from "../../../../lib/authRoutes";
 import useAuthStore from "../../../../store/authStore";
+import toast from "react-hot-toast";
 
 const steps = ["Personal", "Farm Details", "Payout Setup"];
 
@@ -31,7 +33,9 @@ export default function RegisterFarmerPage() {
     handleSubmit,
     setValue,
     watch,
-    trigger,
+    setError,
+    clearErrors,
+    getValues,
     formState: { errors, isSubmitting, isValid },
   } = useForm({
     resolver: zodResolver(registerFarmerUnifiedSchema),
@@ -46,12 +50,12 @@ export default function RegisterFarmerPage() {
       region: "",
       city: "",
       acceptedTerms: false,
-      primaryCrop: "Cocoa Beans",
+      primaryCrop: "",
       harvestVolume: "",
       cooperative: "",
-      exportReady: true,
-      inspectionPreference: "AgriculNet coordinated",
-      payoutMethod: "MTN MoMo",
+      exportReady: false,
+      inspectionPreference: "",
+      payoutMethod: "",
       accountName: "",
       payoutPhone: "",
       notificationOptIn: true,
@@ -61,19 +65,32 @@ export default function RegisterFarmerPage() {
   const password = watch("password");
 
   // Step-specific field validators
-  const validateStep = async (stepNum, formValues) => {
+  const validateStep = async (stepNum) => {
     const step1Fields = ["firstName", "lastName", "phone", "region", "city", "acceptedTerms", "password", "confirmPassword"];
     const step2Fields = ["primaryCrop", "harvestVolume", "cooperative", "inspectionPreference"];
     const step3Fields = ["payoutMethod", "accountName", "payoutPhone"];
-
     const fieldsToCheck = [step1Fields, step2Fields, step3Fields][stepNum] || [];
-    
-    // Trigger validation for these fields
-    const result = await Promise.all(
-      fieldsToCheck.map((field) => trigger(field))
-    );
+    const stepSchema = registerFarmerSchemas[stepNum];
 
-    return result.every((r) => r === true);
+    clearErrors(fieldsToCheck);
+
+    if (!stepSchema) {
+      return true;
+    }
+
+    const result = stepSchema.safeParse(getValues());
+    if (result.success) {
+      return true;
+    }
+
+    result.error.issues.forEach((issue) => {
+      const field = issue.path[0];
+      if (typeof field === "string") {
+        setError(field, { type: "manual", message: issue.message });
+      }
+    });
+
+    return false;
   };
 
   const submitStep = async (values) => {
@@ -81,7 +98,7 @@ export default function RegisterFarmerPage() {
 
     if (currentStep < steps.length - 1) {
       // Validate current step before moving to next
-      const isValid = await validateStep(currentStep, values);
+      const isValid = await validateStep(currentStep);
       if (!isValid) {
         return; // Form validation errors will be shown
       }
@@ -96,7 +113,14 @@ export default function RegisterFarmerPage() {
       return;
     }
 
-    router.push("/verify-phone");
+    if (result.data.emailDelivery?.status === "failed") {
+      toast.error(result.data.emailDelivery.message || "Account created, but verification email could not be sent.", {
+        duration: 8000,
+      });
+    } else {
+      toast.success("Account created. Verify your email to enter your dashboard.");
+    }
+    router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
   };
 
   return (
@@ -131,12 +155,12 @@ export default function RegisterFarmerPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>First Name *</Label>
-                <Input placeholder="e.g. Jean" {...register("firstName")} />
+                <Input placeholder="e.g. Jean" autoComplete="given-name" {...register("firstName")} />
                 {errors.firstName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.firstName.message}</p> : null}
               </div>
               <div>
                 <Label>Last Name *</Label>
-                <Input placeholder="e.g. Ngum" {...register("lastName")} />
+                <Input placeholder="e.g. Ngum" autoComplete="family-name" {...register("lastName")} />
                 {errors.lastName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.lastName.message}</p> : null}
               </div>
             </div>
@@ -150,16 +174,16 @@ export default function RegisterFarmerPage() {
                 error={errors.phone?.message}
               />
               <div>
-                <Label>Email Address</Label>
-                <Input placeholder="name@example.com" {...register("email")} />
-                <p className="mt-2 text-[12px] text-[#6B7280]">Optional for trade notifications</p>
+                <Label>Email Address *</Label>
+                <Input placeholder="example@gmail.com" autoComplete="email" {...register("email")} />
+                <p className="mt-2 text-[12px] text-[#6B7280]">Required for account verification</p>
                 {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <PasswordInput label="Password *" placeholder="Minimum 8 characters" error={errors.password?.message} {...register("password")} />
-              <PasswordInput label="Confirm Password *" placeholder="Repeat password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+              <PasswordInput label="Password *" placeholder="Minimum 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
+              <PasswordInput label="Confirm Password *" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
             </div>
 
             <PasswordStrength password={password || ""} />
@@ -253,7 +277,7 @@ export default function RegisterFarmerPage() {
                 Back
               </Button>
             ) : null}
-            <span className="font-medium text-[#6B7280]">Phone verification starts after account creation.</span>
+            <span className="font-medium text-[#6B7280]">Email verification starts after account creation.</span>
           </div>
           <Button type="submit" disabled={!isValid || isSubmitting}>
             {isSubmitting ? "Processing..." : currentStep === steps.length - 1 ? "Create Farmer Account" : "Continue"}

@@ -9,6 +9,7 @@ module.exports = {
   },
   USER_STATUS: {
     PENDING_VERIFICATION: 'pending_verification',
+    PENDING_IDENTITY_VERIFICATION: 'pending_identity_verification',
     PENDING_REVIEW: 'pending_review',
     ACTIVE: 'active',
     SUSPENDED: 'suspended',
@@ -46,6 +47,8 @@ module.exports = {
     OTP_INVALID: 'OTP_INVALID',
     OTP_EXPIRED: 'OTP_EXPIRED',
     OTP_MAX_ATTEMPTS: 'OTP_MAX_ATTEMPTS',
+    EMAIL_DELIVERY_FAILED: 'EMAIL_DELIVERY_FAILED',
+    SMS_DELIVERY_FAILED: 'SMS_DELIVERY_FAILED',
     RATE_LIMITED: 'RATE_LIMITED',
     UNAUTHORIZED: 'UNAUTHORIZED',
     FORBIDDEN: 'FORBIDDEN',

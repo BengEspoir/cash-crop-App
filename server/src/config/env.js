@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 const isProduction = process.env.NODE_ENV === 'production';
 const required = [
@@ -23,8 +23,16 @@ if (missing.length > 0) {
   throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
 }
 
-const allowDevDeliveryFallback = !isProduction && process.env.ALLOW_DEV_DELIVERY_FALLBACK !== 'false';
-const exposeDevAuthHints = !isProduction && process.env.EXPOSE_DEV_AUTH_HINTS !== 'false';
+const parseBooleanEnv = (value, defaultValue = false) => {
+  if (value === undefined || value === null || value === '') {
+    return defaultValue;
+  }
+
+  return !['false', '0', 'no', 'off'].includes(String(value).trim().toLowerCase());
+};
+
+const allowDevDeliveryFallback = !isProduction && parseBooleanEnv(process.env.ALLOW_DEV_DELIVERY_FALLBACK, true);
+const exposeDevAuthHints = !isProduction && parseBooleanEnv(process.env.EXPOSE_DEV_AUTH_HINTS, true);
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   (!isProduction ? process.env.SUPABASE_ANON_KEY : undefined);
@@ -66,8 +74,8 @@ module.exports = {
   SMS_PRIMARY_PROVIDER: process.env.SMS_PRIMARY_PROVIDER || 'africastalking',
   AT_API_KEY: process.env.AT_API_KEY || '',
   AT_USERNAME: process.env.AT_USERNAME || '',
-  AT_SENDER_ID: process.env.AT_SENDER_ID || 'AgriculNet',
-  AT_SANDBOX: process.env.AT_SANDBOX !== 'false',
+  AT_SENDER_ID: process.env.AT_SENDER_ID === undefined ? '' : process.env.AT_SENDER_ID.trim(),
+  AT_SANDBOX: parseBooleanEnv(process.env.AT_SANDBOX, true),
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
   TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '',
@@ -93,7 +101,7 @@ module.exports = {
   PASSWORD_RESET_URL: process.env.PASSWORD_RESET_URL || 'http://localhost:3000/reset-password',
 
   // Admin
-  ADMIN_ROUTE_SECRET: process.env.ADMIN_ROUTE_SECRET || 'agriculnet-admin-secret-2025',
+  ADMIN_ROUTE_SECRET: process.env.ADMIN_ROUTE_SECRET || '',
 
   // Development helpers
   ALLOW_DEV_DELIVERY_FALLBACK: allowDevDeliveryFallback,

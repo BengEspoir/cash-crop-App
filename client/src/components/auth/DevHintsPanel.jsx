@@ -11,6 +11,7 @@ export function DevHintsPanel({ hints }) {
   const entries = [
     hints.otpCode ? { label: "OTP code", value: hints.otpCode } : null,
     hints.phoneNumber ? { label: "Target phone", value: hints.phoneNumber } : null,
+    hints.message ? { label: "SMS message", value: hints.message } : null,
     hints.verificationEmail ? { label: "Verification email", value: hints.verificationEmail } : null,
     hints.passwordResetEmail ? { label: "Reset email", value: hints.passwordResetEmail } : null,
   ].filter(Boolean);
