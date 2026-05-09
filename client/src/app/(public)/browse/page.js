@@ -7,22 +7,22 @@ import { Pagination } from "../../../components/common/Pagination";
 import { CropCard } from "../../../components/crops/CropCard";
 import { CropListRow } from "../../../components/crops/CropListRow";
 import { Button } from "../../../components/ui/button";
+import { Card } from "../../../components/ui/card";
 import { Stagger, StaggerItem } from "../../../components/motion/Reveal";
-import { demoListings } from "../../../lib/demo-data";
+import { useListings } from "../../../hooks/useListings";
 import { cn } from "../../../lib/utils";
 
 const statusFilters = [
   { label: "All", value: "all" },
-  { label: "Verified", value: "verified" },
+  { label: "Verified farmers", value: "verified" },
+  { label: "Not verified", value: "not_started" },
   { label: "Export-ready", value: "export-ready" },
-  { label: "Negotiable", value: "negotiable" },
-  { label: "Pending", value: "pending" },
 ];
 
 const sortOptions = [
   { label: "Newest", value: "newest" },
-  { label: "Price: low → high", value: "price-asc" },
-  { label: "Price: high → low", value: "price-desc" },
+  { label: "Price: low to high", value: "price-asc" },
+  { label: "Price: high to low", value: "price-desc" },
 ];
 
 export default function BrowsePage() {
@@ -30,17 +30,13 @@ export default function BrowsePage() {
   const [layout, setLayout] = useState("grid");
   const [sort, setSort] = useState("newest");
   const [query, setQuery] = useState("");
+  const { listings, isLoading, error } = useListings({ query });
 
   const filtered = useMemo(() => {
-    const base = demoListings.filter((listing) => {
-      if (status !== "all" && listing.status !== status) return false;
-      if (query) {
-        const q = query.toLowerCase();
-        return (
-          listing.crop.toLowerCase().includes(q) ||
-          listing.location.toLowerCase().includes(q)
-        );
-      }
+    const base = listings.filter((listing) => {
+      if (status === "verified" && listing.farmerVerificationStatus !== "verified") return false;
+      if (status === "not_started" && listing.farmerVerificationStatus === "verified") return false;
+      if (status === "export-ready" && !listing.exportReady) return false;
       return true;
     });
 
@@ -52,25 +48,25 @@ export default function BrowsePage() {
       default:
         return base;
     }
-  }, [status, sort, query]);
+  }, [listings, status, sort]);
 
   return (
     <section className="space-y-6">
       <PageHeader
         eyebrow="Marketplace"
         title="Browse active crop supply"
-        description="Explore the current demo marketplace surface with verified lots, export-ready packaging notes, and destination-aware trade details."
+        description="Explore real crop listings from farmers on AgriculNet, with verification status shown before you engage."
       />
 
       <div className="rounded-2xl border border-ink-200 bg-white p-4 shadow-soft lg:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 items-center gap-2 rounded-full border border-ink-300 bg-ink-50 p-1.5 px-3 focus-within:border-green-800 focus-within:bg-white transition-colors">
+          <div className="flex flex-1 items-center gap-2 rounded-full border border-ink-300 bg-ink-50 p-1.5 px-3 transition-colors focus-within:border-green-800 focus-within:bg-white">
             <SlidersHorizontal className="h-4 w-4 text-ink-500" />
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by crop or region"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by crop, region, or farmer"
               className="h-8 w-full border-0 bg-transparent p-0 text-[13px] text-ink-800 outline-none placeholder:text-ink-400"
             />
           </div>
@@ -78,28 +74,21 @@ export default function BrowsePage() {
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value)}
+              onChange={(event) => setSort(event.target.value)}
               className="h-10 rounded-[10px] border border-ink-300 bg-white px-3 text-[13px] text-ink-700 focus:border-green-800 focus:outline-none focus:ring-4 focus:ring-green-800/10"
               aria-label="Sort listings"
             >
-              {sortOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
 
-            <div
-              role="group"
-              aria-label="Change layout"
-              className="inline-flex items-center overflow-hidden rounded-[10px] border border-ink-300 bg-white"
-            >
+            <div role="group" aria-label="Change layout" className="inline-flex items-center overflow-hidden rounded-[10px] border border-ink-300 bg-white">
               <button
                 type="button"
                 aria-pressed={layout === "grid"}
                 onClick={() => setLayout("grid")}
-                className={cn(
-                  "focus-ring inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors",
-                  layout === "grid" && "bg-green-100 text-green-800",
-                )}
+                className={cn("focus-ring inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors", layout === "grid" && "bg-green-100 text-green-800")}
                 aria-label="Grid view"
               >
                 <Grid3x3 className="h-4 w-4" aria-hidden="true" />
@@ -108,10 +97,7 @@ export default function BrowsePage() {
                 type="button"
                 aria-pressed={layout === "list"}
                 onClick={() => setLayout("list")}
-                className={cn(
-                  "focus-ring inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors",
-                  layout === "list" && "bg-green-100 text-green-800",
-                )}
+                className={cn("focus-ring inline-flex h-10 w-10 items-center justify-center text-ink-500 transition-colors", layout === "list" && "bg-green-100 text-green-800")}
                 aria-label="List view"
               >
                 <List className="h-4 w-4" aria-hidden="true" />
@@ -121,31 +107,29 @@ export default function BrowsePage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <div
-            role="group"
-            aria-label="Filter listings by status"
-            className="flex flex-wrap gap-2"
-          >
-            {statusFilters.map((filter) => (
-              <Button
-                key={filter.value}
-                type="button"
-                aria-pressed={status === filter.value}
-                variant={status === filter.value ? "primary" : "secondary"}
-                className="h-8 px-3 text-[12px]"
-                onClick={() => setStatus(filter.value)}
-              >
-                {filter.label}
-              </Button>
-            ))}
-          </div>
+          {statusFilters.map((filter) => (
+            <Button
+              key={filter.value}
+              type="button"
+              aria-pressed={status === filter.value}
+              variant={status === filter.value ? "primary" : "secondary"}
+              className="h-8 px-3 text-[12px]"
+              onClick={() => setStatus(filter.value)}
+            >
+              {filter.label}
+            </Button>
+          ))}
           <span className="ml-auto self-center text-[12px] text-ink-500" aria-live="polite">
             {filtered.length} listing{filtered.length === 1 ? "" : "s"}
           </span>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <Card className="rounded-[16px] p-8 text-center text-ink-500">Loading real marketplace listings...</Card>
+      ) : error ? (
+        <Card className="rounded-[16px] p-8 text-center text-red-700">Listings could not be loaded. Check the backend deployment and API URL.</Card>
+      ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-ink-300 bg-white p-12 text-center">
           <p className="text-[14px] font-semibold text-ink-800">No listings match your filters.</p>
           <p className="mt-1 text-[13px] text-ink-500">Try clearing the search or status filter.</p>

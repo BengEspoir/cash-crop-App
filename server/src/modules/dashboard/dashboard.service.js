@@ -171,6 +171,25 @@ const mapPayment = (row) => ({
   createdAt: row.created_at
 });
 
+const mapQuote = (row, listingById = {}) => {
+  const listing = listingById[row.listing_id] || {};
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    farmerId: row.farmer_id,
+    buyerId: row.buyer_id,
+    crop: listing.crop_name_fallback || 'Quote request',
+    title: listing.crop_name_fallback || 'Quote request',
+    message: row.message,
+    requestedQty: row.requested_qty,
+    requestedPrice: row.requested_price,
+    currency: row.currency || 'XAF',
+    status: row.status || 'pending',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+};
+
 const mapNotification = (row) => ({
   id: row.id,
   title: row.title,
@@ -250,6 +269,30 @@ const fetchPayments = async (applyFilter = (query) => query, limit = 50) => {
     []
   );
   return rows.map(mapPayment);
+};
+
+const fetchQuotes = async (applyFilter = (query) => query, limit = 50) => {
+  const rows = await safeQuery(
+    applyFilter(
+      supabaseAdmin
+        .from('inquiries')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+    ),
+    []
+  );
+
+  const listingIds = rows.map((row) => row.listing_id).filter(Boolean);
+  const listings = listingIds.length
+    ? await safeQuery(supabaseAdmin.from('listings').select('*').in('id', listingIds), [])
+    : [];
+  const listingById = listings.reduce((acc, listing) => {
+    acc[listing.id] = listing;
+    return acc;
+  }, {});
+
+  return rows.map((row) => mapQuote(row, listingById));
 };
 
 const fetchNotifications = async (userId) => {
@@ -352,6 +395,9 @@ const getFarmerDashboard = async (user, req) => {
     ? await fetchOrders((query) => query.eq('farmer_id', profile.id), 50)
     : [];
   const payments = await fetchPayments((query) => query.eq('payee_id', user.id), 30);
+  const quotes = profile
+    ? await fetchQuotes((query) => query.eq('farmer_id', profile.id), 50)
+    : [];
   const notifications = await fetchNotifications(user.id);
   const conversations = await fetchConversations(user.id);
 
@@ -360,10 +406,12 @@ const getFarmerDashboard = async (user, req) => {
     metrics: {
       activeListings: listings.filter((listing) => listing.status === 'verified').length,
       openOrders: orders.length,
+      openQuotes: quotes.filter((quote) => quote.status === 'pending').length,
       protectedRevenue: formatCurrency(orders.reduce((sum, order) => sum + order.amount, 0)),
       unreadMessages: conversations.reduce((sum, conversation) => sum + (conversation.unread || 0), 0)
     },
     listings,
+    quotes,
     orders,
     payments,
     notifications,
@@ -382,6 +430,9 @@ const getBuyerDashboard = async (user, req) => {
   const profile = await authRepository.getBuyerProfile(user.id);
   const orders = profile
     ? await fetchOrders((query) => query.eq('buyer_id', profile.id), 50)
+    : [];
+  const quotes = profile
+    ? await fetchQuotes((query) => query.eq('buyer_id', profile.id), 50)
     : [];
   const listings = await fetchListings((query) => query.eq('status', 'active'), 20);
   const notifications = await fetchNotifications(user.id);
@@ -402,12 +453,12 @@ const getBuyerDashboard = async (user, req) => {
     metrics: {
       activeOrders: orders.length,
       savedListings: 0,
-      openQuotes: 0
+      openQuotes: quotes.filter((quote) => quote.status === 'pending').length
     },
     orders,
     listings,
     savedListings: [],
-    quotes: [],
+    quotes,
     documents,
     conversations,
     notifications,

@@ -65,9 +65,9 @@ const shouldAdvanceToActive = (user) => {
 };
 
 const shouldAdvanceToIdentityVerification = (user) => {
-  // Farmers move to identity verification after phone and email are verified
+  // Sellers move to identity verification after phone and email are verified.
   return (
-    user.role === USER_ROLES.FARMER && 
+    (user.role === USER_ROLES.FARMER || user.role === USER_ROLES.RESELLER) &&
     user.phone_verified && 
     user.email_verified && 
     user.status === USER_STATUS.PENDING_VERIFICATION

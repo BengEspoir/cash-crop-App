@@ -3,6 +3,7 @@ import { MapPin, Package } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Card } from "../ui/card";
 import { StatusBadge } from "../common/StatusBadge";
+import { VerificationBadge } from "../farmers/VerificationBadge";
 import { SmartImage } from "../media/SmartImage";
 import { cropImagery, cropFallback } from "../../lib/imagery";
 
@@ -47,6 +48,7 @@ export function CropCard({ listing, href }) {
           <h3 className="text-[15px] font-semibold text-ink-800 transition-colors group-hover:text-green-800">
             {listing.crop}
           </h3>
+          <VerificationBadge status={listing.farmerVerificationStatus} />
           <p className={cn("text-[12px] text-ink-500")}>{listing.deliveryWindow ?? "Ready for inspection"}</p>
           <div className="flex items-center justify-between">
             <p className="text-[15px] font-semibold text-green-800">{listing.price}</p>

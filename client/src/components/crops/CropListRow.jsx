@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Card } from "../ui/card";
 import { CropBadge } from "./CropBadge";
 import { StatusBadge } from "../common/StatusBadge";
+import { VerificationBadge } from "../farmers/VerificationBadge";
 import { SmartImage } from "../media/SmartImage";
 import { cropImagery, cropFallback } from "../../lib/imagery";
 
@@ -32,6 +33,7 @@ export function CropListRow({ listing, href }) {
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-display text-[20px] text-ink-800">{listing.crop}</h3>
               <StatusBadge status={listing.status} />
+              <VerificationBadge status={listing.farmerVerificationStatus} />
               {listing.grade ? <CropBadge>{listing.grade}</CropBadge> : null}
             </div>
             {listing.summary ? (

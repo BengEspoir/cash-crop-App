@@ -64,6 +64,9 @@ export default function SellPage() {
           <Button asChild>
             <Link href="/register/farmer">Register as Farmer</Link>
           </Button>
+          <Button asChild variant="secondary">
+            <Link href="/register/reseller">Register as Reseller</Link>
+          </Button>
           <Button asChild variant="outline">
             <Link href="/pricing">See fees</Link>
           </Button>

@@ -102,7 +102,7 @@ export const regionImagery = {
   east: u("1570145820404-cf22b115b06f", { w: 1000 }),
 };
 
-// Crop imagery keyed by crop id (matches demo-data ids where possible).
+// Crop imagery keyed by crop id or API-provided crop names.
 export const cropImagery = {
   "cocoa-kumba-premium": u("1590502593747-42a996133562", { w: 1200 }),
   "coffee-bafoussam-arabica": u("1523741543316-beb7fc7023d8", { w: 1200 }),

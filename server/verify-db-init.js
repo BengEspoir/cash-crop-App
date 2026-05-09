@@ -13,6 +13,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 const REQUIRED_TABLES = [
   'users',
   'farmer_profiles',
+  'reseller_profiles',
   'buyer_profiles',
   'tokens',
   'otps',
@@ -32,15 +33,23 @@ const REQUIRED_COLUMNS = [
   ['farmer_profiles', 'payout_account_name', '022_profile_extensions.sql'],
   ['farmer_profiles', 'payout_phone', '022_profile_extensions.sql'],
   ['farmer_profiles', 'notification_opt_in', '022_profile_extensions.sql'],
+  ['reseller_profiles', 'identity_verification_status', '027_reseller_marketplace_foundation.sql'],
+  ['reseller_profiles', 'id_front_storage_path', '027_reseller_marketplace_foundation.sql'],
+  ['reseller_profiles', 'id_back_storage_path', '027_reseller_marketplace_foundation.sql'],
+  ['reseller_profiles', 'selfie_storage_path', '027_reseller_marketplace_foundation.sql'],
   ['farmer_profiles', 'id_front_url', '024_enhanced_verification.sql'],
   ['farmer_profiles', 'id_back_url', '024_enhanced_verification.sql'],
   ['farmer_profiles', 'selfie_url', '024_enhanced_verification.sql'],
   ['farmer_profiles', 'verification_submitted_at', '024_enhanced_verification.sql'],
-  ['buyer_profiles', 'destination_market', '022_profile_extensions.sql']
+  ['buyer_profiles', 'destination_market', '022_profile_extensions.sql'],
+  ['listings', 'reseller_id', '027_reseller_marketplace_foundation.sql'],
+  ['inquiries', 'reseller_id', '027_reseller_marketplace_foundation.sql'],
+  ['orders', 'reseller_id', '027_reseller_marketplace_foundation.sql']
 ];
 
 const REQUIRED_ENUM_VALUES = [
-  ['users', 'status', 'pending_identity_verification', '024_enhanced_verification.sql']
+  ['users', 'status', 'pending_identity_verification', '024_enhanced_verification.sql'],
+  ['users', 'role', 'reseller', '027_reseller_marketplace_foundation.sql']
 ];
 
 const REQUIRED_MIGRATIONS = [
@@ -53,13 +62,16 @@ const REQUIRED_MIGRATIONS = [
   '022_profile_extensions.sql',
   '023_auto_approval_setup.sql',
   '024_enhanced_verification.sql',
-  '025_activity_events.sql'
+  '025_activity_events.sql',
+  '026_marketplace_verification_gating.sql',
+  '027_reseller_marketplace_foundation.sql'
 ];
 
 const OPTIONAL_SEEDS = [
   'server/database/seeds/001_seed_admin.sql',
   'server/database/seeds/002_seed_regions.sql',
-  'server/database/seeds/003_seed_crops.sql'
+  'server/database/seeds/003_seed_crops.sql',
+  'server/database/seeds/004_seed_marketplace_cameroon_sellers.sql'
 ];
 
 if (!supabaseUrl || !supabaseKey) {

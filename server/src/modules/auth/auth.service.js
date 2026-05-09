@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const path = require('path');
 const repository = require('./auth.repository');
 const helpers = require('./auth.helpers');
 const AppError = require('../../utils/AppError');
@@ -6,6 +7,8 @@ const tokenHelper = require('../../utils/tokenHelper');
 const otpUtil = require('../../utils/otp');
 const mailer = require('../../utils/mailer');
 const sms = require('../../utils/sms');
+const { supabaseAdmin } = require('../../config/supabase');
+const { FARMER_VERIFICATION_STATUS } = require('../../utils/marketplace');
 const {
   USER_ROLES,
   USER_STATUS,
@@ -303,6 +306,75 @@ const registerFarmer = async (data, req) => {
 
   await repository.logAuditEvent(user.id, 'FARMER_REGISTERED', req, { phone, email });
   await repository.logActivityEvent(user.id, 'FARMER_REGISTERED', req, {
+    role: user.role,
+    entityType: 'user',
+    entityId: user.id
+  });
+
+  return withDevHints({
+    ...buildAuthPayload(user, { nextStep: 'verify_email' }),
+    message: isDeliveryFailed(emailDeliveryStatus)
+      ? 'Registration successful, but verification email could not be sent.'
+      : 'Registration successful.',
+    emailDelivery: emailDeliveryStatus,
+    smsDelivery: smsDeliveryStatus
+  }, smsDelivery, emailDelivery);
+};
+
+const registerReseller = async (data, req) => {
+  const phone = helpers.normalizePhone(data.phone);
+  const email = data.email.toLowerCase();
+  const existingPhone = await repository.findUserByPhone(phone);
+  if (existingPhone) {
+    throw new AppError('Phone number already registered', 409, ERROR_CODES.DUPLICATE_PHONE);
+  }
+
+  const existingEmail = await repository.findUserByEmail(email);
+  if (existingEmail) {
+    throw new AppError('Email already registered', 409, ERROR_CODES.DUPLICATE_EMAIL);
+  }
+
+  const passwordHash = await bcrypt.hash(data.password, env.BCRYPT_SALT_ROUNDS);
+
+  const user = await repository.createUser({
+    role: USER_ROLES.RESELLER,
+    status: USER_STATUS.PENDING_VERIFICATION,
+    first_name: data.firstName,
+    last_name: data.lastName,
+    phone,
+    email,
+    password_hash: passwordHash,
+    phone_verified: false,
+    email_verified: false,
+    region: data.region,
+    city: data.city,
+    country: 'Cameroon'
+  });
+
+  await repository.createResellerProfile(user.id, {
+    business_name: data.businessName || null,
+    primary_crop: data.primaryCrop || null,
+    crops_sold: helpers.toCropList(data.cropsSold?.length ? data.cropsSold : data.primaryCrop),
+    about: data.about || null,
+    payout_method: data.payoutMethod || null,
+    payout_account_name: data.accountName || null,
+    payout_phone: data.payoutPhone ? helpers.normalizePhone(data.payoutPhone) : null,
+    notification_opt_in: typeof data.notificationOptIn === 'boolean' ? data.notificationOptIn : true
+  });
+
+  const smsDelivery = await runDelivery(
+    'Reseller registration SMS',
+    () => createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION)
+  );
+  const emailDelivery = await runDelivery(
+    'Reseller verification email',
+    () => createEmailVerificationForUser(user)
+  );
+  const smsDeliveryStatus = buildDeliveryStatus(smsDelivery, 'sms');
+  const emailDeliveryStatus = buildDeliveryStatus(emailDelivery, 'email');
+
+  await repository.logAuditEvent(user.id, 'RESELLER_REGISTERED', req, { phone, email });
+  await repository.logActivityEvent(user.id, 'RESELLER_REGISTERED', req, {
     role: user.role,
     entityType: 'user',
     entityId: user.id
@@ -796,6 +868,8 @@ const getMe = async (userId) => {
 
   if (user.role === USER_ROLES.FARMER) {
     result.profile = await repository.getFarmerProfile(userId);
+  } else if (user.role === USER_ROLES.RESELLER) {
+    result.profile = await repository.getResellerProfile(userId);
   } else if (user.role === USER_ROLES.LOCAL_BUYER || user.role === USER_ROLES.INTERNATIONAL_BUYER) {
     result.profile = await repository.getBuyerProfile(userId);
   }
@@ -851,6 +925,29 @@ const updateMe = async (userId, updateData) => {
         .eq('user_id', userId);
     }
     result.profile = await repository.getFarmerProfile(userId);
+  } else if (user.role === USER_ROLES.RESELLER) {
+    const allowedProfileFields = [
+      'business_name',
+      'about',
+      'primary_crop',
+      'crops_sold',
+      'payout_method',
+      'payout_account_name',
+      'payout_phone',
+      'notification_opt_in'
+    ];
+    const profileUpdates = {};
+    for (const field of allowedProfileFields) {
+      if (updateData[field] !== undefined) {
+        profileUpdates[field] = field === 'payout_phone' && updateData[field]
+          ? helpers.normalizePhone(updateData[field])
+          : updateData[field];
+      }
+    }
+    if (Object.keys(profileUpdates).length > 0) {
+      await repository.updateResellerProfile(userId, profileUpdates);
+    }
+    result.profile = await repository.getResellerProfile(userId);
   } else if (user.role === USER_ROLES.LOCAL_BUYER || user.role === USER_ROLES.INTERNATIONAL_BUYER) {
     const allowedProfileFields = [
       'company_name',
@@ -897,20 +994,82 @@ const deactivateAccount = async (userId, password, req) => {
   return { message: 'Account deactivated successfully' };
 };
 
-const submitIdentityVerification = async (userId, data, req) => {
-  const user = await repository.findUserById(userId);
-  if (!user || user.role !== USER_ROLES.FARMER) {
-    throw new AppError('Only farmers can submit identity verification', 400, ERROR_CODES.VALIDATION_ERROR);
+const getUploadedFile = (files, field) => {
+  const value = files?.[field];
+  return Array.isArray(value) ? value[0] : null;
+};
+
+const extensionForFile = (file) => {
+  const fromName = path.extname(file.originalname || '').toLowerCase();
+  if (fromName) return fromName;
+  if (file.mimetype === 'image/png') return '.png';
+  if (file.mimetype === 'image/webp') return '.webp';
+  return '.jpg';
+};
+
+const uploadVerificationFile = async (userId, field, file) => {
+  const bucket = env.SUPABASE_VERIFICATION_BUCKET;
+  const storagePath = `${userId}/${Date.now()}-${field}${extensionForFile(file)}`;
+  const { error } = await supabaseAdmin.storage
+    .from(bucket)
+    .upload(storagePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: true
+    });
+
+  if (error) {
+    throw new AppError(
+      `Verification upload failed. Confirm the private Supabase bucket "${bucket}" exists and is not public.`,
+      500,
+      ERROR_CODES.SERVER_ERROR,
+      { storage: error.message }
+    );
   }
 
+  return storagePath;
+};
+
+const submitIdentityVerification = async (userId, data, req) => {
+  const user = await repository.findUserById(userId);
+  if (!user || ![USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role)) {
+    throw new AppError('Only sellers can submit identity verification', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const idFront = getUploadedFile(req.files, 'idFront');
+  const idBack = getUploadedFile(req.files, 'idBack');
+  const selfie = getUploadedFile(req.files, 'selfie');
+
+  if (!idFront || !idBack || !selfie) {
+    throw new AppError(
+      'National ID front, National ID back, and live selfie images are required.',
+      400,
+      ERROR_CODES.VALIDATION_ERROR
+    );
+  }
+
+  const [idFrontPath, idBackPath, selfiePath] = await Promise.all([
+    uploadVerificationFile(userId, 'id-front', idFront),
+    uploadVerificationFile(userId, 'id-back', idBack),
+    uploadVerificationFile(userId, 'selfie', selfie)
+  ]);
+
   const updates = {
-    id_front_url: data.idFrontUrl,
-    id_back_url: data.idBackUrl,
-    selfie_url: data.selfieUrl,
-    verification_submitted_at: new Date().toISOString()
+    id_front_storage_path: idFrontPath,
+    id_back_storage_path: idBackPath,
+    selfie_storage_path: selfiePath,
+    id_front_url: null,
+    id_back_url: null,
+    selfie_url: null,
+    identity_verification_status: FARMER_VERIFICATION_STATUS.PENDING_REVIEW,
+    verification_submitted_at: new Date().toISOString(),
+    rejection_reason: null
   };
 
-  await repository.updateFarmerProfile(userId, updates);
+  if (user.role === USER_ROLES.RESELLER) {
+    await repository.updateResellerProfile(userId, updates);
+  } else {
+    await repository.updateFarmerProfile(userId, updates);
+  }
   await repository.updateUser(userId, { status: USER_STATUS.PENDING_REVIEW });
 
   await repository.logAuditEvent(userId, 'IDENTITY_VERIFICATION_SUBMITTED', req, {});
@@ -929,15 +1088,24 @@ const adminReviewUser = async (adminId, userId, action, reason, req) => {
   }
 
   let nextStatus;
+  const farmerProfileUpdate = {};
   switch (action) {
     case 'approve':
       nextStatus = USER_STATUS.ACTIVE;
+      farmerProfileUpdate.identity_verification_status = FARMER_VERIFICATION_STATUS.VERIFIED;
+      farmerProfileUpdate.verified_by = adminId;
+      farmerProfileUpdate.verified_at = new Date().toISOString();
+      farmerProfileUpdate.rejection_reason = null;
       break;
     case 'reject':
-      nextStatus = USER_STATUS.REJECTED;
+      nextStatus = USER_STATUS.PENDING_IDENTITY_VERIFICATION;
+      farmerProfileUpdate.identity_verification_status = FARMER_VERIFICATION_STATUS.REJECTED;
+      farmerProfileUpdate.rejection_reason = reason || 'Rejected by admin review';
       break;
     case 'flag':
       nextStatus = USER_STATUS.PENDING_IDENTITY_VERIFICATION;
+      farmerProfileUpdate.identity_verification_status = FARMER_VERIFICATION_STATUS.REJECTED;
+      farmerProfileUpdate.rejection_reason = reason || 'Additional verification is required';
       break;
     case 'ban':
       nextStatus = USER_STATUS.SUSPENDED;
@@ -957,11 +1125,10 @@ const adminReviewUser = async (adminId, userId, action, reason, req) => {
 
   await repository.updateUser(userId, userUpdate);
   
-  if (action === 'approve') {
-    await repository.updateFarmerProfile(userId, { 
-      verified_by: adminId,
-      verified_at: new Date().toISOString()
-    });
+  if (user.role === USER_ROLES.FARMER && Object.keys(farmerProfileUpdate).length > 0) {
+    await repository.updateFarmerProfile(userId, farmerProfileUpdate);
+  } else if (user.role === USER_ROLES.RESELLER && Object.keys(farmerProfileUpdate).length > 0) {
+    await repository.updateResellerProfile(userId, farmerProfileUpdate);
   }
 
   await repository.logAuditEvent(userId, `USER_${action.toUpperCase()}`, req, { adminId, reason });
@@ -983,15 +1150,19 @@ const getPendingUsers = async () => {
   const users = await repository.findUsersByStatus(USER_STATUS.PENDING_REVIEW);
   return users
     .filter((user) => user.role === USER_ROLES.FARMER)
+    .concat(users.filter((user) => user.role === USER_ROLES.RESELLER))
     .map((user) => ({
       ...user,
       name: formatUserName(user),
-      profile: Array.isArray(user.farmer_profiles) ? user.farmer_profiles[0] : user.farmer_profiles
+      profile: user.role === USER_ROLES.RESELLER
+        ? (Array.isArray(user.reseller_profiles) ? user.reseller_profiles[0] : user.reseller_profiles)
+        : (Array.isArray(user.farmer_profiles) ? user.farmer_profiles[0] : user.farmer_profiles)
     }));
 };
 
 module.exports = {
   registerFarmer,
+  registerReseller,
   registerBuyer,
   login,
   logout,

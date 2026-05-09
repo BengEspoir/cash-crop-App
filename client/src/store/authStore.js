@@ -230,6 +230,37 @@ const useAuthStore = create(
         }
       },
 
+      registerReseller: async (resellerData) => {
+        set({ isLoading: true });
+
+        try {
+          const payload = {
+            ...resellerData,
+            phone: normalizeCameroonPhone(resellerData.phone),
+            payoutPhone: resellerData.payoutPhone ? normalizeCameroonPhone(resellerData.payoutPhone) : undefined,
+          };
+
+          const { data } = await api.post("/auth/register/reseller", payload);
+          get().setOnboarding({
+            userId: data.data.user.id,
+            role: data.data.user.role,
+            phone: data.data.phone,
+            email: data.data.user.email ? maskIdentifier(data.data.user.email) : null,
+            identifier: data.data.user.email || normalizeCameroonPhone(resellerData.phone),
+            nextStep: data.data.nextStep,
+            emailDelivery: data.data.emailDelivery || null,
+            smsDelivery: data.data.smsDelivery || null,
+            devHints: data.data.devHints || null,
+          });
+
+          set({ isLoading: false });
+          return { success: true, data: data.data };
+        } catch (error) {
+          set({ isLoading: false });
+          return getErrorPayload(error, "Registration failed");
+        }
+      },
+
       registerBuyer: async (buyerData) => {
         set({ isLoading: true });
 
@@ -461,6 +492,7 @@ export const useAuth = () => {
     fetchMe,
     hydrateSession,
     registerFarmer,
+    registerReseller,
     registerBuyer,
     verifyPhone,
     verifyEmail,
@@ -483,6 +515,7 @@ export const useAuth = () => {
     fetchMe,
     hydrateSession,
     registerFarmer,
+    registerReseller,
     registerBuyer,
     verifyPhone,
     verifyEmail,

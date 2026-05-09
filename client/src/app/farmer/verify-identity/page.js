@@ -7,7 +7,6 @@ import { CheckCircle2, Loader2, ShieldCheck, UserCheck } from "lucide-react";
 import { CameraCapture } from "@/components/media/CameraCapture";
 import { Button } from "@/components/ui/button";
 import useAuth from "@/hooks/useAuth";
-import { uploadToCloudinary } from "@/lib/cloudinary";
 import api from "@/lib/axios";
 import toast from "react-hot-toast";
 
@@ -61,21 +60,14 @@ export default function VerifyIdentityPage() {
   const submitVerification = async () => {
     setIsSubmitting(true);
     try {
-      // 1. Upload images to Cloudinary
-      const uploadPromises = Object.entries(captures).map(async ([key, dataUrl]) => {
-        const file = dataUrlToFile(dataUrl, `${key}.jpg`);
-        const result = await uploadToCloudinary(file, { folder: `verifications/${user.id}` });
-        return [key, result.secure_url];
-      });
+      // Submit directly to the backend so evidence lands in private Supabase storage.
+      const formData = new FormData();
+      formData.append("idFront", dataUrlToFile(captures.id_front, "national-id-front.jpg"));
+      formData.append("idBack", dataUrlToFile(captures.id_back, "national-id-back.jpg"));
+      formData.append("selfie", dataUrlToFile(captures.selfie, "live-selfie.jpg"));
 
-      const uploadResults = await Promise.all(uploadPromises);
-      const urls = Object.fromEntries(uploadResults);
-
-      // 2. Submit to backend
-      await api.post("/auth/submit-identity", {
-        idFrontUrl: urls.id_front,
-        idBackUrl: urls.id_back,
-        selfieUrl: urls.selfie,
+      await api.post("/auth/submit-identity", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       setIsComplete(true);
@@ -119,7 +111,7 @@ export default function VerifyIdentityPage() {
         </div>
         <h1 className="mt-2 font-display text-2xl font-bold text-ink-900">Secure Your Profile</h1>
         <p className="mt-1 text-ink-600">
-          National ID scan and live biometric matching required for all farmer accounts.
+          National ID scan and live biometric matching required for all seller accounts.
         </p>
       </header>
 

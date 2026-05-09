@@ -118,6 +118,10 @@ const createBuyerProfile = async (userId, profileData) => {
   return insertWithMissingColumnFallback('buyer_profiles', { user_id: userId, ...profileData });
 };
 
+const createResellerProfile = async (userId, profileData) => {
+  return insertWithMissingColumnFallback('reseller_profiles', { user_id: userId, ...profileData });
+};
+
 const updateUser = async (id, updateData) => {
   const { data, error } = await supabaseAdmin
     .from('users')
@@ -344,14 +348,28 @@ const getBuyerProfile = async (userId) => {
   return data;
 };
 
+const getResellerProfile = async (userId) => {
+  const { data, error } = await supabaseAdmin
+    .from('reseller_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
 const updateFarmerProfile = async (userId, updateData) => {
   return updateWithMissingColumnFallback('farmer_profiles', userId, updateData);
+};
+
+const updateResellerProfile = async (userId, updateData) => {
+  return updateWithMissingColumnFallback('reseller_profiles', userId, updateData);
 };
 
 const findUsersByStatus = async (status) => {
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('*, farmer_profiles(*), buyer_profiles(*)')
+    .select('*, farmer_profiles(*), buyer_profiles(*), reseller_profiles(*)')
     .eq('status', status)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -367,8 +385,10 @@ module.exports = {
   createUser,
   createFarmerProfile,
   createBuyerProfile,
+  createResellerProfile,
   updateUser,
   updateFarmerProfile,
+  updateResellerProfile,
   incrementFailedAttempts,
   resetFailedAttempts,
   lockUserAccount,
@@ -385,5 +405,6 @@ module.exports = {
   logAuditEvent,
   logActivityEvent,
   getFarmerProfile,
-  getBuyerProfile
+  getBuyerProfile,
+  getResellerProfile
 };

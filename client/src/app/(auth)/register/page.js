@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Sprout, Truck } from "lucide-react";
+import { ArrowRight, Store, Sprout, Truck } from "lucide-react";
 import { Card } from "../../../components/ui/card";
 import { Reveal, Stagger, StaggerItem } from "../../../components/motion/Reveal";
 
@@ -13,6 +13,14 @@ const options = [
     icon: Sprout,
     accent: "from-green-800/10 to-green-800/0 border-t-[4px] border-t-green-800",
     pill: "Farmer",
+  },
+  {
+    title: "Register as Reseller",
+    body: "Aggregate crop supply, publish listings, and complete the same protected verification flow before transactions.",
+    href: "/register/reseller",
+    icon: Store,
+    accent: "from-green-700/10 to-green-700/0 border-t-[4px] border-t-green-700",
+    pill: "Reseller",
   },
   {
     title: "Register as Buyer",
@@ -37,7 +45,7 @@ export default function RegisterPage() {
         </p>
       </Reveal>
 
-      <Stagger className="mt-6 grid gap-4 lg:grid-cols-2" delay={0.1} stagger={0.1}>
+      <Stagger className="mt-6 grid gap-4 lg:grid-cols-3" delay={0.1} stagger={0.1}>
         {options.map((option) => {
           const Icon = option.icon;
           return (

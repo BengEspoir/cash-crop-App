@@ -7,6 +7,8 @@ const useAuth = () => {
 
   const isAdmin = store.user?.role === 'admin' || store.user?.role === 'super_admin';
   const isFarmer = store.user?.role === 'farmer';
+  const isReseller = store.user?.role === 'reseller';
+  const isSeller = isFarmer || isReseller;
   const isBuyer = ['local_buyer', 'international_buyer'].includes(store.user?.role);
   const isLocalBuyer = store.user?.role === 'local_buyer';
   const isInternationalBuyer = store.user?.role === 'international_buyer';
@@ -23,6 +25,8 @@ const useAuth = () => {
     ...store,
     isAdmin,
     isFarmer,
+    isReseller,
+    isSeller,
     isBuyer,
     isLocalBuyer,
     isInternationalBuyer,

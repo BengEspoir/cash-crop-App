@@ -1,22 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
+
+const unwrapItems = (response) => response.data?.data?.items || response.data?.data || [];
+const unwrapData = (response) => response.data?.data;
 
 export const useListings = (filters = {}) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["listings", filters],
-    queryFn: async () => {
-      // In a real app, this would fetch from /listings
-      // For now, we return empty or fetch if endpoint exists
-      try {
-        const response = await api.get("/listings", { params: filters });
-        return response.data.data;
-      } catch (err) {
-        console.warn("Listings API not fully implemented, returning empty");
-        return [];
-      }
-    },
+    queryFn: async () => unwrapItems(await api.get("/listings", { params: filters })),
   });
 
   return {
@@ -25,4 +18,44 @@ export const useListings = (filters = {}) => {
     error,
     refetch,
   };
+};
+
+export const useListing = (id) => useQuery({
+  queryKey: ["listing", id],
+  enabled: Boolean(id),
+  queryFn: async () => unwrapData(await api.get(`/listings/${id}`)),
+});
+
+export const useCreateListing = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload) => unwrapData(await api.post("/listings", payload)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "farmer"] });
+    },
+  });
+};
+
+export const useUpdateListing = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }) => unwrapData(await api.patch(`/listings/${id}`, payload)),
+    onSuccess: (listing) => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      queryClient.invalidateQueries({ queryKey: ["listing", listing?.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "farmer"] });
+    },
+  });
+};
+
+export const useDeleteListing = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => unwrapData(await api.delete(`/listings/${id}`)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "farmer"] });
+    },
+  });
 };

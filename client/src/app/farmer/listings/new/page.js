@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { ArrowLeft } from "lucide-react";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -10,12 +12,14 @@ import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useCreateListing } from "@/hooks/useListings";
 
 const defaultForm = {
   crop: "Cocoa Beans",
   grade: "Export Grade A",
-  quantity: "2,000 kg",
-  price: "XAF 1,650 / kg",
+  quantity: "2000",
+  quantityUnit: "kg",
+  price: "1650",
   region: "Kumba, South West",
   deliveryWindow: "Ready within 5 days",
   summary:
@@ -23,10 +27,35 @@ const defaultForm = {
 };
 
 export default function FarmerNewListingPage() {
+  const router = useRouter();
   const [form, setForm] = useState(defaultForm);
   const [gallery, setGallery] = useState([]);
+  const createListing = useCreateListing();
 
   const update = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
+
+  const handleSubmit = async (status) => {
+    try {
+      const listing = await createListing.mutateAsync({
+        cropName: form.crop,
+        grade: form.grade,
+        quantity: Number(form.quantity),
+        quantityUnit: form.quantityUnit || "kg",
+        pricePerUnit: Number(form.price),
+        currency: "XAF",
+        status,
+        locationName: form.region,
+        deliveryWindow: form.deliveryWindow,
+        summary: form.summary,
+        exportReady: true,
+        images: gallery.map((item) => ({ url: item.url, alt: item.alt, publicId: item.publicId })),
+      });
+      toast.success(status === "draft" ? "Listing draft saved." : "Listing published.");
+      router.push(`/farmer/listings/${listing.id}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Listing could not be saved.");
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -73,7 +102,11 @@ export default function FarmerNewListingPage() {
                   <Input value={form.quantity} onChange={update("quantity")} />
                 </label>
                 <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Price</span>
+                  <span className="text-[13px] font-medium text-ink-700">Unit</span>
+                  <Input value={form.quantityUnit} onChange={update("quantityUnit")} />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-[13px] font-medium text-ink-700">Price per unit (XAF)</span>
                   <Input value={form.price} onChange={update("price")} />
                 </label>
                 <label className="space-y-2">
@@ -115,8 +148,8 @@ export default function FarmerNewListingPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-ink-100 pt-5">
-            <Button type="button" variant="outline">Save draft</Button>
-            <Button type="button">Publish listing</Button>
+            <Button type="button" variant="outline" disabled={createListing.isPending} onClick={() => handleSubmit("draft")}>Save draft</Button>
+            <Button type="button" disabled={createListing.isPending} onClick={() => handleSubmit("active")}>Publish listing</Button>
           </div>
         </Card>
       </Reveal>

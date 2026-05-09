@@ -3,6 +3,7 @@ const { supabaseAdmin } = require('../config/supabase');
 const env = require('../config/env');
 const { sendError } = require('../utils/response');
 const { ERROR_CODES, USER_STATUS } = require('../config/constants');
+const { isSellerRole, getSellerProfileTable, isVerifiedSellerProfile } = require('../utils/marketplace');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -106,6 +107,38 @@ const restrictUnverifiedFarmer = (req, res, next) => {
   next();
 };
 
+const requireVerifiedFarmerForCommerce = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Authentication required', 401, ERROR_CODES.UNAUTHORIZED);
+    }
+
+    if (!isSellerRole(req.user.role)) {
+      return next();
+    }
+
+    const profileTable = getSellerProfileTable(req.user.role);
+    const { data: profile, error } = await supabaseAdmin
+      .from(profileTable)
+      .select('identity_verification_status, verified_at')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (error || !isVerifiedSellerProfile(profile, req.user)) {
+      return sendError(
+        res,
+        'You must complete National ID verification before accepting sales or receiving payments.',
+        403,
+        ERROR_CODES.FORBIDDEN
+      );
+    }
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -154,5 +187,6 @@ module.exports = {
   requireActiveAccount,
   requireDashboardAccess,
   restrictUnverifiedFarmer,
+  requireVerifiedFarmerForCommerce,
   optionalAuth
 };

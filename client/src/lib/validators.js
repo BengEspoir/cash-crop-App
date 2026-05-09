@@ -223,14 +223,9 @@ export const registerBuyerSchemas = [
     email: z.string().email("Enter a valid email address."),
     password: passwordSchema,
     confirmPassword: z.string().min(8, "Confirm your password."),
+    agreedToPolicy: z.boolean().refine(Boolean, "You must accept the buyer terms."),
   }).superRefine((value, ctx) => {
     validateBuyerStepOne(value, ctx);
-  }),
-  z.object({
-    buyingFocus: z.string().min(2, "Tell us what you source most often."),
-    monthlyVolume: z.string().min(2, "Enter your target order volume."),
-    destination: z.string().min(2, "Enter your destination market."),
-    agreedToPolicy: z.boolean().refine(Boolean, "You must accept the buyer terms."),
   }),
 ];
 
@@ -247,11 +242,11 @@ export const registerBuyerUnifiedSchema = z.object({
   password: passwordSchema,
   confirmPassword: z.string().min(8, "Confirm your password."),
   
-  // Step 2: Sourcing Preferences (Optional until step 2, then required)
+  // Preferences are configured later in dashboard settings.
   buyingFocus: z.string().optional(),
   monthlyVolume: z.string().optional(),
   destination: z.string().optional(),
-  agreedToPolicy: z.boolean().optional(),
+  agreedToPolicy: z.boolean().refine(Boolean, "You must accept the buyer terms."),
 }).superRefine((value, ctx) => {
   validateBuyerStepOne(value, ctx);
 });

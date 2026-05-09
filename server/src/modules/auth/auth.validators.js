@@ -53,6 +53,39 @@ const registerFarmerSchema = Joi.object({
     'object.missing': 'You must agree to the terms and conditions'
   });
 
+const registerResellerSchema = Joi.object({
+  firstName: Joi.string().min(2).max(100).required(),
+  lastName: Joi.string().min(2).max(100).required(),
+  phone: Joi.string().pattern(phonePattern).required().messages({
+    'string.pattern.base': 'Phone must be a valid Cameroon number (+237XXXXXXXXX)'
+  }),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).max(128).pattern(passwordPattern).required().messages({
+    'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+  }),
+  confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
+    'any.only': 'Passwords do not match'
+  }),
+  region: Joi.string().valid(...CAMEROON_REGIONS).required(),
+  city: Joi.string().min(2).max(100).required(),
+  businessName: Joi.string().max(200).allow('', null).optional(),
+  primaryCrop: Joi.string().min(2).max(120).allow('', null).optional(),
+  cropsSold: Joi.array().items(Joi.string().max(120)).max(20).optional(),
+  about: Joi.string().max(1000).allow('', null).optional(),
+  payoutMethod: Joi.string().max(100).allow('').optional(),
+  accountName: Joi.string().max(200).allow('').optional(),
+  payoutPhone: Joi.string().pattern(phonePattern).allow('', null).optional().messages({
+    'string.pattern.base': 'Payout phone must be a valid Cameroon number (+237XXXXXXXXX)'
+  }),
+  notificationOptIn: Joi.boolean().optional(),
+  acceptedTerms: acceptedTerms.optional(),
+  agreeToTerms: acceptedTerms.optional()
+})
+  .or('acceptedTerms', 'agreeToTerms')
+  .messages({
+    'object.missing': 'You must agree to the terms and conditions'
+  });
+
 const registerBuyerSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).optional(),
   lastName: Joi.string().min(2).max(100).optional(),
@@ -203,6 +236,7 @@ const resetPasswordSchema = Joi.object({
 
 module.exports = {
   registerFarmerSchema,
+  registerResellerSchema,
   registerBuyerSchema,
   loginSchema,
   sendOtpSchema,

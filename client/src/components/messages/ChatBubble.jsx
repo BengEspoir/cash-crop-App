@@ -1,7 +1,7 @@
 import { cn } from "../../lib/utils";
 
 export function ChatBubble({ message, currentUser }) {
-  const mine = message.sender === currentUser;
+  const mine = typeof message.mine === "boolean" ? message.mine : message.sender === currentUser;
 
   return (
     <div className={cn("flex", mine ? "justify-end" : "justify-start")}>

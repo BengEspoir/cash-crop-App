@@ -85,6 +85,9 @@ module.exports = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
 
+  // Private verification storage
+  SUPABASE_VERIFICATION_BUCKET: process.env.SUPABASE_VERIFICATION_BUCKET || 'farmer-verifications',
+
   // OTP
   OTP_LENGTH: parseInt(process.env.OTP_LENGTH, 10) || 6,
   OTP_EXPIRES_MINUTES: parseInt(process.env.OTP_EXPIRES_MINUTES, 10) || 10,

@@ -6,9 +6,9 @@ import { farmerNavigation } from "../../constants/routes";
 export default function FarmerRouteLayout({ children }) {
   return (
     <DashboardShell
-      heading="Farmer Workspace"
+      heading="Seller Workspace"
       navigation={farmerNavigation}
-      allowedRoles={["farmer"]}
+      allowedRoles={["farmer", "reseller"]}
       authRedirect="/sign-in"
       description="Manage listings, buyer conversations, payouts, and verification progress with a single view."
     >

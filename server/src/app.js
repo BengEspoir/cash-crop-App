@@ -10,6 +10,13 @@ const authRoutes = require('./modules/auth/auth.routes');
 const adminAuthRoutes = require('./modules/admin/admin.auth.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
+const listingsRoutes = require('./modules/listings/listings.routes');
+const farmersRoutes = require('./modules/farmers/farmers.routes');
+const quotesRoutes = require('./modules/quotes/quotes.routes');
+const conversationsRoutes = require('./modules/conversations/conversations.routes');
+const messagesRoutes = require('./modules/messages/messages.routes');
+const ordersRoutes = require('./modules/orders/orders.routes');
+const paymentsRoutes = require('./modules/payments/payments.routes');
 
 const app = express();
 
@@ -43,6 +50,13 @@ app.use('/api/v1/x-secure/admin-access', adminAuthRoutes);
 
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/listings', listingsRoutes);
+app.use('/api/v1/farmers', farmersRoutes);
+app.use('/api/v1/quotes', quotesRoutes);
+app.use('/api/v1/conversations', conversationsRoutes);
+app.use('/api/v1/messages', messagesRoutes);
+app.use('/api/v1/orders', ordersRoutes);
+app.use('/api/v1/payments', paymentsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

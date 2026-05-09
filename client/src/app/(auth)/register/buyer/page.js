@@ -42,7 +42,7 @@ function CountrySelect({ value, onChange, error }) {
   );
 }
 
-const steps = ["Buyer Profile", "Sourcing Preferences"];
+const steps = ["Buyer Profile"];
 
 export default function RegisterBuyerPage() {
   const router = useRouter();
@@ -74,9 +74,6 @@ export default function RegisterBuyerPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      buyingFocus: "",
-      monthlyVolume: "",
-      destination: "",
       agreedToPolicy: false,
     },
   });
@@ -122,9 +119,8 @@ export default function RegisterBuyerPage() {
   };
 
   const validateStep = async (stepNum) => {
-    const step0Fields = ["buyerType", "companyName", "contactName", "country", "countryCode", "phone", "email", "password", "confirmPassword"];
-    const step1Fields = ["buyingFocus", "monthlyVolume", "destination", "agreedToPolicy"];
-    const fieldsToCheck = [step0Fields, step1Fields][stepNum] || [];
+    const step0Fields = ["buyerType", "companyName", "contactName", "country", "countryCode", "phone", "email", "password", "confirmPassword", "agreedToPolicy"];
+    const fieldsToCheck = [step0Fields][stepNum] || [];
     const stepSchema = registerBuyerSchemas[stepNum];
 
     clearErrors(fieldsToCheck);
@@ -262,32 +258,13 @@ export default function RegisterBuyerPage() {
               <PasswordInput label="Password *" placeholder="Minimum 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
               <PasswordInput label="Confirm Password *" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
             </div>
-          </>
-        ) : null}
 
-        {currentStep === 1 ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Buying Focus *</Label>
-              <Input placeholder="Cocoa, coffee, maize" {...register("buyingFocus")} />
-              {errors.buyingFocus ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.buyingFocus.message}</p> : null}
-            </div>
-            <div>
-              <Label>Monthly Volume *</Label>
-              <Input placeholder="e.g. 12 tonnes" {...register("monthlyVolume")} />
-              {errors.monthlyVolume ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.monthlyVolume.message}</p> : null}
-            </div>
-            <div className="sm:col-span-2">
-              <Label>Destination Market *</Label>
-              <Input placeholder="Douala, Lagos, Rotterdam" {...register("destination")} />
-              {errors.destination ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.destination.message}</p> : null}
-            </div>
-            <label className="sm:col-span-2 flex items-start gap-3 rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-4 text-[13px] text-[#374151]">
+            <label className="flex items-start gap-3 rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-4 text-[13px] text-[#374151]">
               <input type="checkbox" className="mt-1 h-4 w-4 rounded border-[#D1D5DB]" {...register("agreedToPolicy")} />
-              <span>I agree to AgriculNet buyer terms, sourcing policies, and protected payment conditions.</span>
+              <span>I agree to AgriculNet buyer terms, marketplace policies, and protected payment conditions.</span>
             </label>
-            {errors.agreedToPolicy ? <p className="-mt-3 sm:col-span-2 text-[12px] text-[#922B21]">{errors.agreedToPolicy.message}</p> : null}
-          </div>
+            {errors.agreedToPolicy ? <p className="-mt-3 text-[12px] text-[#922B21]">{errors.agreedToPolicy.message}</p> : null}
+          </>
         ) : null}
 
         {submitState.error ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitState.error}</p> : null}

@@ -7,6 +7,11 @@ const registerFarmer = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Farmer registered successfully', 201);
 });
 
+const registerReseller = asyncHandler(async (req, res) => {
+  const result = await authService.registerReseller(req.body, req);
+  sendSuccess(res, result, 'Reseller registered successfully', 201);
+});
+
 const registerBuyer = asyncHandler(async (req, res) => {
   const result = await authService.registerBuyer(req.body, req);
   sendSuccess(res, result, 'Buyer registered successfully', 201);
@@ -99,6 +104,7 @@ const getPendingUsers = asyncHandler(async (req, res) => {
 
 module.exports = {
   registerFarmer,
+  registerReseller,
   registerBuyer,
   login,
   logout,

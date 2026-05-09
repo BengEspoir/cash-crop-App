@@ -1,6 +1,7 @@
 export function getRoleDashboard(user) {
   switch (user?.role) {
     case "farmer":
+    case "reseller":
       return "/farmer/dashboard";
     case "local_buyer":
     case "international_buyer":
@@ -26,6 +27,9 @@ export function getAuthNextRoute(nextStep, user) {
     case "pending_review":
       return "/pending";
     case "dashboard":
+      if (user?.role === "local_buyer" || user?.role === "international_buyer") {
+        return "/browse";
+      }
       return getRoleDashboard(user);
     case "sign_in":
       return "/sign-in";

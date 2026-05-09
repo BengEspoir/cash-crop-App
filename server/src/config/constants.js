@@ -1,6 +1,7 @@
 module.exports = {
   USER_ROLES: {
     FARMER: 'farmer',
+    RESELLER: 'reseller',
     LOCAL_BUYER: 'local_buyer',
     INTERNATIONAL_BUYER: 'international_buyer',
     FIELD_AGENT: 'field_agent',
