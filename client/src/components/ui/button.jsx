@@ -2,8 +2,8 @@
 import { cn } from "../../lib/utils";
 
 const variants = {
-  primary: "border-transparent bg-[#1A6B3C] text-white hover:bg-[#2E8B57]",
-  secondary: "border border-[#D1D5DB] bg-white text-[#374151] hover:border-[#1A6B3C] hover:text-[#1A6B3C]",
+  primary: "border-transparent bg-[#2E8B57] text-white shadow-[0_16px_30px_rgba(26,107,60,0.18)] hover:brightness-110",
+  secondary: "border-transparent bg-[#FFB547] text-white shadow-[0_12px_24px_rgba(255,181,71,0.22)] hover:bg-[#F59E0B]",
   outline: "border-[1.5px] border-[#1A6B3C] bg-white text-[#1A6B3C] hover:bg-[#EAF4EE]",
   danger: "border-transparent bg-[#C0392B] text-white hover:bg-[#A93226]",
   ghost: "border-transparent bg-transparent text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#1A6B3C]",

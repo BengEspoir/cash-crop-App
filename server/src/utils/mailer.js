@@ -57,7 +57,7 @@ const sendEmail = async ({ to, subject, html, devHints }) => {
 const sendVerificationEmail = async (email, firstName, verifyLink) => {
   const html = `
     <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #1A6B3C 0%, #0D3D22 100%); padding: 30px; text-align: center;">
+      <div style="background: #1A6B3C; padding: 30px; text-align: center;">
         <h1 style="color: #E8B84B; margin: 0; font-family: 'DM Serif Display', serif;">AgriculNet</h1>
       </div>
       <div style="padding: 30px; background: #fff;">
@@ -90,7 +90,7 @@ const sendVerificationEmail = async (email, firstName, verifyLink) => {
 const sendPasswordResetEmail = async (email, firstName, resetLink) => {
   const html = `
     <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #1A6B3C 0%, #0D3D22 100%); padding: 30px; text-align: center;">
+      <div style="background: #1A6B3C; padding: 30px; text-align: center;">
         <h1 style="color: #E8B84B; margin: 0; font-family: 'DM Serif Display', serif;">AgriculNet</h1>
       </div>
       <div style="padding: 30px; background: #fff;">
@@ -132,7 +132,7 @@ const sendWelcomeEmail = async (email, firstName, role) => {
 
   const html = `
     <div style="font-family: 'DM Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: linear-gradient(135deg, #1A6B3C 0%, #0D3D22 100%); padding: 30px; text-align: center;">
+      <div style="background: #1A6B3C; padding: 30px; text-align: center;">
         <h1 style="color: #E8B84B; margin: 0; font-family: 'DM Serif Display', serif;">AgriculNet</h1>
       </div>
       <div style="padding: 30px; background: #fff;">

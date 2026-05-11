@@ -13,8 +13,8 @@ const leftLinks = [
 ];
 
 const rightLinks = [
-  { label: "Help Center", href: "#" },
-  { label: "Sell on AgriculNet", href: "#" },
+  { label: "Help Center", href: "/help-center" },
+  { label: "Sell on AgriculNet", href: "/sell-on-agriculnet" },
   { label: "Mobile App", href: "#", accent: true },
 ];
 
@@ -22,8 +22,8 @@ export function SubNav() {
   const pathname = usePathname();
 
   return (
-    <div className="border-b border-[#F3F4F6] bg-white">
-      <div className="content-shell flex min-h-[42px] flex-col gap-2 py-2 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:py-0">
+    <div className="border-b border-[#F3F4F6] bg-white shadow-sm">
+      <div className="content-shell flex min-h-[56px] flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-6 lg:py-0">
         <nav className="flex flex-wrap items-center gap-4 lg:gap-5">
           {leftLinks.map((item) => {
             const active = pathname === item.href;
@@ -32,8 +32,8 @@ export function SubNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "inline-flex min-h-[42px] items-center border-b-2 border-transparent text-[12px] font-medium text-[#374151] transition-colors",
-                  active && "border-[#1A6B3C] text-[#1A6B3C]",
+                  "inline-flex min-h-[42px] items-center rounded-full px-4 py-2 text-[13px] font-medium text-[#374151] transition-all duration-200 hover:bg-[#F3F4F6] hover:text-[#1A6B3C]",
+                  active && "bg-[#EAF4EE] text-[#1A6B3C] shadow-sm",
                 )}
               >
                 {item.label}

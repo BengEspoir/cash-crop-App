@@ -4,7 +4,7 @@ import { SectionHeader } from "../common/SectionHeader";
 
 export function FeaturedFarmers() {
   return (
-    <section className="space-y-5">
+    <section className="space-y-5 animate-fade-in">
       <SectionHeader
         eyebrow="Verified Network"
         title="Featured farmers"
@@ -13,7 +13,7 @@ export function FeaturedFarmers() {
         actionHref="/find-farmers"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 animate-slide-up">
         {featuredFarmers.map((farmer) => (
           <FarmerCard key={farmer.name} farmer={farmer} />
         ))}

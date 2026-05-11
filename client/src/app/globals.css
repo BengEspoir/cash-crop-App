@@ -5,16 +5,24 @@
 
 @layer base {
   :root {
+    --green-950: #082413;
     --green-900: #0D3D22;
     --green-800: #1A6B3C;
     --green-700: #2E8B57;
+    --green-600: #48A26B;
     --green-100: #D4EDDA;
     --green-50: #EAF4EE;
+    --gold-900: #7C5200;
     --gold-800: #8A6200;
     --gold-700: #B5892A;
+    --gold-500: #FFB547;
     --gold-400: #E8B84B;
     --gold-100: #F7EDD5;
     --gold-50: #FDF8EE;
+    --orange-500: #F59E0B;
+    --orange-400: #FBBF24;
+    --blue-500: #3B82F6;
+    --purple-500: #8B5CF6;
     --neutral-900: #111827;
     --neutral-700: #374151;
     --neutral-500: #6B7280;
@@ -35,7 +43,7 @@
 
   body {
     margin: 0;
-    background: var(--neutral-50);
+    background: #FFFFFF;
     color: var(--neutral-900);
     font-family: var(--font-sans), sans-serif;
     font-size: 14px;
@@ -65,7 +73,7 @@
   }
 
   .content-shell {
-    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-[40px];
+    @apply mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-[60px];
   }
 
   .surface-card {
@@ -86,5 +94,83 @@
 
   .body-copy {
     @apply text-[14px] leading-6 text-[#374151];
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+
+  .animate-bounce-in {
+    animation: bounceIn 0.7s ease-out forwards;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(26, 107, 60, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(26, 107, 60, 0.2);
   }
 }

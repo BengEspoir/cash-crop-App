@@ -5,7 +5,7 @@
     location: "Kumba, South West",
     price: "XAF 1,650 / kg",
     status: "verified",
-    imageClass: "bg-[linear-gradient(135deg,#5B3A1D,#C08A46)]",
+    imageClass: "bg-[#5B3A1D]",
   },
   {
     crop: "Arabica Coffee",
@@ -13,7 +13,7 @@
     location: "Bafoussam, West",
     price: "XAF 2,100 / kg",
     status: "export-ready",
-    imageClass: "bg-[linear-gradient(135deg,#3F5F3B,#B79A64)]",
+    imageClass: "bg-[#3F5F3B]",
   },
   {
     crop: "White Maize",
@@ -21,7 +21,7 @@
     location: "Garoua, North",
     price: "XAF 420 / kg",
     status: "negotiable",
-    imageClass: "bg-[linear-gradient(135deg,#E6C96F,#F7EDD5)]",
+    imageClass: "bg-[#E6C96F]",
   },
   {
     crop: "Penja Pepper",
@@ -29,7 +29,7 @@
     location: "Penja, Littoral",
     price: "XAF 8,750 / kg",
     status: "export-ready",
-    imageClass: "bg-[linear-gradient(135deg,#2E2E2E,#9A7445)]",
+    imageClass: "bg-[#2E2E2E]",
   },
   {
     crop: "Plantain",
@@ -37,7 +37,7 @@
     location: "Ebolowa, South",
     price: "XAF 3,200 / bunch",
     status: "verified",
-    imageClass: "bg-[linear-gradient(135deg,#4E7D2E,#D4B74A)]",
+    imageClass: "bg-[#4E7D2E]",
   },
   {
     crop: "Palm Oil",
@@ -45,7 +45,7 @@
     location: "Eseka, Centre",
     price: "XAF 1,900 / L",
     status: "pending",
-    imageClass: "bg-[linear-gradient(135deg,#6B3E1F,#D8903C)]",
+    imageClass: "bg-[#6B3E1F]",
   },
   {
     crop: "Cassava Flour",
@@ -53,7 +53,7 @@
     location: "Bamenda, North West",
     price: "XAF 560 / kg",
     status: "negotiable",
-    imageClass: "bg-[linear-gradient(135deg,#E6D8B2,#F9F1DD)]",
+    imageClass: "bg-[#E6D8B2]",
   },
   {
     crop: "Export Banana",
@@ -61,7 +61,7 @@
     location: "Mundemba, South West",
     price: "XAF 390 / kg",
     status: "export-ready",
-    imageClass: "bg-[linear-gradient(135deg,#7AA645,#E6C95A)]",
+    imageClass: "bg-[#7AA645]",
   },
 ];
 

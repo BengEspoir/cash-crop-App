@@ -9,7 +9,10 @@ export function SectionHeader({ eyebrow, title, description, actionLabel, action
         {description ? <p className="body-copy">{description}</p> : null}
       </div>
       {actionLabel && actionHref ? (
-        <Link href={actionHref} className="text-[13px] font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">
+        <Link
+          href={actionHref}
+          className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#B5892A] transition hover:text-[#D97706]"
+        >
           {actionLabel}
         </Link>
       ) : null}

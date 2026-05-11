@@ -12,7 +12,7 @@ export function EarningsChart({ title = "Performance trend", items = [] }) {
             <div key={item.label} className="flex flex-1 flex-col items-center gap-3">
               <div className="flex h-[180px] w-full items-end rounded-[14px] bg-white px-2 py-2">
                 <div
-                  className="w-full rounded-[10px] bg-[linear-gradient(180deg,#2E8B57,#0D3D22)]"
+                  className="w-full rounded-[10px] bg-[#2E8B57]"
                   style={{ height: `${Math.max((item.value / highestValue) * 100, 10)}%` }}
                 />
               </div>

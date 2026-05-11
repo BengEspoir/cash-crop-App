@@ -12,7 +12,7 @@ export const demoListings = [
     grade: "Export Grade A",
     deliveryWindow: "Ready within 5 days",
     summary: "Sun-dried cocoa prepared for warehouse pickup with moisture checks already completed.",
-    imageClass: "bg-[linear-gradient(135deg,#5B3A1D,#C08A46)]",
+    imageClass: "bg-[#5B3A1D]",
     specs: [
       { label: "Moisture", value: "7.1%" },
       { label: "Bag type", value: "Jute export sacks" },
@@ -33,7 +33,7 @@ export const demoListings = [
     grade: "Specialty Microlot",
     deliveryWindow: "Ready within 7 days",
     summary: "Washed arabica lots from cooperative growers with cupping notes available for buyers.",
-    imageClass: "bg-[linear-gradient(135deg,#3F5F3B,#B79A64)]",
+    imageClass: "bg-[#3F5F3B]",
     specs: [
       { label: "Altitude", value: "1,450m" },
       { label: "Process", value: "Washed" },
@@ -54,7 +54,7 @@ export const demoListings = [
     grade: "Premium export lot",
     deliveryWindow: "Ready within 3 days",
     summary: "Protected premium lot with traceability records and premium packaging options.",
-    imageClass: "bg-[linear-gradient(135deg,#2E2E2E,#9A7445)]",
+    imageClass: "bg-[#2E2E2E]",
     specs: [
       { label: "Certification", value: "Traceability ready" },
       { label: "Origin", value: "Penja volcanic belt" },
@@ -75,7 +75,7 @@ export const demoListings = [
     grade: "Food-grade",
     deliveryWindow: "Ready within 4 days",
     summary: "Clean processed cassava flour for local distribution or contract packaging runs.",
-    imageClass: "bg-[linear-gradient(135deg,#E6D8B2,#F9F1DD)]",
+    imageClass: "bg-[#E6D8B2]",
     specs: [
       { label: "Texture", value: "Fine" },
       { label: "Packaging", value: "25 kg sacks" },
