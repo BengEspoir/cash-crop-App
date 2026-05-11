@@ -1,87 +1,50 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { BrandPanel } from "../auth/BrandPanel";
+import Link from "next/link";
 import { PageTransition } from "../motion/PageTransition";
-import { resolveBrandImagery } from "../../lib/imagery";
-
-const panelContent = {
-  "/sign-in": {
-    eyebrow: "Sign In",
-    title: "Trade verified crops with confidence.",
-    subtitle:
-      "Continue with your preferred sign-in method and get back to sourcing, selling, and tracking orders.",
-  },
-  "/register": {
-    eyebrow: "Get Started",
-    title: "Choose the account that fits your trade flow.",
-    subtitle:
-      "Set up a farmer or buyer profile with the same clear, protected onboarding pattern used across AgriculNet.",
-  },
-  "/register/farmer": {
-    eyebrow: "Farmer Registration",
-    title: "Bring your farm to verified market access.",
-    subtitle:
-      "Share your profile, crop readiness, and payout details so buyers can source from you with trust.",
-  },
-  "/register/buyer": {
-    eyebrow: "Buyer Registration",
-    title: "Source from Cameroon with better visibility.",
-    subtitle:
-      "Set up your buyer account for local procurement or international trade and keep every step documented.",
-  },
-  "/forgot-password": {
-    eyebrow: "Recovery",
-    title: "Secure access starts with a clean reset flow.",
-    subtitle:
-      "Choose phone or email recovery and use development hints locally when delivery providers are not configured.",
-  },
-  "/reset-password": {
-    eyebrow: "Password Reset",
-    title: "Set a stronger password before your next transaction.",
-    subtitle:
-      "Use the reset code you received and update the credentials that protect your account activity and payouts.",
-  },
-  "/verify-email": {
-    eyebrow: "Email Verification",
-    title: "Confirm your email to unlock the next step.",
-    subtitle:
-      "Verification keeps notifications, order updates, and buyer communication tied to a trusted inbox.",
-  },
-  "/verify-phone": {
-    eyebrow: "Phone Verification",
-    title: "Verify your phone for alerts and payout readiness.",
-    subtitle:
-      "Your mobile number powers order notifications, buyer updates, and MTN MoMo or Orange Money workflows.",
-  },
-  "/pending": {
-    eyebrow: "Review Status",
-    title: "Your account is under review.",
-    subtitle:
-      "We are checking profile details, trade readiness, and payout information before approval.",
-  },
-  "/admin-portal": {
-    eyebrow: "Admin Portal",
-    title: "Operational control for a trusted marketplace.",
-    subtitle:
-      "Sign in to moderate listings, review users, and keep disputes, payments, and inspections on track.",
-  },
-};
+import { BrandLogo } from "../common/BrandLogo";
+import { SmartImage } from "../media/SmartImage";
+import { resolveAuthBackground } from "../../lib/imagery";
+import { cn } from "../../lib/utils";
 
 export function AuthLayout({ children }) {
-  const pathname = usePathname();
-  const content = panelContent[pathname] || panelContent["/sign-in"];
-  const image = resolveBrandImagery(pathname);
+  const image = resolveAuthBackground();
 
   return (
-    <div className="min-h-screen bg-ink-100 py-4 lg:py-8">
-      <div className="content-shell">
-        <div className="overflow-hidden rounded-[22px] border border-ink-200 bg-white shadow-soft lg:grid lg:min-h-[calc(100vh-64px)] lg:grid-cols-[0.92fr_1.08fr]">
-          <BrandPanel {...content} image={image} />
-          <div className="flex items-center justify-center px-4 py-6 sm:px-6 lg:px-12 lg:py-10">
-            <PageTransition className="w-full max-w-[560px]">{children}</PageTransition>
+    <div className="relative min-h-screen overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        {image?.src ? (
+          <SmartImage
+            src={image.src}
+            alt={image.alt ?? ""}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+        ) : null}
+        <div
+          className={cn(
+            "absolute inset-0 bg-[linear-gradient(120deg,rgba(13,61,34,0.88)_0%,rgba(13,61,34,0.72)_50%,rgba(13,61,34,0.55)_100%)]",
+          )}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_20%_0%,rgba(232,184,75,0.2),transparent_55%)]" />
+      </div>
+
+      <div className="content-shell flex min-h-screen flex-col items-center justify-center py-8 lg:py-12">
+        <PageTransition className="w-full max-w-[560px] space-y-6">
+          <div className="flex justify-center">
+            <Link
+              href="/"
+              className="focus-ring inline-flex rounded-[12px] bg-white/95 px-3 py-2 shadow-lift backdrop-blur-sm"
+            >
+              <BrandLogo className="h-12 w-[168px]" priority />
+            </Link>
           </div>
-        </div>
+          <div className="rounded-[22px] border border-white/20 bg-white/95 p-1 shadow-lift backdrop-blur-md">
+            <div className="rounded-[20px] bg-white px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+          </div>
+        </PageTransition>
       </div>
     </div>
   );

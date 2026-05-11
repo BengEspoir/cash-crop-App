@@ -5,6 +5,7 @@ const farmerPhoneValidator = z.string().regex(cameroonPhone, "Enter a valid Came
 const emailSchema = z.string().email("Enter a valid email address.");
 const passwordSchema = z.string()
   .min(8, "At least 8 characters")
+  .regex(/[a-z]/, "One lowercase letter")
   .regex(/[A-Z]/, "One uppercase letter")
   .regex(/\d/, "One number");
 

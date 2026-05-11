@@ -19,6 +19,87 @@ const {
 } = require('../../config/constants');
 const env = require('../../config/env');
 
+const oauthExchange = async (payload = {}, req) => {
+  const provider = String(payload.provider || '').trim() || 'oauth';
+  const supabaseAccessToken = String(payload.supabaseAccessToken || '').trim();
+
+  if (!supabaseAccessToken) {
+    throw new AppError('supabaseAccessToken is required', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const { data, error } = await supabaseAdmin.auth.getUser(supabaseAccessToken);
+  if (error || !data?.user) {
+    throw new AppError('OAuth session is invalid or expired', 401, ERROR_CODES.UNAUTHORIZED);
+  }
+
+  const email = (data.user.email || '').toLowerCase();
+  if (!email) {
+    throw new AppError('OAuth user email is missing', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  let user = await repository.findUserByEmail(email);
+
+  if (!user) {
+    const now = new Date().toISOString();
+    user = await repository.createUser({
+      role: USER_ROLES.LOCAL_BUYER,
+      status: USER_STATUS.PENDING_VERIFICATION,
+      first_name: data.user.user_metadata?.first_name || data.user.user_metadata?.name?.split(' ')?.[0] || 'Buyer',
+      last_name: data.user.user_metadata?.last_name || data.user.user_metadata?.name?.split(' ')?.slice(1).join(' ') || 'Buyer',
+      phone: null,
+      email,
+      password_hash: null,
+      phone_verified: false,
+      // OAuth providers validate email ownership; treat as verified for conversion.
+      email_verified: true,
+      region: null,
+      city: null,
+      country: payload.country || 'Cameroon',
+      created_at: now,
+      updated_at: now
+    });
+
+    await repository.createBuyerProfile(user.id, {
+      buyer_type: BUYER_TYPES.LOCAL,
+      company_name: payload.companyName || null,
+      preferred_crops: [],
+      annual_import_volume: null,
+      import_country: payload.country || 'Cameroon',
+      destination_market: null
+    });
+  } else {
+    // Ensure email_verified is true for OAuth user
+    if (!user.email_verified) {
+      user = await repository.updateUser(user.id, { email_verified: true });
+    }
+  }
+
+  // Update status if buyer qualifies for active after email verification (phone may still be false).
+  const nextStatus = helpers.getNextStatus(user);
+  if (nextStatus !== user.status) {
+    user = await repository.updateUser(user.id, { status: nextStatus });
+  }
+
+  const session = await createSession(user, true);
+
+  await repository.logAuditEvent(user.id, 'OAUTH_LOGIN', req, { provider, email });
+  await repository.logActivityEvent(user.id, 'OAUTH_LOGIN', req, {
+    role: user.role,
+    entityType: 'user',
+    entityId: user.id,
+    provider
+  });
+
+  return {
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    user: helpers.sanitizeUser(user),
+    nextStep: helpers.getNextStep(user),
+    phone: user.phone ? helpers.maskPhone(user.phone) : null,
+    email: helpers.maskEmail(user.email)
+  };
+};
+
 const collectDevHints = (...deliveries) => {
   const merged = {};
 
@@ -1161,6 +1242,7 @@ const getPendingUsers = async () => {
 };
 
 module.exports = {
+  oauthExchange,
   registerFarmer,
   registerReseller,
   registerBuyer,

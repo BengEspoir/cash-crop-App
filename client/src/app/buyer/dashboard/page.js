@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
 import useAuth from "@/hooks/useAuth";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useQuotes } from "@/hooks/useQuotes";
+import { DashboardOperationsRow } from "@/components/dashboard/DashboardOperationsRow";
 
 const kpiIcons = [Package, ShoppingBasket, ClipboardList];
 const kpiAccents = ["green", "gold", "green"];
@@ -19,6 +21,7 @@ const kpiAccents = ["green", "gold", "green"];
 export default function BuyerDashboardPage() {
   const { user } = useAuth();
   const { data, isLoading } = useDashboardData("buyer");
+  const { quotes } = useQuotes();
   const orders = data?.orders || [];
   const listings = data?.listings || [];
   const metrics = data?.metrics || {};
@@ -46,6 +49,15 @@ export default function BuyerDashboardPage() {
       />
 
       <VerificationBanner />
+
+      <DashboardOperationsRow
+        quotes={quotes}
+        orders={orders}
+        variant="buyer"
+        buyerSavedShortlist={metrics.savedListings ?? 0}
+        listingsCount={listings.length}
+        exportReadyListingCount={listings.filter((l) => l.exportReady || l.export_ready).length}
+      />
 
       <Stagger className="grid gap-4 md:grid-cols-3">
         {buyerStats.map((item, idx) => (

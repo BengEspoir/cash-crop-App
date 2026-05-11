@@ -106,6 +106,14 @@ export default function RegisterFarmerPage() {
       return;
     }
 
+    for (let stepNum = 0; stepNum < steps.length; stepNum += 1) {
+      const stepOk = await validateStep(stepNum);
+      if (!stepOk) {
+        setCurrentStep(stepNum);
+        return;
+      }
+    }
+
     const result = await registerFarmer(values);
     if (!result.success) {
       const detailMessage = result.details?.[0]?.message;

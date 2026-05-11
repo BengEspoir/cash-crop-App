@@ -7,6 +7,7 @@ export default function AdminRouteLayout({ children }) {
   return (
     <DashboardShell
       heading="Admin Operations"
+      navNamespace="admin"
       navigation={adminNavigation}
       allowedRoles={["admin", "super_admin"]}
       authRedirect="/admin-portal"

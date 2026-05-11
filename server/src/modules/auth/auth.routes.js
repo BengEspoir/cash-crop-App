@@ -19,6 +19,7 @@ const {
   registerFarmer,
   registerReseller,
   registerBuyer,
+  oauthExchange,
   login,
   logout,
   refreshToken,
@@ -37,6 +38,7 @@ const {
 router.post('/register/farmer', authLimiter, validate(registerFarmerSchema), registerFarmer);
 router.post('/register/reseller', authLimiter, validate(registerResellerSchema), registerReseller);
 router.post('/register/buyer', authLimiter, validate(registerBuyerSchema), registerBuyer);
+router.post('/oauth/exchange', authLimiter, oauthExchange);
 router.post('/login', authLimiter, validate(loginSchema), login);
 router.post('/logout', authenticate, logout);
 router.post('/refresh-token', refreshToken);

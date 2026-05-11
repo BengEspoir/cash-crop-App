@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { PageHeader } from "@/components/common/PageHeader";
-import { StatusBadge } from "@/components/common/StatusBadge";
+import { TierBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAdminReviewUser, useDashboardData } from "@/hooks/useDashboardData";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const REVIEW_ACTIONS = [
   { action: "approve", label: "Approve" },
@@ -20,6 +21,7 @@ export default function AdminUserDetailPage({ params }) {
   const { data, isLoading } = useDashboardData("admin");
   const reviewMutation = useAdminReviewUser();
   const [reason, setReason] = useState("");
+  const [activeDoc, setActiveDoc] = useState(null);
   const users = [...(data?.users || []), ...(data?.pendingUsers || [])];
   const user = users.find((item) => item.id === params.id);
   const profile = user?.profile || user?.farmer_profiles?.[0] || user?.farmer_profiles || null;
@@ -64,9 +66,10 @@ export default function AdminUserDetailPage({ params }) {
               <p className="section-eyebrow">{user.id}</p>
               <h2 className="mt-2 font-display text-[24px] text-[#111827]">{user.name}</h2>
             </div>
-            <StatusBadge
+            <TierBadge
               status={user.status === "active" ? "verified" : user.status === "rejected" ? "rejected" : "pending"}
               label={user.status?.replace(/_/g, " ")}
+              size="md"
             />
           </div>
 
@@ -97,9 +100,46 @@ export default function AdminUserDetailPage({ params }) {
               <div key={label} className="rounded-[12px] border border-[#E5E7EB] px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">{label}</p>
                 {value && String(value).startsWith("http") ? (
-                  <a href={value} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[13px] font-semibold text-green-800 hover:text-green-700">
-                    Open uploaded file
-                  </a>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <a
+                      href={value}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex text-[13px] font-semibold text-green-800 hover:text-green-700"
+                    >
+                      Open in new tab
+                    </a>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex rounded-[10px] border border-ink-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-ink-700 hover:bg-ink-50"
+                          onClick={() => setActiveDoc({ label, url: value })}
+                        >
+                          Preview
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[920px] p-0 overflow-hidden">
+                        <div className="p-6">
+                          <DialogHeader>
+                            <DialogTitle>{activeDoc?.label || "Document preview"}</DialogTitle>
+                            <DialogDescription>
+                              Review this file in-context, then apply an approval decision.
+                            </DialogDescription>
+                          </DialogHeader>
+                        </div>
+                        <div className="border-t border-ink-100 bg-ink-50/40 p-4">
+                          <div className="rounded-[14px] border border-ink-200 bg-white p-3">
+                            <img
+                              src={activeDoc?.url || value}
+                              alt={activeDoc?.label || label}
+                              className="max-h-[70vh] w-full rounded-[12px] object-contain"
+                            />
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 ) : (
                   <p className="mt-2 text-[14px] text-[#374151]">{value || "Not submitted"}</p>
                 )}

@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "../../lib/utils";
 import useAuth from "../../hooks/useAuth";
+import { useI18n } from "../../i18n/I18nProvider";
 import { BrandLogo } from "../common/BrandLogo";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { DashboardTopBar } from "./DashboardTopBar";
 import { SkipToContent } from "../a11y/SkipToContent";
 
-export function SidebarPanel({ heading, navigation, pathname }) {
+export function SidebarPanel({ heading, navigation, pathname, resolveLabel }) {
   return (
     <aside
       aria-label={`${heading} sidebar`}
@@ -29,8 +30,9 @@ export function SidebarPanel({ heading, navigation, pathname }) {
       </Link>
 
       <nav aria-label="Workspace navigation" className="mt-6 space-y-2">
-        {navigation.map(({ href, label, icon: Icon }) => {
+        {navigation.map(({ href, label, id, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
+          const text = resolveLabel ? resolveLabel(id, label) : label;
           return (
             <Link
               key={href}
@@ -42,7 +44,7 @@ export function SidebarPanel({ heading, navigation, pathname }) {
               )}
             >
               <Icon className="h-4 w-4" />
-              <span>{label}</span>
+              <span>{text}</span>
             </Link>
           );
         })}
@@ -51,11 +53,22 @@ export function SidebarPanel({ heading, navigation, pathname }) {
   );
 }
 
-export function DashboardShell({ heading, navigation, allowedRoles, authRedirect, description, children }) {
+export function DashboardShell({ heading, navigation, allowedRoles, authRedirect, description, children, navNamespace = "buyer" }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, hydrateSession, logout, redirectToDashboard } = useAuth();
+  const { t } = useI18n();
   const [ready, setReady] = useState(false);
+
+  const resolveNavLabel = useCallback(
+    (id, fallback) => {
+      if (!id) return fallback;
+      const key = `nav.${navNamespace}.${id}`;
+      const translated = t(key);
+      return translated === key ? fallback : translated;
+    },
+    [navNamespace, t],
+  );
 
   useEffect(() => {
     let active = true;
@@ -115,21 +128,21 @@ export function DashboardShell({ heading, navigation, allowedRoles, authRedirect
   };
 
   if (!ready) {
-    return <LoadingSpinner fullScreen label="Loading workspace" />;
+    return <LoadingSpinner fullScreen label={t("dashboard.loadingWorkspace")} />;
   }
 
   if (!user) {
-    return <LoadingSpinner fullScreen label="Redirecting to sign in" />;
+    return <LoadingSpinner fullScreen label={t("dashboard.redirectingSignIn")} />;
   }
 
   return (
     <div className="min-h-screen bg-[#F6F8F6]">
       <SkipToContent />
-      <div className="mx-auto grid max-w-[1440px] gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-6">
-        <SidebarPanel heading={heading} navigation={navigation} pathname={pathname} />
+      <div className="mx-auto grid w-full max-w-none gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:px-10">
+        <SidebarPanel heading={heading} navigation={navigation} pathname={pathname} resolveLabel={resolveNavLabel} />
         <main id="main-content" tabIndex={-1} className="space-y-6">
           <DashboardTopBar
-            title={currentItem?.label || heading}
+            title={resolveNavLabel(currentItem?.id, currentItem?.label) || heading}
             description={description}
             user={user}
             onLogout={handleLogout}

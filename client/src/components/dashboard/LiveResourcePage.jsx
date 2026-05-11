@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
-import { StatusBadge } from "@/components/common/StatusBadge";
+import { TierBadge } from "@/components/ui/badge";
 
 export function LiveResourcePage({
   eyebrow,
@@ -41,7 +41,7 @@ export function LiveResourceCard({ title, subtitle, detail, status, children }) 
           {subtitle ? <p className="mt-1 text-[13px] text-ink-600">{subtitle}</p> : null}
           {detail ? <p className="mt-2 text-[13px] leading-6 text-ink-700">{detail}</p> : null}
         </div>
-        {status ? <StatusBadge status={status} label={String(status).replace(/_/g, " ").replace(/-/g, " ")} /> : null}
+        {status ? <TierBadge status={status} label={String(status).replace(/_/g, " ").replace(/-/g, " ")} size="sm" /> : null}
       </div>
       {children ? <div className="mt-4">{children}</div> : null}
     </Card>

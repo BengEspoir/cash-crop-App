@@ -25,7 +25,7 @@ export function RegionalSpotlight() {
           return (
             <StaggerItem
               key={region.name}
-              className="group relative overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 transition-all duration-200 hover:-translate-y-[2px] hover:shadow-glow"
+              className="group relative overflow-hidden rounded-2xl border border-ink-200 bg-ink-50 transition-all duration-300 hover:-translate-y-1 hover:border-green-800/30 hover:shadow-glow"
             >
               <div className="relative h-[120px] w-full overflow-hidden">
                 <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.06]">

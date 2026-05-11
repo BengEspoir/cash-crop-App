@@ -112,6 +112,115 @@ export const cropImagery = {
 
 export const cropFallback = u("1543362906-acfc16c67564", { w: 1200 });
 
+/** Local static assets under /public/images — add matching files for best results */
+export const AUTH_BACKGROUND = {
+  src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517781/famer_3_epxio6.jpg",
+  alt: "Cameroonian farmer in the field",
+};
+
+export const LOGO_TRANSPARENT_SRC = "/images/agriculnet_logo-transparent.png";
+
+/**
+ * Map normalized crop tokens to image paths (filename in /public/images).
+ * Keys match common words in `crop_name_fallback` / listing titles.
+ */
+export const cropImageByKeyword = {
+  cocoa: "/images/cocoa.jpg",
+  coffee: "/images/coffee.jpg",
+  cassava: "/images/cassava.jpg",
+  plantain: "/images/plantain.jpg",
+  banana: "/images/banana.jpg",
+  pepper: "/images/pepper.jpg",
+  penja: "/images/pepper.jpg",
+  maize: "/images/maize.jpg",
+  corn: "/images/maize.jpg",
+  rice: "/images/rice.jpg",
+  palm: "/images/palm.jpg",
+  tomato: "/images/tomato.jpg",
+  onion: "/images/onion.jpg",
+  bean: "/images/beans.jpg",
+  beans: "/images/beans.jpg",
+  groundnut: "/images/groundnut.jpg",
+  peanut: "/images/groundnut.jpg",
+  potato: "/images/potato.jpg",
+  yam: "/images/yam.jpg",
+  ginger: "/images/ginger.jpg",
+  avocado: "/images/avocado.jpg",
+  pineapple: "/images/pineapple.jpg",
+  mango: "/images/mango.jpg",
+  citrus: "/images/citrus.jpg",
+  orange: "/images/citrus.jpg",
+};
+
+export function normalizeCropToken(name) {
+  return String(name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function resolveLocalCropImagePath(cropLabel) {
+  const norm = normalizeCropToken(cropLabel);
+  if (!norm) return null;
+  const words = norm.split(/\s+/).filter(Boolean);
+  for (const word of words) {
+    if (cropImageByKeyword[word]) return cropImageByKeyword[word];
+  }
+  for (const [key, src] of Object.entries(cropImageByKeyword)) {
+    if (norm.includes(key)) return src;
+  }
+  return null;
+}
+
+/**
+ * Listing image: API image → legacy id map → local crop file → Unsplash fallback
+ */
+export function resolveListingImage(listing) {
+  if (!listing) return cropFallback;
+  if (listing.imageSrc) return listing.imageSrc;
+  if (listing.id && cropImagery[listing.id]) return cropImagery[listing.id];
+  const label = listing.crop || listing.cropName || listing.title || listing.summary || "";
+  const local = resolveLocalCropImagePath(label);
+  if (local) return local;
+  return cropFallback;
+}
+
+/** Hero slideshow: curated Cloudinary agricultural imagery */
+export function getHeroSlides() {
+  return [
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517779/cocoa_too1wf.jpg",
+      alt: "Cocoa farm",
+    },
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517780/maize_farm_nz88c7.jpg",
+      alt: "Maize farm",
+    },
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517781/pimeaple_plantation_uf2adi.jpg",
+      alt: "Pineapple plantation",
+    },
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517780/famer_1_oetdap.jpg",
+      alt: "Farmer in the field",
+    },
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517779/suger_cane_vewwyc.jpg",
+      alt: "Sugar cane plantation",
+    },
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517778/rubber_nfpqx3.jpg",
+      alt: "Rubber plantation",
+    },
+    {
+      src: "https://res.cloudinary.com/dgfhsuzh8/image/upload/v1778517778/Rice_plantation_qcoqiq.jpg",
+      alt: "Rice plantation",
+    },
+  ];
+}
+
 // Static pages — keyed by route slug.
 export const pageImagery = {
   help: { src: u("1523712999610-f77fbcfc3843", { w: 1600 }), alt: "Cooperative member checking crop readiness" },
@@ -170,4 +279,9 @@ export function resolveBrandImagery(pathname) {
     "/pending": "pending",
   };
   return brandImagery[map[pathname] ?? "sign-in"] ?? brandImagery["sign-in"];
+}
+
+/** Unified auth panel background (per product request) */
+export function resolveAuthBackground() {
+  return AUTH_BACKGROUND;
 }

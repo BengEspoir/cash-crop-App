@@ -2,7 +2,7 @@ import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import { buildMetadata } from "../lib/seo";
 import { Providers } from "./providers";
-import { BRAND_FAVICON_SRC } from "../components/common/BrandLogo";
+import { BRAND_FAVICON_SRC } from "../lib/brandAssets";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],

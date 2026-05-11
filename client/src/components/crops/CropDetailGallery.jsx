@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Card } from "../ui/card";
 import { SmartImage } from "../media/SmartImage";
-import { cropImagery, cropFallback } from "../../lib/imagery";
+import { resolveListingImage, cropImageByKeyword } from "../../lib/imagery";
 import { cn } from "../../lib/utils";
 
 function resolveGalleryImages(listing) {
   if (Array.isArray(listing.images) && listing.images.length) {
     return listing.images;
   }
-  const main = listing.imageSrc || cropImagery[listing.id] || cropFallback;
-  const neighbours = Object.values(cropImagery).filter((src) => src !== main).slice(0, 3);
+  const main = resolveListingImage(listing);
+  const neighbours = [...new Set(Object.values(cropImageByKeyword))].filter((src) => src !== main).slice(0, 3);
   return [main, ...neighbours].slice(0, 4);
 }
 

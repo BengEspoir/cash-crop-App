@@ -30,7 +30,7 @@ export default function SellPage() {
         title="Bring your crops to verified buyers across Cameroon and beyond."
         description="Publish listings in minutes, keep full control of your pricing, and get paid through protected payment rails."
         image={pageImagery.sell}
-        primaryAction={{ label: "Register as Farmer", href: "/register/farmer" }}
+        primaryAction={{ label: "Sell on AgriculNet", href: "/sell/onboarding" }}
         secondaryAction={{ label: "See live listings", href: "/browse" }}
       />
 
@@ -62,10 +62,10 @@ export default function SellPage() {
         </div>
         <div className="mt-4 flex flex-wrap gap-3 lg:mt-0">
           <Button asChild>
-            <Link href="/register/farmer">Register as Farmer</Link>
+            <Link href="/sell/onboarding">Start onboarding</Link>
           </Button>
           <Button asChild variant="secondary">
-            <Link href="/register/reseller">Register as Reseller</Link>
+            <Link href="/sell/onboarding">Choose seller role</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/pricing">See fees</Link>

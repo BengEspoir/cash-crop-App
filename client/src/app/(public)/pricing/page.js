@@ -15,7 +15,7 @@ const plans = [
     price: "Free",
     description: "For individual farmers and smallholders publishing up to 10 active listings.",
     bullets: ["Unlimited browsing", "Up to 10 listings", "Mobile money payout", "Protected order support"],
-    cta: { label: "Register as Farmer", href: "/register/farmer" },
+    cta: { label: "Start seller onboarding", href: "/sell/onboarding" },
   },
   {
     name: "Cooperative",

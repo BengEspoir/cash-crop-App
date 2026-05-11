@@ -12,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
 import useAuth from "@/hooks/useAuth";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useQuotes } from "@/hooks/useQuotes";
+import { DashboardOperationsRow } from "@/components/dashboard/DashboardOperationsRow";
 
 const kpiIcons = [Package, CircleDollarSign, BadgeCheck];
 const kpiAccents = ["green", "gold", "green"];
@@ -19,6 +21,7 @@ const kpiAccents = ["green", "gold", "green"];
 export default function FarmerDashboardPage() {
   const { user } = useAuth();
   const { data, isLoading } = useDashboardData("farmer");
+  const { quotes } = useQuotes();
   const listings = data?.listings || [];
   const orders = data?.orders || [];
   const metrics = data?.metrics || {};
@@ -46,6 +49,14 @@ export default function FarmerDashboardPage() {
       />
 
       <VerificationBanner />
+
+      <DashboardOperationsRow
+        quotes={quotes}
+        orders={orders}
+        variant="seller"
+        listingsCount={listings.length}
+        exportReadyListingCount={listings.filter((l) => l.exportReady || l.export_ready).length}
+      />
 
       <Stagger className="grid gap-4 md:grid-cols-3">
         {farmerStats.map((item, idx) => (

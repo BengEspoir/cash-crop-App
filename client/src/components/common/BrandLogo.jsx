@@ -1,20 +1,27 @@
-import Image from "next/image";
-import { cn } from "../../lib/utils";
+"use client";
 
-export const BRAND_LOGO_SRC = "/images/agriculnet_logo.svg";
-export const BRAND_FAVICON_SRC = "/images/agriculnet_favicon.svg";
+import Image from "next/image";
+import { useState } from "react";
+import { cn } from "../../lib/utils";
+import { LOGO_TRANSPARENT_SRC } from "../../lib/imagery";
+import { BRAND_LOGO_SRC, BRAND_FAVICON_SRC } from "../../lib/brandAssets";
+
+export { BRAND_LOGO_SRC, BRAND_FAVICON_SRC };
 
 export function BrandLogo({ className, imageClassName, priority = false }) {
+  const [src, setSrc] = useState(LOGO_TRANSPARENT_SRC || BRAND_LOGO_SRC);
+
   return (
     <span className={cn("inline-flex items-center", className)}>
       <Image
-        src={BRAND_LOGO_SRC}
+        src={src}
         alt="AgriculNet"
-        width={1600}
-        height={520}
+        width={640}
+        height={200}
         priority={priority}
         unoptimized
-        className={cn("h-auto w-full object-contain", imageClassName)}
+        onError={() => setSrc(BRAND_LOGO_SRC)}
+        className={cn("h-auto w-full max-h-14 object-contain object-left", imageClassName)}
       />
     </span>
   );

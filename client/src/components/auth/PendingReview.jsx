@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Clock3, FileCheck2, ShieldCheck, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { StatusBadge } from "../common/StatusBadge";
+import { TierBadge } from "../ui/badge";
 import { getRoleDashboard } from "../../lib/authRoutes";
 import useAuthStore from "../../store/authStore";
 
@@ -63,57 +63,53 @@ export function PendingReview() {
   };
 
   return (
-    <Card className="rounded-[20px] p-6 sm:p-8">
-      <StatusBadge status="pending" />
-      <h1 className="mt-4 font-display text-[22px] leading-[1.15] text-[#111827]">Your account is under review</h1>
-      <p className="mt-3 text-[14px] leading-6 text-[#374151]">
+    <Card variant="elevated" className="rounded-[20px] p-6 sm:p-8">
+      <TierBadge status="pending_verification" size="md" />
+      <h1 className="mt-4 font-display text-[22px] leading-[1.15] text-ink-900">Your account is under review</h1>
+      <p className="mt-3 text-[14px] leading-6 text-ink-600">
         Your verification has been submitted. The admin review queue will decide whether this account becomes active.
       </p>
 
-      <div className="mt-4 rounded-[12px] bg-[#EAF4EE] px-4 py-3 text-center">
-        <p className="text-[13px] text-[#374151]">
-          Current status: <span className="font-semibold text-[#1A6B3C]">{user?.status?.replace(/_/g, " ") || "pending review"}</span>
+      <div className="mt-4 rounded-[12px] border border-green-200 bg-green-50 px-4 py-3 text-center">
+        <p className="text-[13px] text-ink-600">
+          Current status: <span className="font-semibold text-green-800">{user?.status?.replace(/_/g, " ") || "pending review"}</span>
         </p>
-        <p className="mt-1 text-[12px] text-[#6B7280]">
+        <p className="mt-1 text-[12px] text-ink-500">
           This page checks the live backend every 30 seconds and redirects only after approval.
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
         {checkpoints.map(({ title, detail, icon: Icon }, index) => (
-          <div key={title} className="flex gap-4 rounded-[14px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-4">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EAF4EE] text-[#1A6B3C]">
+          <div key={title} className="group flex gap-4 rounded-[14px] border border-ink-200 bg-ink-50 px-4 py-4 transition-all duration-200 hover:border-green-200 hover:bg-green-50/30">
+            <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-800 transition-colors group-hover:bg-green-800 group-hover:text-white">
               <Icon className="h-4 w-4" />
             </div>
-            <div className="space-y-1">
-              <p className="text-[15px] font-semibold text-[#111827]">{index + 1}. {title}</p>
-              <p className="text-[13px] leading-6 text-[#374151]">{detail}</p>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-[15px] font-semibold text-ink-800">{index + 1}. {title}</p>
+              <p className="text-[13px] leading-6 text-ink-600">{detail}</p>
             </div>
           </div>
         ))}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Button 
+        <Button
           onClick={handleManualCheck}
           disabled={isChecking}
+          variant="cta"
+          icon={isChecking ? RefreshCw : undefined}
+          isLoading={isChecking}
         >
-          {isChecking ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Checking...
-            </>
-          ) : (
-            "Check Status"
-          )}
+          {isChecking ? "Checking..." : "Check Status"}
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild variant="secondary-ghost">
           <Link href="/sign-in">Go to Sign In</Link>
         </Button>
       </div>
 
       {lastChecked && (
-        <p className="mt-3 text-[12px] text-[#6B7280]">
+        <p className="mt-3 text-[12px] text-ink-400">
           Last checked: {lastChecked.toLocaleTimeString()}
         </p>
       )}

@@ -7,6 +7,7 @@ export default function FarmerRouteLayout({ children }) {
   return (
     <DashboardShell
       heading="Seller Workspace"
+      navNamespace="farmer"
       navigation={farmerNavigation}
       allowedRoles={["farmer", "reseller"]}
       authRedirect="/sign-in"

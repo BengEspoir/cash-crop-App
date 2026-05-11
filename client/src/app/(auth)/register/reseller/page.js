@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 const cameroonPhone = /^6[\d\s]{8,11}$/;
 const passwordSchema = z.string()
   .min(8, "At least 8 characters")
+  .regex(/[a-z]/, "One lowercase letter")
   .regex(/[A-Z]/, "One uppercase letter")
   .regex(/\d/, "One number");
 
@@ -100,7 +101,7 @@ export default function RegisterResellerPage() {
         </div>
         <p className="text-[13px] text-[#374151]">
           Sell as a farmer?{" "}
-          <Link href="/register/farmer" className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">Use farmer onboarding</Link>
+          <Link href="/sell/onboarding" className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">Use farmer onboarding</Link>
         </p>
       </div>
 

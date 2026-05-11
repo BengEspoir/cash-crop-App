@@ -7,6 +7,7 @@ export default function BuyerRouteLayout({ children }) {
   return (
     <DashboardShell
       heading="Buyer Workspace"
+      navNamespace="buyer"
       navigation={buyerNavigation}
       allowedRoles={["local_buyer", "international_buyer"]}
       authRedirect="/sign-in"

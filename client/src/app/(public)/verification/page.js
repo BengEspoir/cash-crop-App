@@ -28,7 +28,7 @@ export default function VerificationPage() {
         title="Earn the verified badge that buyers look for."
         description="Verification signals to buyers that your farm, cooperative, or aggregator is a reliable trading partner backed by AgriculNet checks."
         image={pageImagery.verification}
-        primaryAction={{ label: "Start verification", href: "/register/farmer" }}
+        primaryAction={{ label: "Start seller onboarding", href: "/sell/onboarding" }}
         secondaryAction={{ label: "See verified listings", href: "/browse" }}
       />
 

@@ -17,9 +17,11 @@ import { signInSchema } from "../../../lib/validators";
 import { formatPhoneInternational } from "../../../lib/countries";
 import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
+import { useI18n } from "../../../i18n/I18nProvider";
 
 export default function SignInPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { login } = useAuthStore();
   const [mode, setMode] = useState("phone");
   const [submitError, setSubmitError] = useState("");
@@ -70,14 +72,14 @@ export default function SignInPage() {
     <Card elevated className="rounded-[22px] p-6 sm:p-8">
       <Reveal inView={false} className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="section-eyebrow">Welcome Back</p>
-          <h1 className="mt-2 font-display text-[24px] leading-[1.15] text-ink-800">Sign in to AgriculNet</h1>
-          <p className="mt-3 text-[14px] leading-6 text-ink-700">Use phone or email to continue trading, sourcing, and tracking orders.</p>
+          <p className="section-eyebrow">{t("auth.welcomeBack")}</p>
+          <h1 className="mt-2 font-display text-[24px] leading-[1.15] text-ink-800">{t("auth.signInTitle")}</h1>
+          <p className="mt-3 text-[14px] leading-6 text-ink-700">{t("auth.signInSubtitle")}</p>
         </div>
         <p className="text-[13px] text-ink-700">
-          New here?{" "}
+          {t("auth.newHere")}{" "}
           <Link href="/register" className="font-semibold text-green-800 hover:text-green-700">
-            Register
+            {t("auth.register")}
           </Link>
         </p>
       </Reveal>
@@ -91,8 +93,8 @@ export default function SignInPage() {
             setValue("mode", nextMode, { shouldValidate: true });
           }}
           options={[
-            { label: "Phone Number", value: "phone" },
-            { label: "Email Address", value: "email" },
+            { label: t("auth.phoneTab"), value: "phone" },
+            { label: t("auth.emailTab"), value: "email" },
           ]}
         />
         </StaggerItem>
@@ -100,7 +102,7 @@ export default function SignInPage() {
         <StaggerItem>
         {mode === "phone" ? (
           <PhoneInput
-            label="Phone Number"
+            label={t("auth.phoneLabel")}
             value={watch("phone")}
             onChange={(nextPhone) => setValue("phone", nextPhone, { shouldValidate: true })}
             error={errors.phone?.message}
@@ -111,22 +113,22 @@ export default function SignInPage() {
           />
         ) : (
           <div>
-            <Label>Email Address</Label>
-            <Input placeholder="example@gmail.com" autoComplete="email" {...register("email")} />
+            <Label>{t("auth.emailLabel")}</Label>
+            <Input placeholder={t("auth.emailPlaceholder")} autoComplete="email" {...register("email")} />
             {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
           </div>
         )}
         </StaggerItem>
 
         <StaggerItem>
-          <PasswordInput label="Password" placeholder="Enter your password" autoComplete="current-password" error={errors.password?.message} {...register("password")} />
+          <PasswordInput label={t("auth.passwordLabel")} placeholder={t("auth.passwordPlaceholder")} autoComplete="current-password" error={errors.password?.message} {...register("password")} />
         </StaggerItem>
 
         <StaggerItem className="flex flex-wrap items-center justify-between gap-3 text-[13px]">
           <Link href="/forgot-password" className="font-semibold text-green-800 hover:text-green-700">
-            Forgot your password?
+            {t("auth.forgotPassword")}
           </Link>
-          <span className="text-ink-500">Phone verification resumes automatically if needed.</span>
+          <span className="text-ink-500">{t("auth.phoneVerifyNote")}</span>
         </StaggerItem>
 
         {submitError ? (
@@ -137,7 +139,7 @@ export default function SignInPage() {
 
         <StaggerItem>
           <Button type="submit" className="h-11 w-full text-[14px]" disabled={!isValid || isSubmitting}>
-            {isSubmitting ? "Signing In..." : "Sign In"}
+            {isSubmitting ? t("auth.signingIn") : t("auth.signInCta")}
           </Button>
         </StaggerItem>
       </Stagger>

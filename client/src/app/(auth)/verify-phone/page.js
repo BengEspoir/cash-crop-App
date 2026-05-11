@@ -8,7 +8,7 @@ import { Card } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { OtpInput } from "../../../components/auth/OtpInput";
 import { verifyPhoneSchema } from "../../../lib/validators";
-import { StatusBadge } from "../../../components/common/StatusBadge";
+import { TierBadge } from "../../../components/ui/badge";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
 import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
@@ -183,19 +183,19 @@ export default function VerifyPhonePage() {
 
   return (
     <Card className="rounded-[20px] p-6 sm:p-8">
-      <StatusBadge status="pending" label="Phone verification" />
-      <h1 className="mt-4 font-display text-[22px] leading-[1.15] text-[#111827]">Enter verification code</h1>
-      <p className="mt-3 text-[14px] leading-6 text-[#374151]">
+      <TierBadge status="pending_verification" label="Phone verification" size="md" />
+      <h1 className="mt-4 font-display text-[22px] leading-[1.15] text-ink-900">Enter verification code</h1>
+      <p className="mt-3 text-[14px] leading-6 text-ink-600">
         {deliveryMessage}
       </p>
 
       {onboarding?.smsDelivery?.status === "failed" ? (
-        <p className="mt-5 rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] leading-5 text-[#922B21]">
+        <p className="mt-5 rounded-[12px] bg-red-50 px-4 py-3 text-[12px] leading-5 text-red-700">
           The last SMS code could not be sent. {onboarding.smsDelivery.message || "Check SMS provider credentials, then send a new code."}
         </p>
       ) : null}
       {onboarding?.smsDelivery?.status === "development-fallback" ? (
-        <p className="mt-5 rounded-[12px] bg-[#FFF7E0] px-4 py-3 text-[12px] leading-5 text-[#7A4B00]">
+        <p className="mt-5 rounded-[12px] bg-gold-50 px-4 py-3 text-[12px] leading-5 text-gold-700">
           SMS was not delivered by a live provider. Use the development OTP hint below, or configure SMS credentials and resend.
         </p>
       ) : null}
@@ -203,18 +203,18 @@ export default function VerifyPhonePage() {
       <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
         <OtpInput value={watch("code")} onChange={(nextCode) => setValue("code", nextCode, { shouldValidate: true })} error={errors.code?.message} />
 
-        {feedback.error ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{feedback.error}</p> : null}
-        {feedback.success ? <p className="rounded-[12px] bg-[#D4EDDA] px-4 py-3 text-[12px] text-[#1A5C2E]">{feedback.success}</p> : null}
+        {feedback.error ? <p className="rounded-[12px] bg-red-50 px-4 py-3 text-[12px] text-red-700">{feedback.error}</p> : null}
+        {feedback.success ? <p className="rounded-[12px] bg-green-50 px-4 py-3 text-[12px] text-green-800">{feedback.success}</p> : null}
 
         <DevHintsPanel hints={onboarding?.devHints} />
 
-        <Button type="submit" className="w-full" disabled={!isValid || isSubmitting}>
+        <Button type="submit" variant="cta" className="w-full" disabled={!isValid || isSubmitting} isLoading={isSubmitting}>
           {isSubmitting ? "Verifying..." : "Verify Code"}
         </Button>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-[#6B7280]">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-ink-500">
           <span>Didn&apos;t get the code?</span>
-          <button type="button" onClick={handleResend} disabled={resending || autoSending} className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57] disabled:opacity-50">
+          <button type="button" onClick={handleResend} disabled={resending || autoSending} className="font-semibold text-green-800 hover:text-green-700 disabled:opacity-50">
             {resending || autoSending ? "Sending..." : "Send a new code"}
           </button>
         </div>

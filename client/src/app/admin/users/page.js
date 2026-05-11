@@ -5,11 +5,13 @@ import Link from "next/link";
 import { ArrowUpRight, Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { FilterTabs } from "@/components/common/FilterTabs";
-import { StatusBadge } from "@/components/common/StatusBadge";
+import { TierBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { cn } from "@/lib/utils";
+import { AdminUserReviewDrawer } from "@/components/admin/AdminUserReviewDrawer";
 
 const ROLE_OPTIONS = [
   { value: "all", label: "All roles" },
@@ -22,6 +24,7 @@ const ROLE_OPTIONS = [
 export default function AdminUsersPage() {
   const [role, setRole] = useState("all");
   const [query, setQuery] = useState("");
+  const [drawerUser, setDrawerUser] = useState(null);
   const { data, isLoading } = useDashboardData("admin");
   const users = useMemo(() => data?.users || [], [data?.users]);
 
@@ -73,30 +76,57 @@ export default function AdminUsersPage() {
       {isLoading ? (
         <Card className="rounded-[16px] p-8 text-center text-ink-500">Loading live users...</Card>
       ) : filtered.length ? (
-        <div className="grid gap-4">
-          {filtered.map((user) => (
-            <Card key={user.id} className="rounded-[18px] p-5 shadow-soft">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="font-display text-[22px] text-ink-900">{user.name}</h2>
-                    <StatusBadge status={user.status === "active" ? "verified" : user.status === "rejected" ? "rejected" : "pending"} label={user.status?.replace(/_/g, " ")} />
-                    <span className="rounded-full border border-ink-200 bg-ink-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-600">
-                      {user.role?.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                  <p className="text-[12px] text-ink-500">
-                    {[user.email, user.phone, user.region || user.country].filter(Boolean).join(" | ") || "Contact details pending"}
-                  </p>
-                </div>
+        <div className="grid gap-3">
+          {filtered.map((user) => {
+            const statusMap = {
+              active: "verified",
+              rejected: "rejected",
+              pending_review: "pending",
+              pending_verification: "pending_verification",
+              pending_identity_verification: "pending_verification",
+            };
+            const badgeStatus = statusMap[user.status] || "pending_verification";
 
-                <Link href={`/admin/users/${user.id}`} className="inline-flex items-center gap-2 text-[13px] font-semibold text-green-800 hover:text-green-700">
-                  Open user
-                  <ArrowUpRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </Card>
-          ))}
+            return (
+              <Card
+                key={user.id}
+                variant="interactive"
+                className="rounded-[18px] p-5"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="space-y-2 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-display text-[20px] text-ink-900">{user.name}</h2>
+                      <TierBadge status={badgeStatus} size="sm" />
+                      <span className="rounded-full border border-ink-200 bg-ink-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-600">
+                        {user.role?.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-ink-500">
+                      {[user.email, user.phone, user.region || user.country].filter(Boolean).join(" | ") || "Contact details pending"}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-lg border border-ink-200 bg-white px-3 py-2 text-[13px] font-semibold text-ink-800 transition-colors hover:border-green-300 hover:bg-green-50/80"
+                      onClick={() => setDrawerUser(user)}
+                    >
+                      Quick review
+                    </button>
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-semibold text-green-800 transition-colors hover:bg-green-50"
+                    >
+                      Open user
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <EmptyState
@@ -104,6 +134,8 @@ export default function AdminUsersPage() {
           description="Registered users will appear here once the system starts receiving real accounts."
         />
       )}
+
+      <AdminUserReviewDrawer user={drawerUser} open={Boolean(drawerUser)} onClose={() => setDrawerUser(null)} />
     </section>
   );
 }

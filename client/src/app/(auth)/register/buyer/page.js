@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,6 +18,8 @@ import { getInternationalCountries, getCountryByCode } from "../../../../lib/cou
 import { getAuthNextRoute } from "../../../../lib/authRoutes";
 import useAuthStore from "../../../../store/authStore";
 import toast from "react-hot-toast";
+import { ArrowRight, Apple, Globe2 } from "lucide-react";
+import { startOAuth } from "../../../../lib/startOAuth";
 
 // Country Select Component for International Buyers
 function CountrySelect({ value, onChange, error }) {
@@ -176,27 +179,30 @@ export default function RegisterBuyerPage() {
   };
 
   return (
-    <Card className="rounded-[20px] p-6 sm:p-8">
-      <div className="space-y-2">
-        <p className="section-eyebrow">Buyer Registration</p>
-        <h1 className="font-display text-[22px] leading-[1.15] text-[#111827]">Create your buyer account</h1>
-        <p className="text-[14px] leading-6 text-[#374151]">Set up a local or international sourcing profile with the same protected onboarding flow.</p>
-      </div>
+    <div className="mx-auto w-full max-w-[560px]">
+      <Card className="rounded-[20px] p-6 sm:p-8">
+        <div className="space-y-2">
+          <p className="section-eyebrow">Buyer onboarding</p>
+          <h1 className="font-display text-[24px] leading-[1.12] text-ink-900">Create your buyer account</h1>
+          <p className="text-[14px] leading-6 text-ink-700">
+            A premium sourcing profile built for verified supply, protected settlement rails, and export-ready workflows.
+          </p>
+        </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-        <RoleSwitcher
-          className="w-full justify-start sm:w-auto"
-          value={watch("buyerType")}
-          onChange={(nextValue) => setValue("buyerType", nextValue, { shouldValidate: true })}
-          options={[
-            { label: "Local Buyer", value: "local" },
-            { label: "International Buyer", value: "international" },
-          ]}
-        />
-        <StepIndicator steps={steps} currentStep={currentStep} />
-      </div>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <RoleSwitcher
+            className="w-full justify-start sm:w-auto"
+            value={watch("buyerType")}
+            onChange={(nextValue) => setValue("buyerType", nextValue, { shouldValidate: true })}
+            options={[
+              { label: "Local Buyer", value: "local" },
+              { label: "International Buyer", value: "international" },
+            ]}
+          />
+          <StepIndicator steps={steps} currentStep={currentStep} />
+        </div>
 
-      <form className="mt-6 space-y-5" onSubmit={handleSubmit(submitStep)}>
+        <form className="mt-6 space-y-5" onSubmit={handleSubmit(submitStep)}>
         {currentStep === 0 ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -275,11 +281,59 @@ export default function RegisterBuyerPage() {
               Back
             </Button>
           ) : <span />}
-          <Button type="submit" disabled={!isValid || isSubmitting}>
+          <Button type="submit" disabled={!isValid || isSubmitting} variant="cta">
             {isSubmitting ? "Processing..." : currentStep === steps.length - 1 ? "Create Buyer Account" : "Continue"}
           </Button>
         </div>
+
+        <div className="pt-2">
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-ink-200" />
+            <p className="text-[12px] font-semibold text-ink-500">Or continue with</p>
+            <div className="h-px flex-1 bg-ink-200" />
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={() => startOAuth("google")}
+              className="group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift"
+            >
+              <Globe2 className="h-4 w-4 text-green-800" />
+              Continue with Google
+              <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
+            </button>
+            <button
+              type="button"
+              onClick={() => startOAuth("apple")}
+              className="group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift"
+            >
+              <Apple className="h-4 w-4" />
+              Continue with Apple
+              <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
+            </button>
+            <button
+              type="button"
+              onClick={() => startOAuth("facebook")}
+              className="group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift"
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                f
+              </span>
+              Continue with Facebook
+              <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
+            </button>
+          </div>
+        </div>
+
+        <p className="pt-1 text-[12.5px] text-ink-500">
+          Already have an account?{" "}
+          <Link className="font-semibold text-green-800 hover:text-green-700" href="/sign-in">
+            Sign in
+          </Link>
+        </p>
       </form>
-    </Card>
+      </Card>
+    </div>
   );
 }

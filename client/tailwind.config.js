@@ -12,6 +12,16 @@ module.exports = {
         'dm-sans': ['"DM Sans"', 'sans-serif'],
       },
       colors: {
+        trust: {
+          verified: '#1A6B3C',
+          verifiedBg: '#EAF4EE',
+          export: '#1D4ED8',
+          exportBg: '#EFF6FF',
+          pending: '#B45309',
+          pendingBg: '#FFFBEB',
+          risk: '#B91C1C',
+          riskBg: '#FEF2F2',
+        },
         green: {
           900: '#0D3D22',
           800: '#1A6B3C',
@@ -36,6 +46,12 @@ module.exports = {
           100: '#F7EDD5',
           50: '#FDF8EE',
         },
+        /* Brand secondary CTA (golden yellow) — use for highlights & key actions */
+        brand: {
+          secondary: '#E8B84B',
+          secondaryHover: '#D1A23A',
+          secondaryFg: '#111827',
+        },
         ink: {
           900: '#0B1220',
           800: '#111827',
@@ -59,6 +75,17 @@ module.exports = {
       borderRadius: {
         xl2: '18px',
         xl3: '22px',
+        card: '14px',
+        chip: '9999px',
+      },
+      transitionDuration: {
+        enter: '200ms',
+        move: '280ms',
+        slow: '400ms',
+      },
+      transitionTimingFunction: {
+        enterprise: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        'enterprise-in-out': 'cubic-bezier(0.45, 0, 0.55, 1)',
       },
       keyframes: {
         'fade-in': {
@@ -81,6 +108,10 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-6px)' },
         },
+        slideInDrawer: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 300ms ease-out both',
@@ -88,6 +119,8 @@ module.exports = {
         shimmer: 'shimmer 1.4s linear infinite',
         'ken-burns': 'ken-burns 16s ease-in-out infinite alternate',
         float: 'float 6s ease-in-out infinite',
+        'slide-in-drawer':
+          'slideInDrawer 260ms cubic-bezier(0.22, 1, 0.36, 1) both',
       },
       backgroundImage: {
         'hero-grid':

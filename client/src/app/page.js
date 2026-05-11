@@ -1,7 +1,7 @@
+import { HomeMarketplaceEcosystem } from "../components/landing/HomeMarketplaceEcosystem";
 import { AnnouncementStrip } from "../components/landing/AnnouncementStrip";
 import { HeroSection } from "../components/landing/HeroSection";
 import { HeroSearchBar } from "../components/landing/HeroSearchBar";
-import { RoleCards } from "../components/landing/RoleCards";
 import { TrustStrip } from "../components/landing/TrustStrip";
 import { CropGrid } from "../components/landing/CropGrid";
 import { RegionalSpotlight } from "../components/landing/RegionalSpotlight";
@@ -23,8 +23,8 @@ export default function HomePage() {
         <main className="space-y-8 lg:space-y-12">
           <HeroSection />
           <HeroSearchBar />
-          <RoleCards />
           <TrustStrip />
+          <HomeMarketplaceEcosystem />
           <CropGrid />
           <RegionalSpotlight />
           <FeaturedFarmers />

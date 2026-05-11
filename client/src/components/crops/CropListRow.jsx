@@ -2,15 +2,16 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Card } from "../ui/card";
 import { CropBadge } from "./CropBadge";
-import { StatusBadge } from "../common/StatusBadge";
-import { VerificationBadge } from "../farmers/VerificationBadge";
+import { InquiryHeat } from "../common/SellerTrustBar";
 import { SmartImage } from "../media/SmartImage";
-import { cropImagery, cropFallback } from "../../lib/imagery";
+import { resolveListingImage } from "../../lib/imagery";
+import { ListingRowTrustStrip } from "./ListingTrustRibbon";
+import { ListingCommerceDetails } from "./ListingCommerceDetails";
 
 export function CropListRow({ listing, href }) {
-  const image = listing.imageSrc || cropImagery[listing.id] || cropFallback;
+  const image = resolveListingImage(listing);
   return (
-    <Card interactive className="group overflow-hidden rounded-2xl p-0">
+    <Card variant="interactive" className="group overflow-hidden rounded-2xl p-0">
       <Link
         href={href ?? `/crops/${listing.id}`}
         className="flex flex-col gap-0 lg:flex-row lg:items-stretch"
@@ -29,21 +30,26 @@ export function CropListRow({ listing, href }) {
         </div>
 
         <div className="flex flex-1 flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
+          <div className="min-w-0 flex-1 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="font-display text-[20px] text-ink-800">{listing.crop}</h3>
-              <StatusBadge status={listing.status} />
-              <VerificationBadge status={listing.farmerVerificationStatus} />
+              <ListingRowTrustStrip listing={listing} />
+              <InquiryHeat viewCount={listing.viewCount} inquiryCount={listing.inquiryCount} />
               {listing.grade ? <CropBadge>{listing.grade}</CropBadge> : null}
             </div>
-            {listing.summary ? (
-              <p className="text-[13px] text-ink-700">{listing.summary}</p>
-            ) : null}
+            {listing.summary ? <p className="text-[13px] text-ink-700">{listing.summary}</p> : null}
             <div className="flex flex-wrap gap-4 text-[12px] text-ink-500">
               <span>{listing.quantityLabel ?? listing.quantity}</span>
               <span>{listing.location}</span>
               <span className="font-semibold text-green-800">{listing.price}</span>
             </div>
+            <div className="max-w-xl lg:hidden">
+              <ListingCommerceDetails listing={listing} />
+            </div>
+          </div>
+
+          <div className="hidden max-w-md flex-shrink-0 lg:block lg:w-[min(100%,360px)]">
+            <ListingCommerceDetails listing={listing} />
           </div>
 
           <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-green-800 transition-transform duration-200 group-hover:translate-x-1">

@@ -17,6 +17,11 @@ const registerBuyer = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Buyer registered successfully', 201);
 });
 
+const oauthExchange = asyncHandler(async (req, res) => {
+  const result = await authService.oauthExchange(req.body, req);
+  sendSuccess(res, result, 'OAuth login successful');
+});
+
 const login = asyncHandler(async (req, res) => {
   const { identifier, password, rememberMe } = req.body;
   const result = await authService.login(identifier, password, rememberMe, req);
@@ -106,6 +111,7 @@ module.exports = {
   registerFarmer,
   registerReseller,
   registerBuyer,
+  oauthExchange,
   login,
   logout,
   refreshToken,

@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Landmark, ShieldCheck, Users } from "lucide-react";
+import { ArrowUpRight, Clock, Landmark, ShieldCheck, Users } from "lucide-react";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { WorkspaceHero } from "@/components/dashboard/WorkspaceHero";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TierBadge } from "@/components/ui/badge";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { cn } from "@/lib/utils";
 
 const kpiIcons = [Users, Landmark, ShieldCheck];
 const kpiAccents = ["green", "gold", "green"];
@@ -71,12 +74,27 @@ export default function AdminDashboardPage() {
             </div>
 
             {pendingUsers.length ? (
-              <div className="mt-4 grid gap-3">
+              <div className="mt-4 grid gap-2">
                 {pendingUsers.slice(0, 4).map((pendingUser) => (
-                  <div key={pendingUser.id} className="rounded-xl border border-ink-100 bg-ink-50 px-4 py-3">
-                    <p className="font-semibold text-ink-900">{pendingUser.name}</p>
-                    <p className="mt-1 text-[12px] text-ink-600">{pendingUser.region || pendingUser.country || "Region pending"}</p>
-                  </div>
+                  <Link
+                    key={pendingUser.id}
+                    href={`/admin/users/${pendingUser.id}`}
+                    className="group flex items-center justify-between gap-3 rounded-xl border border-ink-100 bg-ink-50 px-4 py-3 transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:bg-green-50/30 hover:shadow-soft"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-semibold text-ink-900">{pendingUser.name}</p>
+                        <TierBadge
+                          status={pendingUser.status === "pending_review" ? "pending" : pendingUser.status === "rejected" ? "rejected" : "pending_verification"}
+                          size="sm"
+                        />
+                      </div>
+                      <p className="mt-1 text-[12px] text-ink-500">
+                        {[pendingUser.role, pendingUser.region || pendingUser.country].filter(Boolean).join(" ") || "Details pending"}
+                      </p>
+                    </div>
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-400 transition-colors group-hover:text-green-700" />
+                  </Link>
                 ))}
               </div>
             ) : (

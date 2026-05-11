@@ -23,6 +23,15 @@
     --neutral-50: #F9FAFB;
     --line: #E5E7EB;
     --white: #FFFFFF;
+    /* Trust semantics (mirror TierBadge / Tailwind trust.*) */
+    --trust-tier1-ring: rgba(26, 107, 60, 0.2);
+    --trust-tier2-ring: rgba(59, 130, 246, 0.2);
+    --trust-tier3-ring: rgba(245, 158, 11, 0.28);
+    --trust-risk-ring: rgba(239, 68, 68, 0.24);
+    /* Motion rhythm */
+    --motion-enter: 200ms;
+    --motion-move: 280ms;
+    --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   * {
@@ -64,8 +73,9 @@
     font-family: var(--font-sans), sans-serif;
   }
 
+  /* Full-bleed page frame; use max-w-* only on inner prose blocks when needed */
   .content-shell {
-    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-[40px];
+    @apply mx-auto w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-10;
   }
 
   .surface-card {

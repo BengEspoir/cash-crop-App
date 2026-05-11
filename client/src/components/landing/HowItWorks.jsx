@@ -33,7 +33,7 @@ export function HowItWorks() {
           <p className="mt-3 text-[14px] leading-6 text-ink-700">
             The workflow is built for structured onboarding, verified supply, protected order handling, and better visibility through each trade stage.
           </p>
-          <Button variant="outline" className="mt-5">Start onboarding</Button>
+          <Button variant="cta" size="lg" className="mt-5">Start onboarding</Button>
         </div>
       </Reveal>
 
