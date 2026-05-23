@@ -22,8 +22,8 @@ ADMIN_ROUTE_SECRET=agriculnet-admin-secret-2025
 
 ## Seeded admin account
 If you run `server/database/seeds/001_seed_admin.sql`, the seeded admin is:
-- Email: `mbengespoir@gmail.com`
-- Password: `Admin@AgriculNet2025!`
+- Email: `
+- Password: `
 - Role: `super_admin`
 
 ## Auth status rules
