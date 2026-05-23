@@ -194,7 +194,7 @@ export default function HelpCenterPage() {
         <div className="space-y-2">
           <h2 className="font-display text-[20px] leading-[1.15] text-[#111827]">Contact Support</h2>
           <p className="text-[14px] leading-6 text-[#6B7280]">
-            Can't find what you're looking for? Our support team is here to help
+            Can&apos;t find what you&apos;re looking for? Our support team is here to help
           </p>
         </div>
 

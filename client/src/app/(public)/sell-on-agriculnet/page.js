@@ -143,7 +143,7 @@ export default function SellOnAgriculNetPage() {
         <div className="space-y-2">
           <h2 className="font-display text-[20px] leading-[1.15] text-[#111827]">Why Sell on AgriculNet?</h2>
           <p className="text-[14px] leading-6 text-[#6B7280]">
-            Discover the advantages of joining Cameroon's premier agricultural marketplace
+            Discover the advantages of joining Cameroon&apos;s premier agricultural marketplace
           </p>
         </div>
 
@@ -262,7 +262,7 @@ export default function SellOnAgriculNetPage() {
                     </span>
                   </div>
                   <p className="text-[13px] font-medium text-[#1A6B3C]">{story.achievement}</p>
-                  <p className="text-[13px] leading-5 text-[#6B7280] italic">"{story.quote}"</p>
+                  <p className="text-[13px] leading-5 text-[#6B7280] italic">&quot;{story.quote}&quot;</p>
                 </div>
               </div>
             </Card>
