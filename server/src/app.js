@@ -17,6 +17,9 @@ const conversationsRoutes = require('./modules/conversations/conversations.route
 const messagesRoutes = require('./modules/messages/messages.routes');
 const ordersRoutes = require('./modules/orders/orders.routes');
 const paymentsRoutes = require('./modules/payments/payments.routes');
+const notificationsRoutes = require('./modules/notifications/notifications.routes');
+const preferencesRoutes = require('./modules/preferences/preferences.routes');
+const supportRoutes = require('./modules/support/support.routes');
 
 const app = express();
 
@@ -57,6 +60,9 @@ app.use('/api/v1/conversations', conversationsRoutes);
 app.use('/api/v1/messages', messagesRoutes);
 app.use('/api/v1/orders', ordersRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
+app.use('/api/v1/notifications', notificationsRoutes);
+app.use('/api/v1/preferences', preferencesRoutes);
+app.use('/api/v1/support', supportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

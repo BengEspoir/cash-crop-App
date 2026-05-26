@@ -1,51 +1,82 @@
-import { PageHeader } from "@/components/common/PageHeader";
-import { Card } from "@/components/ui/card";
+"use client";
+
+import { farmerSettingsSections, FarmerButton, FarmerHeader, FarmerPage, FarmerPanel } from "@/components/farmer/FarmerDesignSystem";
 import { Input } from "@/components/ui/input";
 
 export default function FarmerSettingsPage() {
   return (
-    <section className="space-y-6">
-      <PageHeader
-        eyebrow="Farmer settings"
-        title="Workflow preferences and account controls"
-        description="Account preferences are ready for live data and will stay empty until saved by the farmer."
-      />
+    <FarmerPage className="mx-auto max-w-7xl">
+      <FarmerHeader title="Settings" description="Manage your account preferences, security, and notifications." />
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="rounded-[18px] p-5">
-          <h2 className="font-display text-[22px] text-[#111827]">Notifications</h2>
-          <div className="mt-5 space-y-3">
-            {[
-              "SMS when a buyer sends a new inquiry",
-              "Email when payout status changes",
-              "Alerts for inspection schedule updates",
-            ].map((label) => (
-              <label key={label} className="flex items-center gap-3 rounded-[12px] bg-[#F9FAFB] px-4 py-3">
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-[#1A6B3C]" />
-                <span className="text-[13px] text-[#374151]">{label}</span>
+      <div className="grid gap-8 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="space-y-3">
+          {farmerSettingsSections.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.title}
+                type="button"
+                className={`flex h-16 w-full items-center gap-4 rounded-lg px-6 text-left text-[18px] font-bold transition ${index === 0 ? "bg-white text-green-800 shadow-sm" : "text-ink-600 hover:bg-white hover:text-green-800"}`}
+              >
+                <Icon className="h-5 w-5" />
+                {item.title}
+              </button>
+            );
+          })}
+        </aside>
+
+        <div className="space-y-8">
+          <FarmerPanel title="Regional Preferences">
+            <p className="-mt-2 mb-8 text-[17px] text-ink-500">Set your language and timezone settings.</p>
+            <div className="grid gap-5 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Language</span>
+                <Input readOnly value="English (Cameroon)" className="h-14 rounded-lg text-[16px]" />
               </label>
-            ))}
-          </div>
-        </Card>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Currency</span>
+                <Input readOnly value="XAF - CFA Franc BEAC" className="h-14 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-[15px] font-semibold text-ink-700">Timezone</span>
+                <Input readOnly value="(GMT+01:00) West Africa Time - Yaounde" className="h-14 rounded-lg text-[16px]" />
+              </label>
+            </div>
+            <div className="mt-8 flex justify-end">
+              <FarmerButton>Save Preferences</FarmerButton>
+            </div>
+          </FarmerPanel>
 
-        <Card className="rounded-[18px] p-5">
-          <h2 className="font-display text-[22px] text-[#111827]">Default trade setup</h2>
-          <div className="mt-5 grid gap-4">
-            <label className="space-y-2">
-              <span className="text-[13px] font-medium text-[#374151]">Preferred payout phone</span>
-              <Input placeholder="+2376..." autoComplete="tel" />
-            </label>
-            <label className="space-y-2">
-              <span className="text-[13px] font-medium text-[#374151]">Fallback account name</span>
-              <Input placeholder="Account holder name" autoComplete="name" />
-            </label>
-            <label className="space-y-2">
-              <span className="text-[13px] font-medium text-[#374151]">Inspection routing</span>
-              <Input placeholder="Preferred inspection route" />
-            </label>
-          </div>
-        </Card>
+          <FarmerPanel title="Change Password">
+            <p className="-mt-2 mb-8 text-[17px] text-ink-500">Ensure your account is using a long, random password to stay secure.</p>
+            <div className="grid gap-5">
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Current Password</span>
+                <Input type="password" placeholder="Current password" className="h-14 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">New Password</span>
+                <Input type="password" placeholder="New password" className="h-14 rounded-lg text-[16px]" />
+              </label>
+            </div>
+          </FarmerPanel>
+
+          <FarmerPanel title="Notification Settings">
+            <div className="space-y-4">
+              {[
+                "SMS when a buyer sends a new inquiry",
+                "Email when payout status changes",
+                "Alerts for inspection schedule updates",
+              ].map((label) => (
+                <label key={label} className="flex items-center gap-4 rounded-lg border border-ink-100 px-5 py-4">
+                  <input type="checkbox" defaultChecked className="h-5 w-5 accent-green-800" />
+                  <span className="text-[16px] font-medium text-ink-700">{label}</span>
+                </label>
+              ))}
+            </div>
+          </FarmerPanel>
+        </div>
       </div>
-    </section>
+    </FarmerPage>
   );
 }

@@ -8,6 +8,11 @@ const getActivity = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Admin activity retrieved successfully');
 });
 
+const getAuditLogs = asyncHandler(async (req, res) => {
+  const result = await adminService.listAuditLogs(req.query.limit);
+  sendSuccess(res, result, 'Admin audit logs retrieved successfully');
+});
+
 const listVerificationSubmissions = asyncHandler(async (req, res) => {
   const result = await adminService.listVerificationSubmissions(req.query.status);
   sendSuccess(res, result, 'Verification submissions retrieved successfully');
@@ -26,6 +31,7 @@ const reviewVerificationSubmission = asyncHandler(async (req, res) => {
 
 module.exports = {
   getActivity,
+  getAuditLogs,
   listVerificationSubmissions,
   getVerificationSubmission,
   reviewVerificationSubmission

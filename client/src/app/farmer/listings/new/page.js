@@ -1,30 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ArrowLeft } from "lucide-react";
-import { Breadcrumb } from "@/components/common/Breadcrumb";
-import { PageHeader } from "@/components/common/PageHeader";
+import { ArrowLeft, Check, ImagePlus } from "lucide-react";
 import { ImageUploader } from "@/components/media/ImageUploader";
-import { Reveal } from "@/components/motion/Reveal";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  FarmerButton,
+  FarmerHeader,
+  FarmerPage,
+  FarmerPanel,
+} from "@/components/farmer/FarmerDesignSystem";
 import { Input } from "@/components/ui/input";
 import { useCreateListing } from "@/hooks/useListings";
 
 const defaultForm = {
-  crop: "Cocoa Beans",
-  grade: "Export Grade A",
-  quantity: "2000",
+  crop: "Cocoa",
+  grade: "",
+  quantity: "",
   quantityUnit: "kg",
-  price: "1650",
-  region: "Kumba, South West",
-  deliveryWindow: "Ready within 5 days",
-  summary:
-    "Sun-dried cocoa prepared for warehouse pickup with moisture checks already completed.",
+  price: "",
+  region: "",
+  deliveryWindow: "",
+  summary: "",
 };
+
+const steps = ["Crop Details", "Pricing & Quantity", "Photos & Location"];
 
 export default function FarmerNewListingPage() {
   const router = useRouter();
@@ -39,9 +40,9 @@ export default function FarmerNewListingPage() {
       const listing = await createListing.mutateAsync({
         cropName: form.crop,
         grade: form.grade,
-        quantity: Number(form.quantity),
+        quantity: Number(form.quantity || 0),
         quantityUnit: form.quantityUnit || "kg",
-        pricePerUnit: Number(form.price),
+        pricePerUnit: Number(form.price || 0),
         currency: "XAF",
         status,
         locationName: form.region,
@@ -58,101 +59,104 @@ export default function FarmerNewListingPage() {
   };
 
   return (
-    <section className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Farmer", href: "/farmer/dashboard" },
-          { label: "Listings", href: "/farmer/listings" },
-          { label: "Create" },
-        ]}
+    <FarmerPage className="mx-auto max-w-5xl">
+      <FarmerHeader
+        title="Add New Crop Listing"
+        description="Fill in your crop details and submit the listing for marketplace review."
+        backHref="/farmer/listings"
+        backLabel="Back to My Listings"
       />
 
-      <PageHeader
-        eyebrow="Create listing"
-        title="Draft a new crop offer"
-        description="Add photography and trade fields now so buyers get an export-ready presentation the moment it's published."
-        actions={
-          <Button asChild variant="outline">
-            <Link href="/farmer/listings" className="inline-flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" /> Back to listings
-            </Link>
-          </Button>
-        }
-      />
+      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-start gap-4">
+        {steps.map((step, index) => (
+          <div key={step} className="contents">
+            <div className="text-center">
+              <span className={`mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full border-4 text-[18px] font-bold ${index === 0 ? "border-green-800 bg-green-800 text-white" : "border-ink-200 bg-white text-ink-400"}`}>
+                {index === 0 ? <Check className="h-5 w-5" /> : index + 1}
+              </span>
+              <p className={`mt-3 text-[15px] font-bold ${index === 0 ? "text-green-800" : "text-ink-400"}`}>{step}</p>
+            </div>
+            {index < steps.length - 1 ? <div className="mt-6 h-px bg-ink-200" /> : null}
+          </div>
+        ))}
+      </div>
 
-      <Reveal>
-        <Card className="rounded-[18px] p-5 shadow-soft">
-          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <div className="space-y-4">
-              <div>
-                <p className="section-eyebrow">Trade basics</p>
-                <h2 className="mt-1 font-display text-[20px] text-ink-900">Core listing details</h2>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Crop name</span>
-                  <Input value={form.crop} onChange={update("crop")} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Grade</span>
-                  <Input value={form.grade} onChange={update("grade")} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Available quantity</span>
-                  <Input value={form.quantity} onChange={update("quantity")} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Unit</span>
-                  <Input value={form.quantityUnit} onChange={update("quantityUnit")} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Price per unit (XAF)</span>
-                  <Input value={form.price} onChange={update("price")} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Pickup region</span>
-                  <Input value={form.region} onChange={update("region")} />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-[13px] font-medium text-ink-700">Delivery window</span>
-                  <Input value={form.deliveryWindow} onChange={update("deliveryWindow")} />
-                </label>
-              </div>
-
-              <label className="block space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">Listing summary</span>
+      <FarmerPanel>
+        <div className="space-y-8">
+          <div>
+            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-ink-400">Crop Information</p>
+            <div className="mt-5 grid gap-5">
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Crop Category *</span>
+                <Input value={form.crop} onChange={update("crop")} className="h-16 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Crop Variety / Grade *</span>
+                <Input value={form.grade} onChange={update("grade")} placeholder="e.g. Grade A, Trinitario, Robusta" className="h-16 rounded-lg text-[16px]" />
+                <p className="text-[14px] text-ink-400">Be specific. This helps buyers find your exact crop.</p>
+              </label>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Crop Description</span>
                 <textarea
-                  className="min-h-[140px] w-full rounded-[12px] border border-ink-200 px-4 py-3 text-[14px] outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100"
                   value={form.summary}
                   onChange={update("summary")}
+                  maxLength={500}
+                  placeholder="Describe your crop, quality notes, how it was grown, and special characteristics..."
+                  className="min-h-[150px] w-full rounded-lg border border-ink-200 px-5 py-4 text-[16px] outline-none focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
                 />
+                <p className="text-right text-[14px] text-ink-400">{form.summary.length} / 500</p>
               </label>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <p className="section-eyebrow">Photography</p>
-                <h2 className="mt-1 font-display text-[20px] text-ink-900">Listing gallery</h2>
-                <p className="mt-1 text-[12.5px] text-ink-500">
-                  Up to 6 photos. The first becomes the cover used on search cards, detail pages, and
-                  buyer shortlists.
-                </p>
-              </div>
-              <ImageUploader
-                value={gallery}
-                onChange={setGallery}
-                folder="agriculnet/listings"
-                max={6}
-              />
+          <div>
+            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-ink-400">Pricing & Quantity</p>
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Available Quantity *</span>
+                <Input value={form.quantity} onChange={update("quantity")} placeholder="2000" className="h-16 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Unit</span>
+                <Input value={form.quantityUnit} onChange={update("quantityUnit")} className="h-16 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Price per unit (XAF) *</span>
+                <Input value={form.price} onChange={update("price")} placeholder="2100" className="h-16 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2">
+                <span className="text-[15px] font-semibold text-ink-700">Delivery Window</span>
+                <Input value={form.deliveryWindow} onChange={update("deliveryWindow")} placeholder="Ready within 5 days" className="h-16 rounded-lg text-[16px]" />
+              </label>
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-[15px] font-semibold text-ink-700">Pickup Location</span>
+                <Input value={form.region} onChange={update("region")} placeholder="Kumba, South West" className="h-16 rounded-lg text-[16px]" />
+              </label>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-ink-100 pt-5">
-            <Button type="button" variant="outline" disabled={createListing.isPending} onClick={() => handleSubmit("draft")}>Save draft</Button>
-            <Button type="button" disabled={createListing.isPending} onClick={() => handleSubmit("active")}>Publish listing</Button>
+          <div>
+            <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-ink-400">Photos & Location</p>
+            <div className="mt-5 rounded-xl border border-dashed border-ink-200 p-5">
+              <div className="mb-4 flex items-center gap-3 text-[16px] font-bold text-ink-700">
+                <ImagePlus className="h-5 w-5 text-green-800" />
+                Listing Gallery
+              </div>
+              <ImageUploader value={gallery} onChange={setGallery} folder="agriculnet/listings" max={6} />
+            </div>
           </div>
-        </Card>
-      </Reveal>
-    </section>
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-6">
+          <FarmerButton href="/farmer/listings" variant="outline" icon={ArrowLeft}>Cancel</FarmerButton>
+          <div className="flex flex-wrap gap-3">
+            <FarmerButton variant="outline" disabled={createListing.isPending} onClick={() => handleSubmit("draft")}>Save Draft</FarmerButton>
+            <FarmerButton disabled={createListing.isPending} onClick={() => handleSubmit("active")}>
+              {createListing.isPending ? "Publishing..." : "Publish Listing"}
+            </FarmerButton>
+          </div>
+        </div>
+      </FarmerPanel>
+    </FarmerPage>
   );
 }

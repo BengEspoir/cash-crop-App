@@ -1,139 +1,133 @@
 "use client";
 
-import { BadgeCheck, Leaf, Wallet } from "lucide-react";
-import { EmptyState } from "@/components/common/EmptyState";
-import { PageHeader } from "@/components/common/PageHeader";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { WorkspaceHero } from "@/components/dashboard/WorkspaceHero";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
-import { Card } from "@/components/ui/card";
+import { BadgeCheck, FileText } from "lucide-react";
+import {
+  FarmerButton,
+  FarmerEmptyState,
+  FarmerHeader,
+  FarmerPage,
+  FarmerPanel,
+  FarmerStatusBadge,
+  farmerDisplayName,
+  farmerInitials,
+} from "@/components/farmer/FarmerDesignSystem";
 import { Input } from "@/components/ui/input";
-import { useDashboardData } from "@/hooks/useDashboardData";
 import useAuth from "@/hooks/useAuth";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 const valueOrEmpty = (value) => value || "";
+
+function ReadOnlyField({ label, value, className }) {
+  return (
+    <label className={className || "space-y-2"}>
+      <span className="text-[15px] font-semibold text-ink-700">{label}</span>
+      <Input value={valueOrEmpty(value)} readOnly placeholder="Not saved yet" className="h-14 rounded-lg text-[16px]" />
+    </label>
+  );
+}
 
 export default function FarmerProfilePage() {
   const { user } = useAuth();
   const { data, isLoading, error } = useDashboardData("farmer");
   const profile = data?.profile || {};
-  const metrics = data?.metrics || {};
-
-  const profileStats = [
-    {
-      label: "Verification",
-      value: user?.status || "Unknown",
-      delta: "Current account status",
-      icon: BadgeCheck,
-      accent: "green",
-      trend: "neutral",
-    },
-    {
-      label: "Primary crop",
-      value: profile.primary_crop || "Unset",
-      delta: "Saved farm profile value",
-      icon: Leaf,
-      accent: "gold",
-      trend: "neutral",
-    },
-    {
-      label: "Preferred payout",
-      value: profile.payout_method || "Unset",
-      delta: "Saved settlement preference",
-      icon: Wallet,
-      accent: "green",
-      trend: "neutral",
-    },
-  ];
+  const listings = data?.listings || [];
+  const orders = data?.orders || [];
+  const verified = user?.status === "active";
 
   if (isLoading) {
-    return <EmptyState title="Loading farmer profile" description="Fetching your live farmer account details." />;
+    return <FarmerEmptyState title="Loading farmer profile" description="Fetching your live farmer account details." />;
   }
 
   if (error) {
-    return <EmptyState title="Profile unavailable" description="The live farmer profile could not be loaded right now." />;
+    return <FarmerEmptyState title="Profile unavailable" description="The live farmer profile could not be loaded right now." />;
   }
 
   return (
-    <section className="space-y-6">
-      <WorkspaceHero
-        role="farmer"
-        eyebrow="Farmer profile"
-        title="Farm identity and trade readiness"
-        description="Your profile powers how buyers discover and shortlist you. Live values appear as soon as records exist."
-        metrics={[
-          { label: "Listings", value: String(metrics.activeListings || 0), caption: "Active database records" },
-          { label: "Orders", value: String(metrics.openOrders || 0), caption: "Live order records" },
-          { label: "Revenue", value: metrics.protectedRevenue || "XAF 0", caption: "Protected settlement total" },
-        ]}
-      />
+    <FarmerPage>
+      <FarmerHeader title="My Profile" action={<FarmerButton href="/find-farmers" variant="outline">View Public Profile</FarmerButton>} />
 
-      <PageHeader
-        eyebrow="Farmer profile"
-        title="Manage farm identity"
-        description="These profile fields are loaded from the farmer account created during registration."
-      />
-
-      <Stagger className="grid gap-4 md:grid-cols-3">
-        {profileStats.map((item) => (
-          <StaggerItem key={item.label}>
-            <KpiCard {...item} />
-          </StaggerItem>
-        ))}
-      </Stagger>
-
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Reveal>
-          <Card className="rounded-[18px] p-5 shadow-soft">
-            <h2 className="font-display text-[22px] text-ink-900">Farmer details</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">First name</span>
-                <Input value={valueOrEmpty(user?.first_name)} readOnly placeholder="No first name saved yet" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">Last name</span>
-                <Input value={valueOrEmpty(user?.last_name)} readOnly placeholder="No last name saved yet" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">Phone</span>
-                <Input value={valueOrEmpty(user?.phone)} readOnly placeholder="No phone saved yet" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">City</span>
-                <Input value={valueOrEmpty(user?.city)} readOnly placeholder="No city saved yet" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">Primary crop</span>
-                <Input value={valueOrEmpty(profile.primary_crop)} readOnly placeholder="No crop saved yet" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[13px] font-medium text-ink-700">Harvest volume</span>
-                <Input value={valueOrEmpty(profile.harvest_volume)} readOnly placeholder="No harvest volume saved yet" />
-              </label>
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <FarmerPanel>
+            <div className="text-center">
+              <span className="mx-auto inline-flex h-32 w-32 items-center justify-center rounded-full border-8 border-green-50 bg-green-800 text-[44px] font-bold text-white">
+                {farmerInitials(user)}
+              </span>
+              <button type="button" className="mt-5 text-[16px] font-bold text-green-800 underline">Change Photo</button>
+              <h2 className="mt-6 text-[30px] font-medium text-ink-950">{farmerDisplayName(user)}</h2>
+              <p className="mt-2 text-[17px] text-ink-500">{[profile.city || user?.city, profile.region || user?.region].filter(Boolean).join(", ") || "Location pending"}</p>
+              <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4">
+                <p className="inline-flex items-center gap-2 text-[18px] font-bold text-green-800">
+                  <BadgeCheck className="h-5 w-5" />
+                  {verified ? "Verified Farmer" : "Verification Pending"}
+                </p>
+                <p className="mt-2 text-[14px] text-ink-500">Current account status: {user?.status || "unknown"}</p>
+              </div>
+              <div className="mt-6 grid grid-cols-3 border-t border-ink-100 pt-6 text-center">
+                <div>
+                  <p className="text-[22px] font-bold text-ink-950">{listings.length}</p>
+                  <p className="text-[12px] font-bold uppercase text-ink-400">Listings</p>
+                </div>
+                <div>
+                  <p className="text-[22px] font-bold text-ink-950">{orders.length}</p>
+                  <p className="text-[12px] font-bold uppercase text-ink-400">Sales</p>
+                </div>
+                <div>
+                  <p className="text-[22px] font-bold text-ink-950">{profile.rating || "0"}</p>
+                  <p className="text-[12px] font-bold uppercase text-ink-400">Rating</p>
+                </div>
+              </div>
             </div>
-          </Card>
-        </Reveal>
+          </FarmerPanel>
 
-        <Reveal delay={0.08}>
-          <Card className="rounded-[18px] p-5 shadow-soft">
-            <h2 className="font-display text-[22px] text-ink-900">Payout and inspection</h2>
-            <div className="mt-5 space-y-3">
-              {[
-                ["Inspection preference", profile.inspection_preference || "No inspection preference saved yet"],
-                ["Payout method", profile.payout_method || "No payout method saved yet"],
-                ["Account name", profile.payout_account_name || "No payout account saved yet"],
-                ["Notification opt-in", profile.notification_opt_in ? "Enabled" : "Not enabled"],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-[12px] bg-ink-50 px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">{label}</p>
-                  <p className="mt-2 text-[14px] font-medium text-ink-900">{value}</p>
+          <FarmerPanel title="Documents">
+            <div className="space-y-3">
+              {["National ID Card", "Farm Ownership", "Cooperative Reference"].map((label) => (
+                <div key={label} className="flex items-center justify-between gap-3 rounded-lg border border-ink-100 px-4 py-3">
+                  <span className="inline-flex items-center gap-3 text-[15px] font-bold text-ink-950">
+                    <FileText className="h-5 w-5 text-ink-300" />
+                    {label}
+                  </span>
+                  <FarmerStatusBadge status={verified ? "verified" : "pending"}>{verified ? "Verified" : "Pending"}</FarmerStatusBadge>
                 </div>
               ))}
             </div>
-          </Card>
-        </Reveal>
+          </FarmerPanel>
+        </div>
+
+        <FarmerPanel title="Farm & Personal Details">
+          <div className="space-y-8">
+            <div>
+              <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-ink-400">Personal Information</p>
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <ReadOnlyField label="First Name" value={user?.first_name} />
+                <ReadOnlyField label="Last Name" value={user?.last_name} />
+                <ReadOnlyField label="Phone Number" value={user?.phone} className="space-y-2 md:col-span-2" />
+                <ReadOnlyField label="Email" value={user?.email} className="space-y-2 md:col-span-2" />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-ink-400">Farm Details</p>
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <ReadOnlyField label="Farm / Cooperative Name" value={profile.farm_name || profile.cooperative_name} className="space-y-2 md:col-span-2" />
+                <ReadOnlyField label="Region" value={profile.region || user?.region} />
+                <ReadOnlyField label="City" value={profile.city || user?.city} />
+                <ReadOnlyField label="Primary Crop" value={profile.primary_crop} />
+                <ReadOnlyField label="Harvest Volume" value={profile.harvest_volume} />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-ink-400">Settlement</p>
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <ReadOnlyField label="Payout Method" value={profile.payout_method} />
+                <ReadOnlyField label="Payout Account Name" value={profile.payout_account_name} />
+              </div>
+            </div>
+          </div>
+        </FarmerPanel>
       </div>
-    </section>
+    </FarmerPage>
   );
 }

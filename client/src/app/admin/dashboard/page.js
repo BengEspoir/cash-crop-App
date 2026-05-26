@@ -1,147 +1,164 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Clock, Landmark, ShieldCheck, Users } from "lucide-react";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { WorkspaceHero } from "@/components/dashboard/WorkspaceHero";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
-import { Card } from "@/components/ui/card";
+import {
+  AlertTriangle,
+  Box,
+  Clock,
+  Coins,
+  Leaf,
+  Scale,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import {
+  AdminCard,
+  AdminDataTable,
+  AdminPageHeader,
+  AdminStatCard,
+  AdminStatusPill,
+  formatAdminDate,
+} from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { TierBadge } from "@/components/ui/badge";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { cn } from "@/lib/utils";
-
-const kpiIcons = [Users, Landmark, ShieldCheck];
-const kpiAccents = ["green", "gold", "green"];
 
 export default function AdminDashboardPage() {
-  const { data } = useDashboardData("admin");
+  const { data, isLoading } = useDashboardData("admin");
   const metrics = data?.metrics || {};
   const pendingUsers = data?.pendingUsers || [];
-  const activity = data?.activity || [];
+  const orders = data?.orders || [];
+  const disputes = data?.disputes || [];
+  const listings = data?.listings || [];
 
-  const adminStats = [
-    { label: "Users awaiting review", value: String(metrics.pendingReviews ?? 0), delta: "Live sync" },
-    { label: "Orders in motion", value: String(metrics.totalOrders ?? 0), delta: "Logistics" },
-    { label: "Protected volume", value: metrics.protectedVolume || "XAF 0", delta: "Escrow" },
+  const pendingRows = [
+    ...pendingUsers.slice(0, 4).map((user) => ({
+      id: user.id,
+      icon: Users,
+      tone: "gold",
+      title: `${user.name || "User"} - Farmer Registration`,
+      detail: [user.region || user.country, user.created_at ? formatAdminDate(user.created_at) : "Submitted"].filter(Boolean).join(" | "),
+      action: "Review",
+      href: `/admin/users/${user.id}`,
+      status: user.status,
+    })),
+    ...listings.filter((item) => ["pending", "pending_review"].includes(item.status)).slice(0, 3).map((listing) => ({
+      id: listing.id,
+      icon: Leaf,
+      tone: "blue",
+      title: `${listing.crop} - Listing Pending`,
+      detail: listing.location || "Location pending",
+      action: "Approve",
+      href: `/admin/listings/${listing.id}`,
+      status: listing.status,
+    })),
+    ...disputes.slice(0, 3).map((dispute) => ({
+      id: dispute.id,
+      icon: Scale,
+      tone: "red",
+      title: dispute.subject || "Open dispute",
+      detail: dispute.order_id || dispute.description || "Needs resolution",
+      action: "Resolve",
+      href: "/admin/disputes",
+      status: dispute.status,
+    })),
   ];
 
   return (
-    <section className="space-y-6">
-      <WorkspaceHero
-        role="admin"
-        eyebrow="Operations center"
-        title="AgriculNet Admin Control"
-        description="Monitor system health, review farmer applications, and manage platform logistics."
-        metrics={[
-          { label: "Pending reviews", value: String(metrics.pendingReviews ?? 0), caption: "Farmers" },
-          { label: "Active disputes", value: String(metrics.activeDisputes ?? 0), caption: "Open" },
-          { label: "Protected volume", value: metrics.protectedVolume || "XAF 0", caption: "Platform" },
-        ]}
-        primaryAction={{ label: "Review applications", href: "/admin/users" }}
-        secondaryAction={{ label: "System settings", href: "/admin/settings" }}
+    <section className="space-y-8">
+      <AdminPageHeader
+        title="Good morning, Admin"
+        eyebrow="Thursday, 19 March 2026 | Here's what needs your attention today."
+        actionLabel="Download Report"
       />
 
-      <Stagger className="grid gap-4 md:grid-cols-3">
-        {adminStats.map((item, idx) => (
-          <StaggerItem key={item.label}>
-            <KpiCard
-              {...item}
-              icon={kpiIcons[idx] ?? Users}
-              accent={kpiAccents[idx] ?? "green"}
-              trend="up"
-            />
-          </StaggerItem>
-        ))}
-      </Stagger>
-
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Reveal>
-          <Card className="rounded-[18px] p-5 shadow-soft">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="section-eyebrow">User verification</p>
-                <h2 className="mt-2 font-display text-[22px] text-ink-900">Farmers awaiting approval</h2>
-              </div>
-              <Link
-                href="/admin/users"
-                className="inline-flex items-center gap-2 text-[13px] font-semibold text-green-800 hover:text-green-700"
-              >
-                View all queue
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {pendingUsers.length ? (
-              <div className="mt-4 grid gap-2">
-                {pendingUsers.slice(0, 4).map((pendingUser) => (
-                  <Link
-                    key={pendingUser.id}
-                    href={`/admin/users/${pendingUser.id}`}
-                    className="group flex items-center justify-between gap-3 rounded-xl border border-ink-100 bg-ink-50 px-4 py-3 transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:bg-green-50/30 hover:shadow-soft"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-semibold text-ink-900">{pendingUser.name}</p>
-                        <TierBadge
-                          status={pendingUser.status === "pending_review" ? "pending" : pendingUser.status === "rejected" ? "rejected" : "pending_verification"}
-                          size="sm"
-                        />
-                      </div>
-                      <p className="mt-1 text-[12px] text-ink-500">
-                        {[pendingUser.role, pendingUser.region || pendingUser.country].filter(Boolean).join(" ") || "Details pending"}
-                      </p>
-                    </div>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-400 transition-colors group-hover:text-green-700" />
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-ink-200 text-ink-500 text-sm">
-                No pending verifications at the moment.
-              </div>
-            )}
-          </Card>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <ActivityFeed items={activity} />
-        </Reveal>
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+        <AdminStatCard icon={Users} value={metrics.totalUsers ?? 0} label="Total Users" tag="+34 this week" tone="green" progress={62} />
+        <AdminStatCard icon={Clock} value={metrics.pendingReviews ?? 0} label="Pending Verifications" tag="Action required" tone="gold" progress={28} />
+        <AdminStatCard icon={Leaf} value={metrics.totalListings ?? listings.length} label="Active Listings" tag="+67 this week" tone="green" progress={66} />
+        <AdminStatCard icon={Box} value={metrics.totalOrders ?? orders.length} label="Open Orders" tag="awaiting action" tone="blue" progress={45} />
+        <AdminStatCard icon={Coins} value={metrics.protectedVolume || "XAF 0"} label="Revenue This Month" tag="+18% vs last month" tone="gold" progress={80} />
       </div>
 
-      <Reveal>
-        <Card className="rounded-[18px] p-5 shadow-soft">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-eyebrow">Platform integrity</p>
-              <h2 className="mt-2 font-display text-[22px] text-ink-900">Recent critical actions</h2>
-            </div>
-          </div>
-          <div className="mt-4 space-y-3">
-            {activity.length ? activity.slice(0, 5).map((item) => (
-              <div key={item.id} className="rounded-[12px] bg-[#F9FAFB] px-4 py-3">
-                <p className="font-medium text-[#111827]">{item.title}</p>
-                <p className="mt-2 text-[13px] leading-6 text-[#374151]">{item.detail}</p>
-              </div>
-            )) : (
-              <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-ink-200 text-ink-500 text-sm">
-                No critical actions recorded yet.
-              </div>
-            )}
-          </div>
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+        <AdminCard
+          title="Pending Actions"
+          action={<span className="rounded-full bg-gold-100 px-4 py-1.5 text-[14px] font-bold text-gold-800">{pendingRows.length} items</span>}
+        >
+          <AdminDataTable
+            columns={[
+              {
+                key: "title",
+                label: "Action",
+                render: (row) => {
+                  const Icon = row.icon;
+                  return (
+                    <div className="flex items-center gap-4">
+                      <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${row.tone === "red" ? "bg-red-50 text-red-800" : row.tone === "gold" ? "bg-gold-100 text-gold-800" : "bg-blue-50 text-blue-800"}`}>
+                        <Icon className="h-6 w-6" />
+                      </span>
+                      <div>
+                        <p className="font-bold text-ink-900">{row.title}</p>
+                        <p className="mt-1 text-[13px] text-ink-400">{row.detail}</p>
+                      </div>
+                    </div>
+                  );
+                },
+              },
+              { key: "status", label: "Status", render: (row) => <AdminStatusPill status={row.status} /> },
+              {
+                key: "action",
+                label: "Action",
+                render: (row) => (
+                  <Button asChild variant={row.tone === "red" ? "danger" : row.tone === "gold" ? "outline" : "primary"} size="sm">
+                    <Link href={row.href}>{row.action}</Link>
+                  </Button>
+                ),
+              },
+            ]}
+            rows={pendingRows}
+            emptyTitle={isLoading ? "Loading live actions..." : "No pending actions"}
+            emptyDescription="Live review, listing, and dispute actions will appear here when available."
+          />
+        </AdminCard>
 
-          <div className="mt-5 rounded-[14px] border border-blue-100 bg-blue-50/70 px-4 py-3">
-            <p className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-blue-800">
-              <ShieldCheck className="h-4 w-4" /> Security note
-            </p>
-            <p className="mt-1 text-[12.5px] text-ink-700">
-              Admin sessions are logged and timed. Always ensure you are on the secure access lane before
-              performing bulk approvals or payment releases.
-            </p>
-          </div>
-        </Card>
-      </Reveal>
+        <div className="space-y-6">
+          <AdminCard title="Revenue Overview">
+            <div className="p-6">
+              <div className="relative h-64 rounded-2xl bg-gradient-to-b from-green-50 to-white">
+                <div className="absolute inset-x-6 bottom-8 h-24 rounded-t-full border-t-[10px] border-green-800" />
+                <div className="absolute bottom-12 left-1/4 h-4 w-4 rounded-full bg-green-800" />
+                <div className="absolute bottom-24 right-1/4 h-4 w-4 rounded-full bg-green-800" />
+              </div>
+              <div className="mt-6 flex items-end justify-between">
+                <div>
+                  <p className="text-[32px] font-bold text-ink-900">{metrics.protectedVolume || "XAF 0"}</p>
+                  <p className="text-[14px] text-ink-400">This month</p>
+                </div>
+                <p className="text-[15px] font-bold text-green-800">+18% vs last month</p>
+              </div>
+            </div>
+          </AdminCard>
+
+          <AdminCard title="Platform Integrity">
+            <div className="grid gap-4 p-6">
+              <div className="flex items-center gap-4 rounded-2xl bg-green-50 p-4">
+                <ShieldCheck className="h-8 w-8 text-green-800" />
+                <div>
+                  <p className="font-bold text-ink-900">Protected sessions</p>
+                  <p className="text-[13px] text-ink-500">Admin access remains role gated.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 rounded-2xl bg-red-50 p-4">
+                <AlertTriangle className="h-8 w-8 text-red-800" />
+                <div>
+                  <p className="font-bold text-ink-900">{metrics.activeDisputes ?? 0} open disputes</p>
+                  <p className="text-[13px] text-ink-500">Resolve exceptions before payment release.</p>
+                </div>
+              </div>
+            </div>
+          </AdminCard>
+        </div>
+      </div>
     </section>
   );
 }

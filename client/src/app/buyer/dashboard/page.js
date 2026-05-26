@@ -1,165 +1,106 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, CheckCircle2, ClipboardList, Package, ShoppingBasket } from "lucide-react";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { WorkspaceHero } from "@/components/dashboard/WorkspaceHero";
-import { CropCard } from "@/components/crops/CropCard";
-import { OrderCard } from "@/components/orders/OrderCard";
-import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
-import { Card } from "@/components/ui/card";
+import { ArrowRight, CreditCard, Heart, MessageSquare, Package } from "lucide-react";
+import {
+  BuyerButton,
+  BuyerConversationPreview,
+  BuyerEmptyState,
+  BuyerHeader,
+  BuyerMetricCard,
+  BuyerOrderSummary,
+  BuyerPage,
+  BuyerPanel,
+  BuyerStatusBadge,
+  compactBuyerCurrency,
+  buyerDisplayName,
+} from "@/components/buyer/BuyerDesignSystem";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
 import useAuth from "@/hooks/useAuth";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { useQuotes } from "@/hooks/useQuotes";
-import { DashboardOperationsRow } from "@/components/dashboard/DashboardOperationsRow";
-
-const kpiIcons = [Package, ShoppingBasket, ClipboardList];
-const kpiAccents = ["green", "gold", "green"];
 
 export default function BuyerDashboardPage() {
   const { user } = useAuth();
   const { data, isLoading } = useDashboardData("buyer");
-  const { quotes } = useQuotes();
   const orders = data?.orders || [];
   const listings = data?.listings || [];
+  const conversations = data?.conversations || [];
   const metrics = data?.metrics || {};
-
-  const buyerStats = [
-    { label: "Protected orders", value: String(metrics.activeOrders ?? orders.length), delta: "Live data" },
-    { label: "Saved listings", value: String(metrics.savedListings ?? 0), delta: "Items you like" },
-    { label: "Open quotes", value: String(metrics.openQuotes ?? 0), delta: "Awaiting reply" },
-  ];
+  const activeOrders = metrics.activeOrders ?? orders.length;
+  const savedListings = metrics.savedListings ?? data?.savedListings?.length ?? 0;
+  const unreadMessages = metrics.unreadMessages ?? conversations.reduce((sum, item) => sum + (item.unread || 0), 0);
+  const sourcedTotal = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
 
   return (
-    <section className="space-y-6">
-      <WorkspaceHero
-        role="buyer"
-        eyebrow="Buyer workspace"
-        title={`Welcome back, ${user?.first_name}`}
-        description="Track your sourcing, manage orders, and explore new partners in real-time."
-        metrics={[
-          { label: "Active orders", value: orders.length.toString(), caption: "In progress" },
-          { label: "Saved listings", value: String(metrics.savedListings ?? 0), caption: "Shortlisted" },
-          { label: "Open RFQs", value: String(metrics.openQuotes ?? 0), caption: "Quotes" },
-        ]}
-        primaryAction={{ label: "Browse supply", href: "/browse" }}
-        secondaryAction={{ label: "Request a quote", href: "/request-quote" }}
+    <BuyerPage>
+      <BuyerHeader
+        title={`Good morning, ${user?.first_name || buyerDisplayName(user)}`}
+        description={`${new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} - Here is your sourcing overview for today.`}
+        action={<BuyerButton href="/buyer/profile" variant="outline" icon={ArrowRight}>View Public Profile</BuyerButton>}
       />
 
       <VerificationBanner />
 
-      <DashboardOperationsRow
-        quotes={quotes}
-        orders={orders}
-        variant="buyer"
-        buyerSavedShortlist={metrics.savedListings ?? 0}
-        listingsCount={listings.length}
-        exportReadyListingCount={listings.filter((l) => l.exportReady || l.export_ready).length}
-      />
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <BuyerMetricCard icon={Package} value={String(activeOrders)} label="Active Orders" detail={`From ${orders.length} order records`} tag="In transit" tone="blue" />
+        <BuyerMetricCard icon={Heart} value={String(savedListings)} label="Saved Crops" detail="Monitoring live prices" tag="+3 this week" tone="green" />
+        <BuyerMetricCard icon={MessageSquare} value={String(unreadMessages)} label="Unread Messages" detail="Direct chats with farmers" tag="Requires reply" tone="gold" />
+        <BuyerMetricCard icon={CreditCard} value={compactBuyerCurrency(sourcedTotal)} label="Total Sourced" detail="Completed trade volume" tag="Escrow Protected" tone="gold" />
+      </div>
 
-      <Stagger className="grid gap-4 md:grid-cols-3">
-        {buyerStats.map((item, idx) => (
-          <StaggerItem key={item.label}>
-            <KpiCard
-              {...item}
-              icon={kpiIcons[idx] ?? Package}
-              accent={kpiAccents[idx] ?? "green"}
-              trend="up"
-            />
-          </StaggerItem>
-        ))}
-      </Stagger>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+        <BuyerPanel
+          title="Active Orders & Shipments"
+          action={<Link href="/buyer/orders" className="inline-flex items-center gap-2 text-[16px] font-bold text-green-800">View all ({orders.length}) <ArrowRight className="h-4 w-4" /></Link>}
+          bodyClassName="p-0"
+        >
+          {isLoading ? (
+            <div className="p-6 text-[15px] text-ink-500">Loading live orders...</div>
+          ) : orders.length ? (
+            orders.slice(0, 3).map((order) => <BuyerOrderSummary key={order.rawId || order.id} order={order} />)
+          ) : (
+            <div className="p-6">
+              <BuyerEmptyState title="No active orders yet" description="Orders will appear here after you place real crop orders." action={<BuyerButton href="/browse">Browse Crops</BuyerButton>} />
+            </div>
+          )}
+        </BuyerPanel>
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <Reveal>
-          <Card className="rounded-[18px] p-5 shadow-soft">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="section-eyebrow">Protected orders</p>
-                <h2 className="mt-2 font-display text-[22px] text-ink-900">Priority deliveries</h2>
-              </div>
-              <Link
-                href="/buyer/orders"
-                className="inline-flex items-center gap-2 text-[13px] font-semibold text-green-800 hover:text-green-700"
-              >
-                View all
-                <ArrowUpRight className="h-4 w-4" />
+        <BuyerPanel
+          title="Recent Inquiries"
+          action={<Link href="/buyer/messages" className="inline-flex items-center gap-2 text-[16px] font-bold text-green-800">Go to Messages <ArrowRight className="h-4 w-4" /></Link>}
+          bodyClassName="p-0"
+        >
+          {conversations.length ? (
+            conversations.slice(0, 4).map((conversation) => (
+              <BuyerConversationPreview key={conversation.id} conversation={conversation} />
+            ))
+          ) : (
+            <div className="p-6">
+              <BuyerEmptyState title="No inquiries yet" description="Start a chat from a crop listing or farmer profile." action={<BuyerButton href="/browse" variant="outline">Browse Market</BuyerButton>} />
+            </div>
+          )}
+        </BuyerPanel>
+      </div>
+
+      <BuyerPanel
+        title="Recommended Crop Listings"
+        action={<Link href="/browse" className="inline-flex items-center gap-2 text-[16px] font-bold text-green-800">Browse Market <ArrowRight className="h-4 w-4" /></Link>}
+      >
+        {listings.length ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {listings.slice(0, 4).map((listing) => (
+              <Link key={listing.id} href={`/crops/${listing.id}`} className="rounded-xl border border-ink-100 p-5 transition-all duration-200 hover:border-green-800 hover:bg-green-50/40 motion-safe:hover:-translate-y-0.5">
+                <h3 className="text-[18px] font-bold text-ink-950">{listing.crop}</h3>
+                <p className="mt-2 text-[15px] text-ink-500">{listing.quantity} - {listing.location}</p>
+                <p className="mt-4 text-[20px] font-bold text-green-800">{listing.price}</p>
+                <BuyerStatusBadge status={listing.farmerVerificationStatus || "pending"} className="mt-4">{listing.farmerVerificationStatus === "verified" ? "Verified" : "Review status"}</BuyerStatusBadge>
               </Link>
-            </div>
-            
-            <div className="mt-4 min-h-[150px]">
-              {isLoading ? (
-                <div className="flex h-32 items-center justify-center text-ink-500">Loading orders...</div>
-              ) : orders.length > 0 ? (
-                <Stagger className="grid gap-4">
-                  {orders.slice(0, 2).map((order) => (
-                    <StaggerItem key={order.id}>
-                      <OrderCard order={order} href={`/buyer/orders/${order.id}`} />
-                    </StaggerItem>
-                  ))}
-                </Stagger>
-              ) : (
-                <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-ink-200 text-center">
-                  <Package className="mb-2 h-8 w-8 text-ink-300" />
-                  <p className="text-[14px] text-ink-500">No active orders found.</p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </Reveal>
-
-        <Reveal delay={0.08}>
-          <ActivityFeed items={[]} />
-        </Reveal>
-      </div>
-
-      <Reveal>
-        <Card className="rounded-[18px] p-5 shadow-soft">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="section-eyebrow">Marketplace ideas</p>
-              <h2 className="mt-2 font-display text-[22px] text-ink-900">Suggested supply</h2>
-            </div>
-            <Link
-              href="/browse"
-              className="inline-flex items-center gap-2 text-[13px] font-semibold text-green-800 hover:text-green-700"
-            >
-              Explore marketplace
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
+            ))}
           </div>
-          
-          <div className="mt-4 min-h-[200px]">
-            {isLoading ? (
-              <div className="flex h-40 items-center justify-center text-ink-500">Loading supply...</div>
-            ) : listings.length > 0 ? (
-              <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {listings.slice(0, 4).map((listing) => (
-                  <StaggerItem key={listing.id}>
-                    <CropCard listing={listing} />
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            ) : (
-              <div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed border-ink-200 text-center">
-                <ShoppingBasket className="mb-2 h-8 w-8 text-ink-300" />
-                <p className="text-[14px] text-ink-500">No suggestions available right now.</p>
-              </div>
-            )}
-          </div>
-        </Card>
-      </Reveal>
-
-      <div className="mt-5 rounded-[14px] border border-green-100 bg-green-50/70 px-4 py-3">
-        <p className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-green-800">
-          <CheckCircle2 className="h-4 w-4" /> Buyer tip
-        </p>
-        <p className="mt-1 text-[12.5px] text-ink-700">
-          Shortlist verified farmers to unlock direct-quote flows and faster inspection scheduling.
-        </p>
-      </div>
-    </section>
+        ) : (
+          <BuyerEmptyState title="No suggestions available" description="Marketplace listings will appear here when active crop records are available." action={<BuyerButton href="/browse">Open Browse Crops</BuyerButton>} />
+        )}
+      </BuyerPanel>
+    </BuyerPage>
   );
 }

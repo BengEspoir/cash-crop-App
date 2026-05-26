@@ -35,6 +35,27 @@ const getUserById = async (userId) => {
   return data;
 };
 
+const getUsersByIds = async (ids) => {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (!uniqueIds.length) return {};
+
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('id, first_name, last_name, email, phone, role')
+    .in('id', uniqueIds);
+  if (error) throw error;
+
+  return (data || []).reduce((acc, user) => {
+    acc[user.id] = user;
+    return acc;
+  }, {});
+};
+
+const mapUserName = (user) => {
+  if (!user) return 'System';
+  return [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email || user.phone || 'System';
+};
+
 const mapSubmission = async (profile, includeSignedAssets = false) => {
   const user = await getUserById(profile.user_id);
   const isReseller = user.role === 'reseller';
@@ -118,8 +139,51 @@ const reviewVerificationSubmission = async (adminId, userId, action, reason, req
   return authService.adminReviewUser(adminId, userId, action, reason, req);
 };
 
+const listAuditLogs = async (limit = 100) => {
+  const safeLimit = Math.min(250, Math.max(1, Number(limit) || 100));
+  const { data, error } = await supabaseAdmin
+    .from('audit_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(safeLimit);
+  if (error) throw error;
+
+  const users = await getUsersByIds((data || []).map((row) => row.user_id));
+  const items = (data || []).map((row) => {
+    const actor = users[row.user_id];
+    return {
+      id: row.id,
+      action: row.action || row.event,
+      title: row.action || row.event,
+      event: row.event,
+      actor: actor ? {
+        id: actor.id,
+        name: mapUserName(actor),
+        role: row.actor_role || actor.role,
+        email: actor.email
+      } : null,
+      actorRole: row.actor_role || actor?.role || null,
+      resourceType: row.resource_type,
+      resourceId: row.resource_id,
+      status: row.status || 'success',
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      metadata: row.metadata || {},
+      detail: row.metadata ? JSON.stringify(row.metadata) : row.event,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  });
+
+  return {
+    items,
+    count: items.length
+  };
+};
+
 module.exports = {
   listVerificationSubmissions,
   getVerificationSubmission,
-  reviewVerificationSubmission
+  reviewVerificationSubmission,
+  listAuditLogs
 };

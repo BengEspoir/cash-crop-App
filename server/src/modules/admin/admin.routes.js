@@ -3,6 +3,7 @@ const { authenticate, authorize, requireActiveAccount } = require('../../middlew
 const { adminReviewUser, getPendingUsers } = require('../auth/auth.controller');
 const {
   getActivity,
+  getAuditLogs,
   listVerificationSubmissions,
   getVerificationSubmission,
   reviewVerificationSubmission
@@ -16,5 +17,6 @@ router.get('/verification-submissions', listVerificationSubmissions);
 router.get('/verification-submissions/:userId', getVerificationSubmission);
 router.post('/verification-submissions/:userId/review', reviewVerificationSubmission);
 router.get('/activity', getActivity);
+router.get('/audit-logs', getAuditLogs);
 
 module.exports = router;

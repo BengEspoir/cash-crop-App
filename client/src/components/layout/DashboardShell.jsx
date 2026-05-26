@@ -10,8 +10,265 @@ import { BrandLogo } from "../common/BrandLogo";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { DashboardTopBar } from "./DashboardTopBar";
 import { SkipToContent } from "../a11y/SkipToContent";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { FarmerButton, farmerDisplayName, farmerInitials } from "../farmer/FarmerDesignSystem";
+import { BuyerButton, buyerDisplayName, buyerInitials } from "../buyer/BuyerDesignSystem";
 
-export function SidebarPanel({ heading, navigation, pathname, resolveLabel }) {
+function navBadgeCount(item, data) {
+  if (!data || item.id === "dashboard" || item.id === "settings" || item.id === "helpSupport") return null;
+  const metrics = data.metrics || {};
+  const counts = {
+    users: metrics.totalUsers,
+    listings: metrics.totalListings ?? data.listings?.length,
+    orders: metrics.totalOrders ?? data.orders?.length,
+    payments: data.payments?.length,
+    inspections: data.inspections?.length,
+    logistics: data.logistics?.length,
+    disputes: metrics.activeDisputes ?? data.disputes?.length,
+    analytics: null,
+    auditLogs: data.activity?.length,
+    addListing: null,
+    messages: metrics.unreadMessages ?? data.conversations?.reduce((sum, item) => sum + (item.unread || 0), 0),
+    notifications: data.notifications?.filter((item) => item.status !== "verified").length ?? data.notifications?.length,
+    profile: null,
+    saved: metrics.savedListings ?? data.savedListings?.length,
+    browse: null,
+    findFarmers: null,
+  };
+  const value = counts[item.id];
+  return typeof value === "number" ? value : null;
+}
+
+export function SidebarPanel({ heading, navigation, pathname, resolveLabel, variant = "default", dashboardData, user }) {
+  if (variant === "admin") {
+    return (
+      <aside
+        aria-label={`${heading} sidebar`}
+        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-ink-200 bg-white px-6 py-7 text-ink-700 lg:block"
+      >
+        <Link
+          href="/"
+          className="focus-ring flex items-center gap-3 rounded-md"
+        >
+          <BrandLogo className="h-12 w-[190px]" />
+        </Link>
+
+        <div className="mt-8 inline-flex rounded-full border border-[#C6BFF2] bg-[#F2F0FF] px-5 py-2 text-[14px] font-bold text-[#5547BF]">
+          Admin Panel
+        </div>
+
+        <div className="mt-8 border-t border-ink-100 pt-7">
+          <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">Main</p>
+          <nav aria-label="Workspace navigation" className="mt-4 space-y-1">
+            {navigation.map((item) => {
+              const { href, label, id, icon: Icon } = item;
+              const active = pathname === href || pathname.startsWith(`${href}/`);
+              const text = resolveLabel ? resolveLabel(id, label) : label;
+                  const badge = navBadgeCount(item, dashboardData);
+              const danger = id === "disputes" && badge > 0;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "focus-ring flex min-h-14 items-center gap-4 rounded-2xl px-4 text-[16px] font-medium transition-all duration-200 motion-safe:hover:translate-x-1",
+                    active ? "border-l-4 border-green-800 bg-green-50 text-green-800" : "text-ink-500 hover:bg-ink-50 hover:text-ink-800",
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{text}</span>
+                  {badge !== null ? (
+                    <span
+                      className={cn(
+                        "inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-[12px] font-bold",
+                        danger ? "bg-red-50 text-red-800" : "bg-ink-100 text-ink-500",
+                      )}
+                    >
+                      {badge}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="mt-8 border-t border-ink-100 pt-7">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#5547BF] text-[17px] font-bold text-white">
+              AD
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-bold text-ink-900">Admin User</p>
+              <p className="text-[13px] text-ink-400">Super Admin</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
+  if (variant === "farmer") {
+    const profile = dashboardData?.profile || {};
+    const listingsCount = dashboardData?.listings?.length || 0;
+    const location = [profile.city || user?.city, profile.region || user?.region].filter(Boolean).join(", ") || "Farm location pending";
+    const statusText = user?.status === "active" ? "Verified Farmer" : "Verification pending";
+    const mainItems = navigation.filter((item) => !["profile", "settings", "helpSupport"].includes(item.id));
+    const accountItems = navigation.filter((item) => ["profile", "settings", "helpSupport"].includes(item.id));
+
+    const renderItem = (item) => {
+      const { href, label, id, icon: Icon } = item;
+      const active = id === "listings"
+        ? pathname === href || (pathname.startsWith(`${href}/`) && pathname !== "/farmer/listings/new")
+        : pathname === href || pathname.startsWith(`${href}/`);
+      const text = resolveLabel ? resolveLabel(id, label) : label;
+      const badge = navBadgeCount(item, dashboardData);
+      return (
+        <Link
+          key={href}
+          href={href}
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "focus-ring flex min-h-11 items-center gap-3 rounded-lg px-3 text-[16px] font-medium transition-all duration-200 motion-safe:hover:translate-x-1",
+            active ? "border-l-4 border-green-800 bg-green-50 text-green-800" : "text-ink-600 hover:bg-ink-50 hover:text-green-800",
+          )}
+        >
+          <Icon className="h-5 w-5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{text}</span>
+          {badge ? (
+            <span className={cn(
+              "inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-[12px] font-bold",
+              id === "orders" || id === "messages" ? "bg-amber-50 text-amber-800" : "bg-ink-50 text-ink-500",
+            )}>
+              {badge}
+            </span>
+          ) : null}
+        </Link>
+      );
+    };
+
+    return (
+      <aside
+        aria-label={`${heading} sidebar`}
+        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-ink-200 bg-white text-ink-700 lg:block"
+      >
+        <div className="flex min-h-full flex-col">
+          <div className="border-b border-ink-100 px-7 py-8 text-center">
+            <span className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-800 text-[26px] font-bold text-white">
+              {farmerInitials(user)}
+            </span>
+            <h2 className="mt-4 text-[20px] font-bold text-ink-950">{farmerDisplayName(user)}</h2>
+            <p className="mt-1 text-[15px] text-ink-500">{location}</p>
+            <p className="mt-1 text-[15px] text-ink-500">{profile.rating ? `${profile.rating} rating` : "Rating pending"}</p>
+            <span className="mt-3 inline-flex rounded-full bg-green-100 px-4 py-1.5 text-[14px] font-bold text-green-800">
+              {statusText}
+            </span>
+          </div>
+
+          <div className="flex-1 px-6 py-7">
+            <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">My Farm</p>
+            <nav aria-label="Farmer navigation" className="mt-4 space-y-1">
+              {mainItems.map(renderItem)}
+            </nav>
+
+            <div className="mt-7 border-t border-ink-100 pt-7">
+              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">Account</p>
+              <nav aria-label="Farmer account navigation" className="mt-4 space-y-1">
+                {accountItems.map(renderItem)}
+              </nav>
+            </div>
+          </div>
+
+          <div className="border-t border-ink-100 p-6">
+            <FarmerButton href="/farmer/listings/new" className="w-full">Add New Listing</FarmerButton>
+            <p className="mt-3 text-center text-[14px] text-ink-400">{listingsCount} active listings</p>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
+  if (variant === "buyer") {
+    const profile = dashboardData?.profile || {};
+    const savedCount = dashboardData?.metrics?.savedListings ?? dashboardData?.savedListings?.length ?? 0;
+    const listingsCount = dashboardData?.listings?.length || 0;
+    const location = [user?.city, user?.region].filter(Boolean).join(", ") || profile.destination_market || "Sourcing location pending";
+    const company = profile.company_name || profile.business_name || "Buyer account";
+    const statusText = user?.status === "active" ? "Verified Buyer" : "Verification pending";
+    const mainItems = navigation.filter((item) => !["profile", "settings", "helpSupport"].includes(item.id));
+    const accountItems = navigation.filter((item) => ["profile", "settings", "helpSupport"].includes(item.id));
+
+    const renderItem = (item) => {
+      const { href, label, id, icon: Icon } = item;
+      const active = pathname === href || pathname.startsWith(`${href}/`);
+      const text = resolveLabel ? resolveLabel(id, label) : label;
+      const badge = navBadgeCount(item, dashboardData);
+      return (
+        <Link
+          key={href}
+          href={href}
+          aria-current={active ? "page" : undefined}
+          className={cn(
+            "focus-ring flex min-h-11 items-center gap-3 rounded-lg px-3 text-[16px] font-medium transition-all duration-200 motion-safe:hover:translate-x-1",
+            active ? "border-l-4 border-green-800 bg-green-50 text-green-800" : "text-ink-600 hover:bg-ink-50 hover:text-green-800",
+          )}
+        >
+          <Icon className="h-5 w-5 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{text}</span>
+          {badge ? (
+            <span className={cn(
+              "inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-[12px] font-bold",
+              id === "orders" || id === "messages" ? "bg-amber-50 text-amber-800" : "bg-ink-50 text-ink-500",
+            )}>
+              {badge}
+            </span>
+          ) : null}
+        </Link>
+      );
+    };
+
+    return (
+      <aside
+        aria-label={`${heading} sidebar`}
+        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-ink-200 bg-white text-ink-700 lg:block"
+      >
+        <div className="flex min-h-full flex-col">
+          <div className="border-b border-ink-100 px-7 py-8 text-center">
+            <span className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-amber-600 text-[26px] font-bold text-white">
+              {buyerInitials(user)}
+            </span>
+            <h2 className="mt-4 text-[20px] font-bold text-ink-950">{buyerDisplayName(user)}</h2>
+            <p className="mt-1 text-[15px] text-ink-500">{location}</p>
+            <p className="mt-1 text-[15px] text-ink-500">{company}</p>
+            <span className="mt-3 inline-flex rounded-full bg-green-100 px-4 py-1.5 text-[14px] font-bold text-green-800">
+              {statusText}
+            </span>
+          </div>
+
+          <div className="flex-1 px-6 py-7">
+            <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">My Sourcing</p>
+            <nav aria-label="Buyer navigation" className="mt-4 space-y-1">
+              {mainItems.map(renderItem)}
+            </nav>
+
+            <div className="mt-7 border-t border-ink-100 pt-7">
+              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">Account</p>
+              <nav aria-label="Buyer account navigation" className="mt-4 space-y-1">
+                {accountItems.map(renderItem)}
+              </nav>
+            </div>
+          </div>
+
+          <div className="border-t border-ink-100 p-6">
+            <BuyerButton href="/browse" variant="gold" className="w-full">Browse Market</BuyerButton>
+            <p className="mt-3 text-center text-[14px] text-ink-400">{listingsCount || savedCount} active listings available</p>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside
       aria-label={`${heading} sidebar`}
@@ -59,6 +316,11 @@ export function DashboardShell({ heading, navigation, allowedRoles, authRedirect
   const { user, hydrateSession, logout, redirectToDashboard } = useAuth();
   const { t } = useI18n();
   const [ready, setReady] = useState(false);
+  const isAdminShell = navNamespace === "admin";
+  const isFarmerShell = navNamespace === "farmer";
+  const isBuyerShell = navNamespace === "buyer";
+  const dashboardRole = isAdminShell ? "admin" : isFarmerShell && user?.role === "farmer" ? "farmer" : isBuyerShell ? "buyer" : null;
+  const { data: dashboardData } = useDashboardData(dashboardRole);
 
   const resolveNavLabel = useCallback(
     (id, fallback) => {
@@ -136,18 +398,31 @@ export function DashboardShell({ heading, navigation, allowedRoles, authRedirect
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F8F6]">
+    <div className={cn("min-h-screen", isAdminShell || isFarmerShell || isBuyerShell ? "bg-ink-50" : "bg-[#F6F8F6]")}>
       <SkipToContent />
-      <div className="mx-auto grid w-full max-w-none gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:px-10">
-        <SidebarPanel heading={heading} navigation={navigation} pathname={pathname} resolveLabel={resolveNavLabel} />
-        <main id="main-content" tabIndex={-1} className="space-y-6">
+      <div className={cn(
+        "mx-auto grid w-full max-w-none",
+        isAdminShell || isFarmerShell || isBuyerShell ? "lg:grid-cols-[300px_minmax(0,1fr)]" : "gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:px-10",
+      )}>
+        <SidebarPanel
+          heading={heading}
+          navigation={navigation}
+          pathname={pathname}
+          resolveLabel={resolveNavLabel}
+          variant={isAdminShell ? "admin" : isFarmerShell ? "farmer" : isBuyerShell ? "buyer" : "default"}
+          dashboardData={dashboardData}
+          user={user}
+        />
+        <main id="main-content" tabIndex={-1} className={cn(isAdminShell || isFarmerShell || isBuyerShell ? "min-w-0 space-y-8 px-4 pb-10 lg:px-8 xl:px-10" : "space-y-6")}>
           <DashboardTopBar
             title={resolveNavLabel(currentItem?.id, currentItem?.label) || heading}
             description={description}
             user={user}
             onLogout={handleLogout}
+            variant={isAdminShell ? "admin" : isFarmerShell ? "farmer" : isBuyerShell ? "buyer" : "default"}
+            dashboardData={dashboardData}
           />
-          <div className="space-y-6">{children}</div>
+          <div className={cn(isAdminShell || isFarmerShell || isBuyerShell ? "space-y-8" : "space-y-6")}>{children}</div>
         </main>
       </div>
     </div>
