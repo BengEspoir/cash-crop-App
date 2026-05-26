@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Leaf, PackageCheck, ShieldCheck, Sprout } from "lucide-react";
 import {
@@ -12,10 +13,12 @@ import {
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function AdminListingsPage() {
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("listings");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const listings = data?.listings || [];
   const active = listings.filter((listing) => ["verified", "active", "export-ready"].includes(String(listing.status || "").toLowerCase())).length;
   const pending = listings.filter((listing) => String(listing.status || "").includes("pending")).length;
@@ -27,6 +30,15 @@ export default function AdminListingsPage() {
         eyebrow="Admin > Listings"
         description="Moderate live marketplace inventory, listing quality, and export readiness."
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -39,7 +51,28 @@ export default function AdminListingsPage() {
         <div className="border-b border-ink-100 p-6">
           <AdminToolbar
             searchPlaceholder="Search crop, farmer, location..."
-            filters={["Crop: All", "Status: All", "Grade: All"]}
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "active", label: "Active" },
+                { value: "verified", label: "Verified" },
+                { value: "pending", label: "Pending" },
+                { value: "rejected", label: "Rejected" },
+              ] },
+              { key: "grade", label: "Grade", options: [
+                { value: "all", label: "Grade: All" },
+                { value: "a", label: "Grade A" },
+                { value: "b", label: "Grade B" },
+                { value: "c", label: "Grade C" },
+              ] },
+              { key: "sort", label: "Sort", options: [
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ] },
+            ]}
             totalLabel={`${listings.length} live listings`}
           />
         </div>

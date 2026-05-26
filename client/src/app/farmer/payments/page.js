@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import toast from "react-hot-toast";
 import { CreditCard, DollarSign, Download, Hourglass, WalletCards } from "lucide-react";
 import {
   FarmerEmptyState,
+  FarmerFilters,
   FarmerHeader,
   FarmerMetricCard,
   FarmerPage,
@@ -11,7 +14,8 @@ import {
   compactCurrency,
   formatShortDate,
 } from "@/components/farmer/FarmerDesignSystem";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
+import { useRequestWithdrawal } from "@/hooks/usePayments";
 
 function parseAmount(label) {
   const digits = String(label || "").replace(/[^\d.]/g, "");
@@ -19,7 +23,10 @@ function parseAmount(label) {
 }
 
 export default function FarmerPaymentsPage() {
-  const { data, isLoading } = useDashboardData("farmer");
+  const [isExporting, setIsExporting] = useState(false);
+  const requestWithdrawal = useRequestWithdrawal();
+  const filterState = useDashboardFilters("payments");
+  const { data, isLoading } = useDashboardData("farmer", filterState.queryFilters);
   const payments = data?.payments || [];
   const orders = data?.orders || [];
   const totalEarned = payments.reduce((sum, payment) => sum + parseAmount(payment.amountLabel), 0);
@@ -37,15 +44,50 @@ export default function FarmerPaymentsPage() {
         <FarmerMetricCard icon={WalletCards} value={compactCurrency(escrow.reduce((sum, item) => sum + parseAmount(item.amountLabel), 0))} label="In Escrow" detail={`${escrow.length || orders.length} open orders`} tone="cyan" />
       </div>
 
+      <FarmerFilters
+        searchPlaceholder="Search payments, buyer, channel..."
+        values={filterState.filters}
+        onChange={filterState.updateFilter}
+        onReset={filterState.resetFilters}
+        onExport={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("farmer", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
+        isExporting={isExporting}
+        filterOptions={[
+          { key: "status", label: "Status", options: [
+            { value: "all", label: "Status: All" },
+            { value: "pending", label: "Pending" },
+            { value: "escrow", label: "Escrow" },
+            { value: "released", label: "Released" },
+          ] },
+          { key: "sort", label: "Sort", options: [
+            { value: "newest", label: "Newest" },
+            { value: "oldest", label: "Oldest" },
+          ] },
+        ]}
+      />
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <FarmerPanel
           title="Transaction History"
           action={
             <div className="flex gap-3">
-              <button type="button" className="inline-flex h-12 items-center gap-2 rounded-lg border border-ink-200 px-4 text-[15px] font-bold text-ink-700">
-                Mar 2025
+              <button type="button" className="inline-flex h-12 items-center gap-2 rounded-lg border border-ink-200 px-4 text-[15px] font-bold text-ink-500" disabled>
+                Date filter coming soon
               </button>
-              <button type="button" className="inline-flex h-12 items-center gap-2 rounded-lg border border-ink-200 px-4 text-[15px] font-bold text-ink-700">
+              <button type="button" onClick={async () => {
+                setIsExporting(true);
+                try {
+                  await exportDashboardCsv("farmer", filterState.queryFilters);
+                } finally {
+                  setIsExporting(false);
+                }
+              }} className="inline-flex h-12 items-center gap-2 rounded-lg border border-ink-200 px-4 text-[15px] font-bold text-ink-700 disabled:opacity-60" disabled={isExporting}>
                 Export <Download className="h-4 w-4" />
               </button>
             </div>
@@ -94,6 +136,21 @@ export default function FarmerPaymentsPage() {
               <p className="text-[18px] font-bold text-ink-950">Primary payout</p>
               <p className="mt-2 text-[15px] text-ink-500">No editable payout method is exposed by the current backend contract.</p>
               <FarmerStatusBadge status="verified" className="mt-4">Connected when profile data exists</FarmerStatusBadge>
+              <button
+                type="button"
+                disabled={requestWithdrawal.isPending}
+                onClick={async () => {
+                  try {
+                    const result = await requestWithdrawal.mutateAsync();
+                    toast.success(result?.message || "Withdrawal provider is not integrated yet.");
+                  } catch (error) {
+                    toast.error(error.response?.data?.message || "Withdrawal request could not be checked.");
+                  }
+                }}
+                className="mt-5 inline-flex h-11 items-center rounded-lg bg-gold-500 px-4 text-[14px] font-bold text-white transition hover:bg-gold-600 disabled:opacity-60"
+              >
+                {requestWithdrawal.isPending ? "Checking..." : "Request withdrawal"}
+              </button>
             </div>
           </FarmerPanel>
 

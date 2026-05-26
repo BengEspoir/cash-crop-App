@@ -65,6 +65,16 @@ export default function SignInPage() {
       return;
     }
 
+    if (result.data?.requiresRecoveryContactVerification) {
+      const params = new URLSearchParams({
+        mode: "recovery-contact",
+        type: result.data.type,
+        value: identifier,
+      });
+      router.push(result.data.type === "email" ? `/verify-email?${params}` : `/verify-phone?${params}`);
+      return;
+    }
+
     router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
   };
 

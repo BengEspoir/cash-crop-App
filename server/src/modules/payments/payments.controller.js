@@ -17,6 +17,21 @@ const releasePayment = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Payment released successfully');
 });
 
+const createCheckoutIntent = asyncHandler(async (req, res) => {
+  const result = await service.createCheckoutIntent(req.user, req.body);
+  sendSuccess(res, result, 'Checkout intent prepared successfully', 201);
+});
+
+const getCheckoutIntent = asyncHandler(async (req, res) => {
+  const result = await service.getCheckoutIntent(req.user, req.params.id);
+  sendSuccess(res, result, 'Checkout intent retrieved successfully');
+});
+
+const confirmCheckoutIntent = asyncHandler(async (req, res) => {
+  const result = await service.confirmCheckoutIntent(req.user, req.params.id);
+  sendSuccess(res, result, 'Checkout intent confirmed successfully');
+});
+
 const requestWithdrawal = asyncHandler(async (req, res) => {
   const result = await service.requestWithdrawal(req.user);
   sendSuccess(res, result, 'Withdrawal request checked successfully');
@@ -25,6 +40,9 @@ const requestWithdrawal = asyncHandler(async (req, res) => {
 module.exports = {
   listPayments,
   createPayment,
+  createCheckoutIntent,
+  getCheckoutIntent,
+  confirmCheckoutIntent,
   releasePayment,
   requestWithdrawal
 };

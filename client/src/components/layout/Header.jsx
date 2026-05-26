@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, ChevronDown, Search, User } from "lucide-react";
 import { BrandLogo } from "../common/BrandLogo";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
 import useAuth from "../../hooks/useAuth";
 import { useI18n } from "../../i18n/I18nProvider";
-import { getAllCountries, getCountryByCode } from "../../lib/countries";
-import { useSitePrefsStore } from "../../store/sitePrefsStore";
 import { startOAuth } from "../../lib/startOAuth";
+import { CountrySelector } from "../common/CountrySelector";
 
 function GoogleGlyph({ className }) {
   return (
@@ -46,17 +45,6 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
-  const countryCode = useSitePrefsStore((s) => s.countryCode);
-  const setCountryCode = useSitePrefsStore((s) => s.setCountryCode);
-
-  const countries = useMemo(() => {
-    const all = getAllCountries();
-    return [...all].sort((a, b) => {
-      if (a.code === "CM") return -1;
-      if (b.code === "CM") return 1;
-      return a.name.localeCompare(b.name);
-    });
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -79,21 +67,7 @@ export function Header() {
               <BrandLogo className="h-12 w-[180px]" priority />
             </Link>
 
-            <label className="flex cursor-pointer items-center gap-2">
-              <span className="sr-only">Country</span>
-              <select
-                value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value)}
-                className="max-w-[200px] rounded-full border border-ink-200 bg-ink-50 py-1.5 pl-3 pr-8 text-[12px] font-medium text-ink-800 outline-none focus:border-green-800 focus:ring-2 focus:ring-green-800/15"
-              >
-                {countries.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none -ml-7 h-3.5 w-3.5 text-ink-500" aria-hidden />
-            </label>
+            <CountrySelector label={t("common.country")} selectClassName="max-w-[200px]" />
           </div>
 
           <form
@@ -129,8 +103,18 @@ export function Header() {
             <div
               className="inline-flex items-center rounded-full border border-ink-200 bg-white p-0.5 text-[12px] font-semibold"
               role="group"
-              aria-label="Language"
+              aria-label={t("common.language")}
             >
+              <button
+                type="button"
+                onClick={() => setLocale("en")}
+                className={cn(
+                  "rounded-full px-3 py-1 transition-colors",
+                  locale === "en" ? "bg-green-800 text-white" : "text-ink-600 hover:text-green-800",
+                )}
+              >
+                EN
+              </button>
               <button
                 type="button"
                 onClick={() => setLocale("fr")}
@@ -143,13 +127,13 @@ export function Header() {
               </button>
               <button
                 type="button"
-                onClick={() => setLocale("en")}
+                onClick={() => setLocale("es")}
                 className={cn(
                   "rounded-full px-3 py-1 transition-colors",
-                  locale === "en" ? "bg-green-800 text-white" : "text-ink-600 hover:text-green-800",
+                  locale === "es" ? "bg-green-800 text-white" : "text-ink-600 hover:text-green-800",
                 )}
               >
-                EN
+                ES
               </button>
             </div>
 

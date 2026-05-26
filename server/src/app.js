@@ -20,6 +20,7 @@ const paymentsRoutes = require('./modules/payments/payments.routes');
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
 const preferencesRoutes = require('./modules/preferences/preferences.routes');
 const supportRoutes = require('./modules/support/support.routes');
+const uploadsRoutes = require('./modules/uploads/uploads.routes');
 
 const app = express();
 
@@ -63,6 +64,7 @@ app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/preferences', preferencesRoutes);
 app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/uploads', uploadsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

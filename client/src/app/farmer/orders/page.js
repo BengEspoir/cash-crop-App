@@ -1,10 +1,13 @@
 "use client";
 
-import { FarmerEmptyState, FarmerHeader, FarmerOrderRow, FarmerPage, FarmerTabs } from "@/components/farmer/FarmerDesignSystem";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useState } from "react";
+import { FarmerEmptyState, FarmerFilters, FarmerHeader, FarmerOrderRow, FarmerPage, FarmerTabs } from "@/components/farmer/FarmerDesignSystem";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function FarmerOrdersPage() {
-  const { data, isLoading } = useDashboardData("farmer");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("orders");
+  const { data, isLoading } = useDashboardData("farmer", filterState.queryFilters);
   const orders = data?.orders || [];
   const active = orders.filter((order) => !["completed", "cancelled", "canceled"].includes(String(order.status).toLowerCase())).length;
   const completed = orders.filter((order) => String(order.status).toLowerCase().includes("complete")).length;
@@ -22,6 +25,36 @@ export default function FarmerOrdersPage() {
           { id: "transit", label: `In Transit (${inTransit})` },
           { id: "completed", label: `Completed (${completed})` },
           { id: "cancelled", label: "Cancelled (0)" },
+        ]}
+      />
+
+      <FarmerFilters
+        searchPlaceholder="Search orders, buyers, crops..."
+        values={filterState.filters}
+        onChange={filterState.updateFilter}
+        onReset={filterState.resetFilters}
+        onExport={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("farmer", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
+        isExporting={isExporting}
+        filterOptions={[
+          { key: "status", label: "Status", options: [
+            { value: "all", label: "Status: All" },
+            { value: "pending", label: "Pending" },
+            { value: "confirmed", label: "Confirmed" },
+            { value: "transit", label: "In transit" },
+            { value: "completed", label: "Completed" },
+            { value: "cancelled", label: "Cancelled" },
+          ] },
+          { key: "sort", label: "Sort", options: [
+            { value: "newest", label: "Newest" },
+            { value: "oldest", label: "Oldest" },
+          ] },
         ]}
       />
 

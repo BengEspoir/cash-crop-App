@@ -123,6 +123,21 @@ const useAuthStore = create(
             rememberMe,
           });
 
+          if (data.data?.requiresRecoveryContactVerification) {
+            get().setOnboarding({
+              identifier: formattedIdentifier,
+              recoveryContactId: data.data.recoveryContactId,
+              recoveryContactType: data.data.type,
+              recoveryContactTarget: data.data.target,
+              nextStep: data.data.nextStep,
+              emailDelivery: data.data.emailDelivery || null,
+              smsDelivery: data.data.smsDelivery || null,
+              devHints: data.data.devHints || null,
+            });
+            set({ isLoading: false, isAuthenticated: false });
+            return { success: true, data: data.data };
+          }
+
           const { accessToken, refreshToken, user } = data.data;
           get().setTokens(accessToken, refreshToken);
           if (data.data.nextStep && data.data.nextStep !== "dashboard") {

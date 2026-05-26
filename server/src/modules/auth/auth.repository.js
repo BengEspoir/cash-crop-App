@@ -100,6 +100,16 @@ const findUserByIdentifier = async (identifier) => {
   return findUserByPhone(helpers.normalizePhone(identifier));
 };
 
+const findRecoveryContactByValue = async (normalizedValue) => {
+  const { data, error } = await supabaseAdmin
+    .from('account_recovery_contacts')
+    .select('*')
+    .eq('normalized_value', normalizedValue)
+    .single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
 const createUser = async (userData) => {
   const { data, error } = await supabaseAdmin
     .from('users')
@@ -126,6 +136,86 @@ const updateUser = async (id, updateData) => {
   const { data, error } = await supabaseAdmin
     .from('users')
     .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const listRecoveryContacts = async (userId) => {
+  const { data, error } = await supabaseAdmin
+    .from('account_recovery_contacts')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+};
+
+const upsertRecoveryContact = async (payload) => {
+  const { data, error } = await supabaseAdmin
+    .from('account_recovery_contacts')
+    .upsert(payload, { onConflict: 'normalized_value' })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const updateRecoveryContact = async (id, payload) => {
+  const { data, error } = await supabaseAdmin
+    .from('account_recovery_contacts')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const deleteRecoveryContact = async (userId, id) => {
+  const { error } = await supabaseAdmin
+    .from('account_recovery_contacts')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', id);
+  if (error) throw error;
+};
+
+const createContactChange = async (payload) => {
+  const { data, error } = await supabaseAdmin
+    .from('account_contact_changes')
+    .insert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const findPendingContactChange = async (userId, type, normalizedValue) => {
+  let query = supabaseAdmin
+    .from('account_contact_changes')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', type)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (normalizedValue) {
+    query = query.eq('normalized_value', normalizedValue);
+  }
+
+  const { data, error } = await query.single();
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+};
+
+const updateContactChange = async (id, payload) => {
+  const { data, error } = await supabaseAdmin
+    .from('account_contact_changes')
+    .update(payload)
     .eq('id', id)
     .select()
     .single();
@@ -381,12 +471,20 @@ module.exports = {
   findUserByEmail,
   findUserById,
   findUserByIdentifier,
+  findRecoveryContactByValue,
   findUsersByStatus,
   createUser,
   createFarmerProfile,
   createBuyerProfile,
   createResellerProfile,
   updateUser,
+  listRecoveryContacts,
+  upsertRecoveryContact,
+  updateRecoveryContact,
+  deleteRecoveryContact,
+  createContactChange,
+  findPendingContactChange,
+  updateContactChange,
   updateFarmerProfile,
   updateResellerProfile,
   incrementFailedAttempts,

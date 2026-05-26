@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function BuyerSettingsPage() {
   return (
@@ -15,10 +16,10 @@ export default function BuyerSettingsPage() {
         <Card className="rounded-[18px] p-5">
           <h2 className="font-display text-[22px] text-[#111827]">Security</h2>
           <div className="mt-5 grid gap-4">
-            <label className="space-y-2">
-              <span className="text-[13px] font-medium text-[#374151]">Recovery email</span>
-              <Input placeholder="example@gmail.com" autoComplete="email" />
-            </label>
+            <p className="text-[14px] leading-6 text-[#374151]">Recovery contacts and password changes are managed from the editable buyer profile security panel.</p>
+            <Button asChild variant="accent-gold">
+              <Link href="/buyer/profile">Open profile security</Link>
+            </Button>
             <label className="flex items-center gap-3 rounded-[12px] bg-[#F9FAFB] px-4 py-3">
               <input type="checkbox" defaultChecked className="h-4 w-4 accent-[#1A6B3C]" />
               <span className="text-[13px] text-[#374151]">Require phone verification before high-value orders</span>

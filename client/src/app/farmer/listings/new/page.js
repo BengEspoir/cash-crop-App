@@ -142,7 +142,7 @@ export default function FarmerNewListingPage() {
                 <ImagePlus className="h-5 w-5 text-green-800" />
                 Listing Gallery
               </div>
-              <ImageUploader value={gallery} onChange={setGallery} folder="agriculnet/listings" max={6} />
+              <ImageUploader value={gallery} onChange={setGallery} folder="listings" max={6} />
             </div>
           </div>
         </div>

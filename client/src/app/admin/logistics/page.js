@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MapPin, Route, Truck } from "lucide-react";
 import {
   AdminCard,
@@ -10,10 +11,12 @@ import {
   AdminToolbar,
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function AdminLogisticsPage() {
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("logistics");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const logistics = data?.logistics || [];
   const active = logistics.filter((item) => ["active", "in_transit", "in-transit"].includes(String(item.status || "").toLowerCase())).length;
 
@@ -24,6 +27,15 @@ export default function AdminLogisticsPage() {
         eyebrow="Admin > Logistics"
         description="Monitor live shipment lanes, carrier records, and fulfillment movement."
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -34,7 +46,26 @@ export default function AdminLogisticsPage() {
 
       <AdminCard title="Shipment Records">
         <div className="border-b border-ink-100 p-6">
-          <AdminToolbar searchPlaceholder="Search lane, carrier, tracking number..." filters={["Carrier: All", "Status: All"]} totalLabel={`${logistics.length} records`} />
+          <AdminToolbar
+            searchPlaceholder="Search lane, carrier, tracking number..."
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "active", label: "Active" },
+                { value: "transit", label: "In transit" },
+                { value: "delivered", label: "Delivered" },
+                { value: "delayed", label: "Delayed" },
+              ] },
+              { key: "sort", label: "Sort", options: [
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ] },
+            ]}
+            totalLabel={`${logistics.length} records`}
+          />
         </div>
         <AdminDataTable
           columns={[

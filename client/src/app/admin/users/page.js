@@ -14,12 +14,14 @@ import {
   formatRole,
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 import { AdminUserReviewDrawer } from "@/components/admin/AdminUserReviewDrawer";
 
 export default function AdminUsersPage() {
   const [drawerUser, setDrawerUser] = useState(null);
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("users");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const users = useMemo(() => data?.users || [], [data?.users]);
   const pending = users.filter((user) => String(user.status || "").includes("pending")).length;
   const active = users.filter((user) => user.status === "active").length;
@@ -32,6 +34,15 @@ export default function AdminUsersPage() {
         eyebrow="Admin > Users"
         description="Review all live user records, approval state, and contact readiness from the admin workspace."
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -44,7 +55,28 @@ export default function AdminUsersPage() {
         <div className="border-b border-ink-100 p-6">
           <AdminToolbar
             searchPlaceholder="Search name, email, phone, or role..."
-            filters={["Role: All", "Status: All", "Region: All"]}
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "role", label: "Role", options: [
+                { value: "all", label: "Role: All" },
+                { value: "farmer", label: "Farmer" },
+                { value: "buyer", label: "Buyer" },
+                { value: "reseller", label: "Reseller" },
+                { value: "admin", label: "Admin" },
+              ] },
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "active", label: "Active" },
+                { value: "pending", label: "Pending" },
+                { value: "suspended", label: "Suspended" },
+              ] },
+              { key: "sort", label: "Sort", options: [
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ] },
+            ]}
             totalLabel={`${users.length} live profiles`}
           />
         </div>

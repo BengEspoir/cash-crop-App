@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { CreditCard, ShieldCheck } from "lucide-react";
 import {
   BuyerEmptyState,
+  BuyerButton,
   BuyerHeader,
   BuyerMetricCard,
   BuyerPage,
@@ -11,8 +13,7 @@ import {
   compactBuyerCurrency,
   formatBuyerDate,
 } from "@/components/buyer/BuyerDesignSystem";
-import { useDashboardData } from "@/hooks/useDashboardData";
-import { usePayments } from "@/hooks/usePayments";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 function parseAmount(label) {
   const digits = String(label || "").replace(/[^\d.]/g, "");
@@ -20,8 +21,10 @@ function parseAmount(label) {
 }
 
 export default function BuyerPaymentsPage() {
-  const { data: dashboard } = useDashboardData("buyer");
-  const { data: payments = [], isLoading } = usePayments();
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("payments");
+  const { data: dashboard, isLoading } = useDashboardData("buyer", filterState.queryFilters);
+  const payments = dashboard?.payments || [];
   const buyerOrders = dashboard?.orders || [];
   const sourcedTotal = buyerOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
   const paymentTotal = payments.reduce((sum, payment) => sum + parseAmount(payment.amountLabel), 0);
@@ -36,7 +39,37 @@ export default function BuyerPaymentsPage() {
         <BuyerMetricCard icon={ShieldCheck} value={String(buyerOrders.length)} label="Orders Tracked" detail="Buyer dashboard contract" tone="blue" />
       </div>
 
-      <BuyerPanel title="Payment Activity" bodyClassName="p-0">
+      <BuyerPanel
+        title="Payment Activity"
+        action={<BuyerButton variant="gold" disabled={isExporting} onClick={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("buyer", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}>{isExporting ? "Exporting..." : "Export CSV"}</BuyerButton>}
+        bodyClassName="p-0"
+      >
+        <div className="border-b border-ink-100 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <input
+              type="search"
+              placeholder="Search payments, farmer, channel..."
+              value={filterState.filters.q || ""}
+              onChange={(event) => filterState.updateFilter("q", event.target.value)}
+              className="h-12 flex-1 rounded-lg border border-ink-200 px-4 text-[15px] outline-none focus:border-green-700"
+            />
+            <select value={filterState.filters.status} onChange={(event) => filterState.updateFilter("status", event.target.value)} className="h-12 rounded-lg border border-ink-200 px-3 text-[14px] font-medium text-ink-700 outline-none focus:border-green-700">
+              <option value="all">Status: All</option>
+              <option value="pending">Pending</option>
+              <option value="escrow">Escrow</option>
+              <option value="released">Released</option>
+              <option value="failed">Failed</option>
+            </select>
+            <button type="button" onClick={filterState.resetFilters} className="h-12 rounded-lg border border-ink-200 px-4 text-[14px] font-bold text-green-800">Reset</button>
+          </div>
+        </div>
         {isLoading ? (
           <div className="p-6 text-[16px] text-ink-500">Loading payment records...</div>
         ) : payments.length ? (

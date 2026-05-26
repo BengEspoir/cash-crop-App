@@ -8,6 +8,7 @@ const isAdmin = (user) => [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(us
 
 const helpLinkForRole = (role) => {
   if ([USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(role)) return '/farmer/help-support';
+  if ([USER_ROLES.LOCAL_BUYER, USER_ROLES.INTERNATIONAL_BUYER].includes(role)) return '/buyer/help-support';
   if (role === USER_ROLES.ADMIN || role === USER_ROLES.SUPER_ADMIN) return '/admin/help-support';
   return '/help';
 };

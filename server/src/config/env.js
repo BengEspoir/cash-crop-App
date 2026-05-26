@@ -87,6 +87,7 @@ module.exports = {
 
   // Private verification storage
   SUPABASE_VERIFICATION_BUCKET: process.env.SUPABASE_VERIFICATION_BUCKET || 'farmer-verifications',
+  SUPABASE_ASSETS_BUCKET: process.env.SUPABASE_ASSETS_BUCKET || 'agriculnet-assets',
 
   // OTP
   OTP_LENGTH: parseInt(process.env.OTP_LENGTH, 10) || 6,

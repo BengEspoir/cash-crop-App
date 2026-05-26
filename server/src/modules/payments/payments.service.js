@@ -73,6 +73,97 @@ const createPayment = async (user, payload) => {
   return mapPayment(data);
 };
 
+const mapCheckoutIntent = (payment, order = null) => ({
+  id: payment.id,
+  payment: mapPayment(payment),
+  orderId: payment.order_id,
+  orderNumber: order?.order_number || null,
+  amount: Number(payment.amount || 0),
+  amountLabel: mapPayment(payment).amountLabel,
+  currency: payment.currency || 'XAF',
+  provider: payment.metadata?.provider || 'internal_ledger',
+  providerReference: payment.transaction_ref || payment.metadata?.providerReference || null,
+  checkoutUrl: payment.metadata?.checkoutUrl || null,
+  nextAction: payment.metadata?.nextAction || 'provider_not_configured',
+  status: payment.status || 'pending',
+  message: 'Payment provider is not configured yet. An internal ledger payment record was prepared.'
+});
+
+const createCheckoutIntent = async (user, payload) => {
+  if (!isBuyerRole(user.role)) {
+    throw new AppError('Only buyers can create checkout intents', 403, ERROR_CODES.FORBIDDEN);
+  }
+
+  const order = await ordersService.getOrderRowForAccess(user, payload.orderId);
+  const existing = await supabaseAdmin
+    .from('payments')
+    .select('*')
+    .eq('order_id', order.id)
+    .eq('payer_id', user.id)
+    .in('status', ['pending', 'held_in_escrow'])
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (existing.error) throw existing.error;
+  if (existing.data?.[0]) return mapCheckoutIntent(existing.data[0], order);
+
+  const payment = await createPayment(user, {
+    orderId: order.id,
+    channel: payload.channel || 'bank_transfer'
+  });
+
+  const { data, error } = await supabaseAdmin
+    .from('payments')
+    .update({
+      metadata: {
+        provider: payload.provider || 'internal_ledger',
+        providerReference: null,
+        checkoutUrl: null,
+        nextAction: 'provider_not_configured',
+        mode: 'provider_ready_stub',
+        note: 'No live payment provider was charged for this record.'
+      }
+    })
+    .eq('id', payment.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return mapCheckoutIntent(data, order);
+};
+
+const getCheckoutIntent = async (user, intentId) => {
+  const { data, error } = await supabaseAdmin.from('payments').select('*').eq('id', intentId).single();
+  if (error && isNotFound(error)) throw new AppError('Checkout intent not found', 404, ERROR_CODES.NOT_FOUND);
+  if (error) throw error;
+  await ordersService.getOrderRowForAccess(user, data.order_id);
+  const { data: order, error: orderError } = await supabaseAdmin.from('orders').select('*').eq('id', data.order_id).single();
+  if (orderError) throw orderError;
+  return mapCheckoutIntent(data, order);
+};
+
+const confirmCheckoutIntent = async (user, intentId) => {
+  const { data: payment, error } = await supabaseAdmin.from('payments').select('*').eq('id', intentId).single();
+  if (error && isNotFound(error)) throw new AppError('Checkout intent not found', 404, ERROR_CODES.NOT_FOUND);
+  if (error) throw error;
+  const order = await ordersService.getOrderRowForAccess(user, payment.order_id);
+  if (!isBuyerRole(user.role)) {
+    throw new AppError('Only buyers can confirm checkout intents', 403, ERROR_CODES.FORBIDDEN);
+  }
+  const { data, error: updateError } = await supabaseAdmin
+    .from('payments')
+    .update({
+      metadata: {
+        ...(payment.metadata || {}),
+        nextAction: 'provider_not_configured',
+        confirmedAt: new Date().toISOString()
+      }
+    })
+    .eq('id', intentId)
+    .select()
+    .single();
+  if (updateError) throw updateError;
+  return mapCheckoutIntent(data, order);
+};
+
 const releasePayment = async (user, paymentId) => {
   if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
     throw new AppError('Only admins can release internal ledger payments', 403, ERROR_CODES.FORBIDDEN);
@@ -124,6 +215,9 @@ const requestWithdrawal = async (user) => {
 module.exports = {
   listPayments,
   createPayment,
+  createCheckoutIntent,
+  getCheckoutIntent,
+  confirmCheckoutIntent,
   releasePayment,
   requestWithdrawal
 };

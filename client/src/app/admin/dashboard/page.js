@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -20,9 +21,10 @@ import {
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData } from "@/hooks/useDashboardData";
 
 export default function AdminDashboardPage() {
+  const [isExporting, setIsExporting] = useState(false);
   const { data, isLoading } = useDashboardData("admin");
   const metrics = data?.metrics || {};
   const pendingUsers = data?.pendingUsers || [];
@@ -69,6 +71,15 @@ export default function AdminDashboardPage() {
         title="Good morning, Admin"
         eyebrow="Thursday, 19 March 2026 | Here's what needs your attention today."
         actionLabel="Download Report"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", { resource: "report" });
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">

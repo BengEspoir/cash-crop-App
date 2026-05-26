@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LockKeyhole, ScrollText, ShieldAlert, ShieldCheck } from "lucide-react";
 import {
   AdminCard,
@@ -11,7 +12,7 @@ import {
   formatAdminDate,
   formatAdminTime,
 } from "@/components/admin/AdminDesignSystem";
-import { useAdminAuditLogs } from "@/hooks/useAdminAuditLogs";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 function actionCode(title = "") {
   const value = String(title).toLowerCase();
@@ -23,8 +24,10 @@ function actionCode(title = "") {
 }
 
 export default function AdminAuditLogsPage() {
-  const { data, isLoading } = useAdminAuditLogs(100);
-  const activity = data?.items || [];
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("activity", { limit: 100 });
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
+  const activity = data?.activity || [];
   const failures = activity.filter((item) => String(item.status || item.title || "").toLowerCase().includes("fail")).length;
 
   return (
@@ -34,6 +37,15 @@ export default function AdminAuditLogsPage() {
         eyebrow="Admin > System > Audit Logs"
         description="Tracking all administrative and system-level actions for security and compliance."
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -46,7 +58,21 @@ export default function AdminAuditLogsPage() {
         <div className="border-b border-ink-100 p-6">
           <AdminToolbar
             searchPlaceholder="Search action or resource..."
-            filters={["Action Type: All", "User: All Admins", "Date: Last 7 Days"]}
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "success", label: "Success" },
+                { value: "failed", label: "Failed" },
+                { value: "warning", label: "Warning" },
+              ] },
+              { key: "sort", label: "Sort", options: [
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ] },
+            ]}
             totalLabel={`${activity.length} total entries`}
           />
         </div>

@@ -13,6 +13,7 @@ import { SkipToContent } from "../a11y/SkipToContent";
 import { useDashboardData } from "../../hooks/useDashboardData";
 import { FarmerButton, farmerDisplayName, farmerInitials } from "../farmer/FarmerDesignSystem";
 import { BuyerButton, buyerDisplayName, buyerInitials } from "../buyer/BuyerDesignSystem";
+import { ProfilePhotoEditor } from "../account/ProfilePhotoEditor";
 
 function navBadgeCount(item, data) {
   if (!data || item.id === "dashboard" || item.id === "settings" || item.id === "helpSupport") return null;
@@ -44,21 +45,21 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
     return (
       <aside
         aria-label={`${heading} sidebar`}
-        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-ink-200 bg-white px-6 py-7 text-ink-700 lg:block"
+        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-green-950 bg-[#0D3D22] px-6 py-7 text-white lg:block"
       >
         <Link
           href="/"
-          className="focus-ring flex items-center gap-3 rounded-md"
+          className="focus-ring flex items-center gap-3 rounded-md bg-white px-3 py-2"
         >
           <BrandLogo className="h-12 w-[190px]" />
         </Link>
 
-        <div className="mt-8 inline-flex rounded-full border border-[#C6BFF2] bg-[#F2F0FF] px-5 py-2 text-[14px] font-bold text-[#5547BF]">
+        <div className="mt-8 inline-flex rounded-full border border-amber-300 bg-amber-500 px-5 py-2 text-[14px] font-bold text-white">
           Admin Panel
         </div>
 
-        <div className="mt-8 border-t border-ink-100 pt-7">
-          <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">Main</p>
+        <div className="mt-8 border-t border-white/15 pt-7">
+          <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/60">Main</p>
           <nav aria-label="Workspace navigation" className="mt-4 space-y-1">
             {navigation.map((item) => {
               const { href, label, id, icon: Icon } = item;
@@ -73,7 +74,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "focus-ring flex min-h-14 items-center gap-4 rounded-2xl px-4 text-[16px] font-medium transition-all duration-200 motion-safe:hover:translate-x-1",
-                    active ? "border-l-4 border-green-800 bg-green-50 text-green-800" : "text-ink-500 hover:bg-ink-50 hover:text-ink-800",
+                    active ? "border-l-4 border-amber-400 bg-white text-[#0D3D22]" : "text-white/80 hover:bg-white/10 hover:text-white",
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -82,7 +83,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
                     <span
                       className={cn(
                         "inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-[12px] font-bold",
-                        danger ? "bg-red-50 text-red-800" : "bg-ink-100 text-ink-500",
+                        danger ? "bg-red-100 text-red-800" : "bg-white/15 text-white",
                       )}
                     >
                       {badge}
@@ -94,14 +95,20 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
           </nav>
         </div>
 
-        <div className="mt-8 border-t border-ink-100 pt-7">
+        <div className="mt-8 border-t border-white/15 pt-7">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#5547BF] text-[17px] font-bold text-white">
-              AD
-            </span>
+            <ProfilePhotoEditor
+              user={user}
+              initials="AD"
+              displayName="Admin profile photo"
+              size="md"
+              compact
+              avatarClassName="ring-2 ring-white/40"
+              buttonClassName="sr-only"
+            />
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-bold text-ink-900">Admin User</p>
-              <p className="text-[13px] text-ink-400">Super Admin</p>
+              <p className="truncate text-[15px] font-bold text-white">{[user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Admin User"}</p>
+              <p className="text-[13px] text-white/60">{user?.role || "Super Admin"}</p>
             </div>
           </div>
         </div>
@@ -131,7 +138,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
           aria-current={active ? "page" : undefined}
           className={cn(
             "focus-ring flex min-h-11 items-center gap-3 rounded-lg px-3 text-[16px] font-medium transition-all duration-200 motion-safe:hover:translate-x-1",
-            active ? "border-l-4 border-green-800 bg-green-50 text-green-800" : "text-ink-600 hover:bg-ink-50 hover:text-green-800",
+            active ? "border-l-4 border-amber-400 bg-white text-[#0D3D22]" : "text-white/80 hover:bg-white/10 hover:text-white",
           )}
         >
           <Icon className="h-5 w-5 shrink-0" />
@@ -139,7 +146,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
           {badge ? (
             <span className={cn(
               "inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-[12px] font-bold",
-              id === "orders" || id === "messages" ? "bg-amber-50 text-amber-800" : "bg-ink-50 text-ink-500",
+              id === "orders" || id === "messages" ? "bg-amber-100 text-amber-800" : "bg-white/15 text-white",
             )}>
               {badge}
             </span>
@@ -151,38 +158,43 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
     return (
       <aside
         aria-label={`${heading} sidebar`}
-        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-ink-200 bg-white text-ink-700 lg:block"
+        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-green-950 bg-[#0D3D22] text-white lg:block"
       >
         <div className="flex min-h-full flex-col">
-          <div className="border-b border-ink-100 px-7 py-8 text-center">
-            <span className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-800 text-[26px] font-bold text-white">
-              {farmerInitials(user)}
-            </span>
-            <h2 className="mt-4 text-[20px] font-bold text-ink-950">{farmerDisplayName(user)}</h2>
-            <p className="mt-1 text-[15px] text-ink-500">{location}</p>
-            <p className="mt-1 text-[15px] text-ink-500">{profile.rating ? `${profile.rating} rating` : "Rating pending"}</p>
-            <span className="mt-3 inline-flex rounded-full bg-green-100 px-4 py-1.5 text-[14px] font-bold text-green-800">
+          <div className="border-b border-white/15 px-7 py-8 text-center">
+            <ProfilePhotoEditor
+              user={user}
+              initials={farmerInitials(user)}
+              displayName={farmerDisplayName(user)}
+              size="xl"
+              avatarClassName="mx-auto h-20 w-20 border-4 border-white/30 text-[26px]"
+              buttonClassName="mt-3 inline-flex items-center justify-center gap-2 rounded-lg text-[13px] font-bold text-amber-200 underline-offset-4 hover:underline"
+            />
+            <h2 className="mt-4 text-[20px] font-bold text-white">{farmerDisplayName(user)}</h2>
+            <p className="mt-1 text-[15px] text-white/70">{location}</p>
+            <p className="mt-1 text-[15px] text-white/70">{profile.rating ? `${profile.rating} rating` : "Rating pending"}</p>
+            <span className="mt-3 inline-flex rounded-full bg-white px-4 py-1.5 text-[14px] font-bold text-[#0D3D22]">
               {statusText}
             </span>
           </div>
 
           <div className="flex-1 px-6 py-7">
-            <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">My Farm</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/60">My Farm</p>
             <nav aria-label="Farmer navigation" className="mt-4 space-y-1">
               {mainItems.map(renderItem)}
             </nav>
 
             <div className="mt-7 border-t border-ink-100 pt-7">
-              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">Account</p>
+              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/60">Account</p>
               <nav aria-label="Farmer account navigation" className="mt-4 space-y-1">
                 {accountItems.map(renderItem)}
               </nav>
             </div>
           </div>
 
-          <div className="border-t border-ink-100 p-6">
-            <FarmerButton href="/farmer/listings/new" className="w-full">Add New Listing</FarmerButton>
-            <p className="mt-3 text-center text-[14px] text-ink-400">{listingsCount} active listings</p>
+          <div className="border-t border-white/15 p-6">
+            <FarmerButton href="/farmer/listings/new" variant="gold" className="w-full">Add New Listing</FarmerButton>
+            <p className="mt-3 text-center text-[14px] text-white/60">{listingsCount} active listings</p>
           </div>
         </div>
       </aside>
@@ -211,7 +223,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
           aria-current={active ? "page" : undefined}
           className={cn(
             "focus-ring flex min-h-11 items-center gap-3 rounded-lg px-3 text-[16px] font-medium transition-all duration-200 motion-safe:hover:translate-x-1",
-            active ? "border-l-4 border-green-800 bg-green-50 text-green-800" : "text-ink-600 hover:bg-ink-50 hover:text-green-800",
+            active ? "border-l-4 border-amber-400 bg-white text-[#0D3D22]" : "text-white/80 hover:bg-white/10 hover:text-white",
           )}
         >
           <Icon className="h-5 w-5 shrink-0" />
@@ -219,7 +231,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
           {badge ? (
             <span className={cn(
               "inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-[12px] font-bold",
-              id === "orders" || id === "messages" ? "bg-amber-50 text-amber-800" : "bg-ink-50 text-ink-500",
+              id === "orders" || id === "messages" ? "bg-amber-100 text-amber-800" : "bg-white/15 text-white",
             )}>
               {badge}
             </span>
@@ -231,38 +243,43 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
     return (
       <aside
         aria-label={`${heading} sidebar`}
-        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-ink-200 bg-white text-ink-700 lg:block"
+        className="sticky top-0 hidden h-screen overflow-y-auto border-r border-green-950 bg-[#0D3D22] text-white lg:block"
       >
         <div className="flex min-h-full flex-col">
-          <div className="border-b border-ink-100 px-7 py-8 text-center">
-            <span className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-amber-600 text-[26px] font-bold text-white">
-              {buyerInitials(user)}
-            </span>
-            <h2 className="mt-4 text-[20px] font-bold text-ink-950">{buyerDisplayName(user)}</h2>
-            <p className="mt-1 text-[15px] text-ink-500">{location}</p>
-            <p className="mt-1 text-[15px] text-ink-500">{company}</p>
-            <span className="mt-3 inline-flex rounded-full bg-green-100 px-4 py-1.5 text-[14px] font-bold text-green-800">
+          <div className="border-b border-white/15 px-7 py-8 text-center">
+            <ProfilePhotoEditor
+              user={user}
+              initials={buyerInitials(user)}
+              displayName={buyerDisplayName(user)}
+              size="xl"
+              avatarClassName="mx-auto h-20 w-20 border-4 border-white/30 text-[26px]"
+              buttonClassName="mt-3 inline-flex items-center justify-center gap-2 rounded-lg text-[13px] font-bold text-amber-200 underline-offset-4 hover:underline"
+            />
+            <h2 className="mt-4 text-[20px] font-bold text-white">{buyerDisplayName(user)}</h2>
+            <p className="mt-1 text-[15px] text-white/70">{location}</p>
+            <p className="mt-1 text-[15px] text-white/70">{company}</p>
+            <span className="mt-3 inline-flex rounded-full bg-white px-4 py-1.5 text-[14px] font-bold text-[#0D3D22]">
               {statusText}
             </span>
           </div>
 
           <div className="flex-1 px-6 py-7">
-            <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">My Sourcing</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/60">My Sourcing</p>
             <nav aria-label="Buyer navigation" className="mt-4 space-y-1">
               {mainItems.map(renderItem)}
             </nav>
 
             <div className="mt-7 border-t border-ink-100 pt-7">
-              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-ink-400">Account</p>
+              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/60">Account</p>
               <nav aria-label="Buyer account navigation" className="mt-4 space-y-1">
                 {accountItems.map(renderItem)}
               </nav>
             </div>
           </div>
 
-          <div className="border-t border-ink-100 p-6">
+          <div className="border-t border-white/15 p-6">
             <BuyerButton href="/browse" variant="gold" className="w-full">Browse Market</BuyerButton>
-            <p className="mt-3 text-center text-[14px] text-ink-400">{listingsCount || savedCount} active listings available</p>
+            <p className="mt-3 text-center text-[14px] text-white/60">{listingsCount || savedCount} active listings available</p>
           </div>
         </div>
       </aside>

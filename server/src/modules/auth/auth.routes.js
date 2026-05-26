@@ -12,7 +12,13 @@ const {
   sendOtpSchema,
   confirmOtpSchema,
   forgotPasswordSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  updateMeSchema,
+  changePasswordSchema,
+  contactChangeRequestSchema,
+  contactChangeConfirmSchema,
+  recoveryContactSchema,
+  recoveryContactConfirmSchema
 } = require('./auth.validators');
 
 const {
@@ -31,6 +37,14 @@ const {
   resendVerification,
   getMe,
   updateMe,
+  changePassword,
+  requestContactChange,
+  confirmContactChange,
+  listRecoveryContacts,
+  addRecoveryContact,
+  confirmRecoveryContact,
+  confirmRecoveryContactPublic,
+  deleteRecoveryContact,
   deactivateAccount,
   submitIdentityVerification
 } = require('./auth.controller');
@@ -49,7 +63,15 @@ router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordSch
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 router.post('/resend-verification', otpSendLimiter, resendVerification);
 router.get('/me', authenticate, getMe);
-router.patch('/me', authenticate, updateMe);
+router.patch('/me', authenticate, validate(updateMeSchema), updateMe);
+router.post('/me/change-password', authenticate, validate(changePasswordSchema), changePassword);
+router.post('/contact-change/request', authenticate, validate(contactChangeRequestSchema), requestContactChange);
+router.post('/contact-change/confirm', authenticate, validate(contactChangeConfirmSchema), confirmContactChange);
+router.get('/recovery-contacts', authenticate, listRecoveryContacts);
+router.post('/recovery-contacts', authenticate, validate(recoveryContactSchema), addRecoveryContact);
+router.post('/recovery-contacts/confirm-public', validate(recoveryContactConfirmSchema), confirmRecoveryContactPublic);
+router.post('/recovery-contacts/confirm', authenticate, validate(recoveryContactConfirmSchema), confirmRecoveryContact);
+router.delete('/recovery-contacts/:id', authenticate, deleteRecoveryContact);
 router.post('/submit-identity', authenticate, identityUpload, submitIdentityVerification);
 router.delete('/me', authenticate, deactivateAccount);
 

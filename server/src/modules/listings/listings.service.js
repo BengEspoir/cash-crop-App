@@ -11,6 +11,23 @@ const {
 
 const isNotFound = (error) => error?.code === 'PGRST116';
 
+const normalize = (value) => String(value || '').toLowerCase();
+
+const countryFilterTerms = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw || raw === 'all') return [];
+  const terms = [normalize(raw)];
+  if (/^[a-z]{2}$/i.test(raw)) {
+    try {
+      const display = new Intl.DisplayNames(['en'], { type: 'region' }).of(raw.toUpperCase());
+      if (display) terms.push(normalize(display));
+    } catch {
+      /* ignore unsupported region display */
+    }
+  }
+  return [...new Set(terms)];
+};
+
 const getFarmerProfileForUser = async (userId) => {
   const { data, error } = await supabaseAdmin
     .from('farmer_profiles')
@@ -55,7 +72,7 @@ const getUsersByIds = async (ids) => {
 
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, first_name, last_name, email, phone, role, status, region, city, country, created_at')
+    .select('id, first_name, last_name, email, phone, role, status, region, city, country, profile_image_url, created_at')
     .in('id', uniqueIds);
   if (error) throw error;
 
@@ -166,7 +183,14 @@ const listPublicListings = async (filters = {}) => {
   const { data, error } = await query.limit(Number(filters.limit || 80));
   if (error) throw error;
 
-  const items = await mapListings(data || []);
+  let items = await mapListings(data || []);
+  if (filters.country && filters.country !== 'all') {
+    const terms = countryFilterTerms(filters.country);
+    items = items.filter((item) => {
+      const haystack = normalize([item.country, item.location, item.seller?.country, item.farmer?.country].filter(Boolean).join(' '));
+      return terms.some((term) => haystack.includes(term));
+    });
+  }
   return { items, count: items.length };
 };
 

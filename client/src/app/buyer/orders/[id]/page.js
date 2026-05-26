@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { OrderCard } from "@/components/orders/OrderCard";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { CheckoutIntentButton } from "@/components/payments/CheckoutIntentButton";
 import { useDashboardData } from "@/hooks/useDashboardData";
 
 export default function BuyerOrderDetailPage({ params }) {
@@ -24,7 +25,11 @@ export default function BuyerOrderDetailPage({ params }) {
       <Breadcrumb items={[{ label: "Buyer", href: "/buyer/dashboard" }, { label: "Orders", href: "/buyer/orders" }, { label: order.id }]} />
       <PageHeader eyebrow="Order detail" title={order.id} description={order.notes} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <OrderCard order={order} href={`/buyer/orders/${order.rawId || order.id}`} />
+        <OrderCard
+          order={order}
+          href={`/buyer/orders/${order.rawId || order.id}`}
+          action={<CheckoutIntentButton order={order} />}
+        />
         <OrderTimeline items={order.timeline || []} />
       </div>
     </section>

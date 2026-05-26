@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card } from "../../../components/ui/card";
@@ -12,6 +12,7 @@ import { TierBadge } from "../../../components/ui/badge";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
 import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
+import api from "../../../lib/axios";
 
 const AUTO_SEND_WINDOW_MS = 10 * 60 * 1000;
 const autoSendRequests = new Map();
@@ -53,12 +54,17 @@ const getOrCreateAutoSendRequest = (userId, resendVerification) => {
 
 export default function VerifyPhonePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode");
+  const contactType = searchParams.get("type") || "phone";
+  const contactValue = searchParams.get("value");
   const {
     user,
     onboarding,
     syncOnboarding,
     verifyPhone,
     resendVerification,
+    fetchMe,
   } = useAuthStore();
   const [feedback, setFeedback] = useState({ error: "", success: "" });
   const [resending, setResending] = useState(false);
@@ -84,7 +90,7 @@ export default function VerifyPhonePage() {
     const userId = onboarding?.userId || user?.id;
     const phoneVerified = user?.phone_verified || onboarding?.user?.phone_verified;
 
-    if (!userId || phoneVerified || autoSending || sendState !== "idle") {
+    if (mode === "contact-change" || mode === "recovery-contact" || !userId || phoneVerified || autoSending || sendState !== "idle") {
       return;
     }
 
@@ -130,7 +136,7 @@ export default function VerifyPhonePage() {
     return () => {
       cancelled = true;
     };
-  }, [autoSending, onboarding, resendVerification, sendState, user]);
+  }, [autoSending, mode, onboarding, resendVerification, sendState, user]);
 
   const onSubmit = async (values) => {
     const userId = onboarding?.userId || user?.id;
@@ -141,6 +147,38 @@ export default function VerifyPhonePage() {
     }
 
     setFeedback({ error: "", success: "" });
+    if (mode === "contact-change") {
+      try {
+        await api.post("/auth/contact-change/confirm", {
+          type: contactType,
+          value: contactValue,
+          otp: values.code,
+        });
+        const refreshed = await fetchMe();
+        setFeedback({ success: "Primary phone verified and updated.", error: "" });
+        const role = refreshed?.data?.user?.role;
+        router.push(role === "farmer" ? "/farmer/profile" : role === "admin" || role === "super_admin" ? "/admin/settings" : "/buyer/profile");
+      } catch (error) {
+        setFeedback({ success: "", error: error.response?.data?.message || "Phone verification failed." });
+      }
+      return;
+    }
+
+    if (mode === "recovery-contact") {
+      try {
+        await api.post("/auth/recovery-contacts/confirm-public", {
+          type: contactType,
+          value: contactValue,
+          otp: values.code,
+        });
+        setFeedback({ success: "Recovery phone verified. Sign in again with that recovery contact to continue.", error: "" });
+        router.push("/sign-in");
+      } catch (error) {
+        setFeedback({ success: "", error: error.response?.data?.message || "Recovery phone verification failed." });
+      }
+      return;
+    }
+
     const result = await verifyPhone(userId, values.code);
 
     if (!result.success) {
@@ -156,6 +194,26 @@ export default function VerifyPhonePage() {
     setResending(true);
     setSendState("sending");
     setFeedback({ error: "", success: "" });
+    if (mode === "contact-change") {
+      try {
+        await api.post("/auth/contact-change/request", { type: contactType, value: contactValue });
+        setResending(false);
+        setSendState("delivered");
+        setLastTarget(contactValue || "");
+        setFeedback({ success: `A new code was sent to ${contactValue || "the new phone number"}.`, error: "" });
+      } catch (error) {
+        setResending(false);
+        setSendState("failed");
+        setFeedback({ success: "", error: error.response?.data?.message || "Could not resend verification code." });
+      }
+      return;
+    }
+    if (mode === "recovery-contact") {
+      setResending(false);
+      setSendState("failed");
+      setFeedback({ success: "", error: "Start sign-in again to send a fresh recovery verification code." });
+      return;
+    }
     const result = await resendVerification("phone");
     setResending(false);
 
@@ -172,7 +230,7 @@ export default function VerifyPhonePage() {
     applySuccessfulSendState({ result, onboarding, user, setFeedback, setLastTarget, setSendState });
   };
 
-  const deliveryTarget = lastTarget || onboarding?.phone || user?.phone || "your phone number";
+  const deliveryTarget = lastTarget || (mode === "contact-change" || mode === "recovery-contact" ? contactValue : null) || onboarding?.phone || user?.phone || "your phone number";
   const deliveryMessage = sendState === "sending"
     ? "Sending verification code..."
     : sendState === "delivered"

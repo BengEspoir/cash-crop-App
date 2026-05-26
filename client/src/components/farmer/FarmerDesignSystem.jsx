@@ -66,7 +66,7 @@ export function FarmerHeader({ title, description, action, backHref, backLabel =
             {backLabel}
           </Link>
         ) : null}
-        <h1 className="text-[34px] font-semibold leading-tight tracking-normal text-ink-950 md:text-[42px]">{title}</h1>
+        <h1 className="font-display text-[34px] font-semibold leading-tight tracking-normal text-ink-950 md:text-[42px]">{title}</h1>
         {description ? <p className="mt-2 max-w-3xl text-[18px] leading-7 text-ink-500">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -84,6 +84,7 @@ export function FarmerButton({ href, children, variant = "primary", icon: Icon, 
   const classes = cn(
     "focus-ring inline-flex h-14 items-center justify-center gap-3 rounded-lg px-6 text-[16px] font-bold transition-all duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md",
     variant === "primary" && "bg-green-800 text-white hover:bg-green-900",
+    variant === "gold" && "bg-amber-600 text-white hover:bg-amber-700",
     variant === "outline" && "border border-ink-200 bg-white text-ink-700 hover:border-green-700 hover:text-green-800",
     variant === "ghost" && "bg-transparent text-green-800 hover:bg-green-50",
     disabled && "pointer-events-none opacity-60",
@@ -108,7 +109,7 @@ export function FarmerPanel({ title, action, children, className, bodyClassName 
     <section className={cn("motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 overflow-hidden rounded-2xl border border-ink-200 bg-white transition-shadow duration-200 hover:shadow-sm", className)}>
       {(title || action) ? (
         <div className="flex min-h-20 items-center justify-between gap-4 border-b border-ink-100 px-6 py-5">
-          {title ? <h2 className="text-[22px] font-bold tracking-normal text-ink-950">{title}</h2> : <span />}
+          {title ? <h2 className="font-display text-[22px] font-bold tracking-normal text-ink-950">{title}</h2> : <span />}
           {action}
         </div>
       ) : null}
@@ -133,7 +134,7 @@ export function FarmerMetricCard({ icon: Icon = Leaf, value, label, detail, tag,
         </span>
         {tag ? <span className="rounded-full bg-green-50 px-4 py-1.5 text-[13px] font-bold text-green-800">{tag}</span> : null}
       </div>
-      <p className="mt-7 text-[42px] font-medium leading-none tracking-normal text-ink-950">{value}</p>
+      <p className="mt-7 font-display text-[42px] font-medium leading-none tracking-normal text-ink-950">{value}</p>
       <p className="mt-3 text-[14px] font-bold uppercase tracking-[0.12em] text-ink-400">{label}</p>
       {detail ? <p className="mt-2 text-[16px] text-ink-500">{detail}</p> : null}
     </article>
@@ -162,7 +163,11 @@ export function FarmerTabs({ tabs = [], active = "all" }) {
   );
 }
 
-export function FarmerFilters({ searchPlaceholder = "Search...", filters = [] }) {
+export function FarmerFilters({ searchPlaceholder = "Search...", filters = [], filterOptions = [], values = {}, onChange, onReset, onExport, isExporting }) {
+  const selectFilters = filterOptions.length
+    ? filterOptions
+    : filters.map((label) => ({ key: String(label).split(":")[0].trim().toLowerCase(), label, options: [{ value: "all", label }] }));
+
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
       <div className="relative min-w-0 flex-1 lg:max-w-[420px]">
@@ -170,19 +175,31 @@ export function FarmerFilters({ searchPlaceholder = "Search...", filters = [] })
         <input
           type="search"
           placeholder={searchPlaceholder}
+          value={values.q || ""}
+          onChange={(event) => onChange?.("q", event.target.value)}
           className="h-14 w-full rounded-lg border border-ink-200 bg-white pl-14 pr-4 text-[16px] text-ink-800 outline-none transition focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
         />
       </div>
-      {filters.map((filter) => (
-        <button
-          key={filter}
-          type="button"
+      {selectFilters.map((filter) => (
+        <label
+          key={filter.key}
           className="focus-ring inline-flex h-14 items-center justify-between gap-3 rounded-lg border border-ink-200 bg-white px-5 text-[16px] font-medium text-ink-700 transition-all duration-200 hover:border-green-700 hover:text-green-800 motion-safe:hover:-translate-y-0.5"
         >
-          {filter}
+          <span className="sr-only">{filter.label}</span>
+          <select
+            value={values[filter.key] || "all"}
+            onChange={(event) => onChange?.(filter.key, event.target.value)}
+            className="h-full min-w-[130px] bg-transparent outline-none"
+          >
+            {(filter.options || []).map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
           <ChevronDown className="h-4 w-4 text-ink-400" />
-        </button>
+        </label>
       ))}
+      {onReset ? <FarmerButton variant="outline" onClick={onReset}>Reset</FarmerButton> : null}
+      {onExport ? <FarmerButton variant="gold" onClick={onExport} disabled={isExporting}>{isExporting ? "Exporting..." : "Export CSV"}</FarmerButton> : null}
     </div>
   );
 }

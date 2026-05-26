@@ -10,12 +10,16 @@ import { TierBadge } from "../../../components/ui/badge";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
 import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
+import api from "../../../lib/axios";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const { onboarding, syncOnboarding, verifyEmail, resendVerification } = useAuthStore();
+  const mode = searchParams.get("mode");
+  const contactType = searchParams.get("type") || "email";
+  const value = searchParams.get("value");
+  const { onboarding, syncOnboarding, verifyEmail, resendVerification, fetchMe } = useAuthStore();
   const [state, setState] = useState({ status: token ? "processing" : "idle", error: "", success: "" });
   const hasVerificationLink = useMemo(() => Boolean(onboarding?.devHints?.verificationLink), [onboarding]);
   const emailDelivery = onboarding?.emailDelivery;
@@ -32,6 +36,34 @@ export default function VerifyEmailPage() {
     let cancelled = false;
 
     const runVerification = async () => {
+      if (mode === "contact-change") {
+        try {
+          await api.post("/auth/contact-change/confirm", { type: contactType, value, token });
+          const refreshed = await fetchMe();
+          if (!cancelled) {
+            setState({ status: "success", error: "", success: "Primary email verified and updated." });
+            const role = refreshed?.data?.user?.role;
+            router.push(role === "farmer" ? "/farmer/profile" : role === "admin" || role === "super_admin" ? "/admin/settings" : "/buyer/profile");
+          }
+        } catch (error) {
+          if (!cancelled) setState({ status: "error", error: error.response?.data?.message || "Email verification failed.", success: "" });
+        }
+        return;
+      }
+
+      if (mode === "recovery-contact") {
+        try {
+          await api.post("/auth/recovery-contacts/confirm-public", { type: contactType, value, token });
+          if (!cancelled) {
+            setState({ status: "success", error: "", success: "Recovery email verified. Sign in again with that recovery contact to continue." });
+            router.push("/sign-in");
+          }
+        } catch (error) {
+          if (!cancelled) setState({ status: "error", error: error.response?.data?.message || "Recovery email verification failed.", success: "" });
+        }
+        return;
+      }
+
       const result = await verifyEmail(token);
       if (cancelled) {
         return;
@@ -51,7 +83,7 @@ export default function VerifyEmailPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, token, verifyEmail]);
+  }, [contactType, fetchMe, mode, router, token, value, verifyEmail]);
 
   const handleResend = async () => {
     const result = await resendVerification("email");

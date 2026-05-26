@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Scale } from "lucide-react";
 import {
   AdminCard,
@@ -11,10 +12,12 @@ import {
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function AdminDisputesPage() {
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("disputes");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const disputes = data?.disputes || [];
   const open = disputes.filter((item) => ["open", "pending"].includes(String(item.status || "").toLowerCase())).length;
   const resolved = disputes.filter((item) => ["resolved", "verified", "closed"].includes(String(item.status || "").toLowerCase())).length;
@@ -26,6 +29,15 @@ export default function AdminDisputesPage() {
         eyebrow="Admin > Disputes"
         description="Track buyer and farmer conflicts, resolution progress, and operational risk."
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -36,7 +48,29 @@ export default function AdminDisputesPage() {
 
       <AdminCard title="Dispute Queue">
         <div className="border-b border-ink-100 p-6">
-          <AdminToolbar searchPlaceholder="Search dispute, order, user..." filters={["Status: All", "Priority: All"]} totalLabel={`${disputes.length} records`} />
+          <AdminToolbar
+            searchPlaceholder="Search dispute, order, user..."
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "open", label: "Open" },
+                { value: "pending", label: "Pending" },
+                { value: "resolved", label: "Resolved" },
+                { value: "closed", label: "Closed" },
+              ] },
+              { key: "priority", label: "Priority", options: [
+                { value: "all", label: "Priority: All" },
+                { value: "low", label: "Low" },
+                { value: "normal", label: "Normal" },
+                { value: "high", label: "High" },
+                { value: "urgent", label: "Urgent" },
+              ] },
+            ]}
+            totalLabel={`${disputes.length} records`}
+          />
         </div>
         <AdminDataTable
           columns={[
@@ -45,7 +79,7 @@ export default function AdminDisputesPage() {
             { key: "description", label: "Details", render: (item) => item.description || item.resolution || "No details recorded" },
             { key: "status", label: "Status", render: (item) => <AdminStatusPill status={item.status} /> },
             { key: "date", label: "Updated", render: (item) => formatAdminDate(item.updated_at || item.created_at) },
-            { key: "actions", label: "Actions", render: () => <Button variant="danger" size="sm">Resolve</Button> },
+            { key: "actions", label: "Actions", render: () => <Button variant="secondary" size="sm" disabled>Resolution workflow pending</Button> },
           ]}
           rows={disputes}
           emptyTitle={isLoading ? "Loading disputes..." : "No live disputes yet"}

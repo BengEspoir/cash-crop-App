@@ -234,6 +234,69 @@ const resetPasswordSchema = Joi.object({
   'any.custom': '{{#message}}'
 });
 
+const updateMeSchema = Joi.object({
+  first_name: Joi.string().max(100).optional(),
+  last_name: Joi.string().max(100).optional(),
+  region: Joi.string().max(100).allow('', null).optional(),
+  city: Joi.string().max(100).allow('', null).optional(),
+  country: Joi.string().max(100).allow('', null).optional(),
+  profile_image_url: Joi.string().uri().allow('', null).optional(),
+  farm_name: Joi.string().max(200).allow('', null).optional(),
+  cooperative_name: Joi.string().max(200).allow('', null).optional(),
+  bio: Joi.string().max(2000).allow('', null).optional(),
+  crops_grown: Joi.array().items(Joi.string().max(100)).optional(),
+  primary_crop: Joi.string().max(120).allow('', null).optional(),
+  harvest_volume: Joi.string().max(120).allow('', null).optional(),
+  export_ready: Joi.boolean().optional(),
+  inspection_preference: Joi.string().max(160).allow('', null).optional(),
+  payout_method: Joi.string().max(120).allow('', null).optional(),
+  payout_account_name: Joi.string().max(160).allow('', null).optional(),
+  payout_phone: Joi.string().allow('', null).optional(),
+  notification_opt_in: Joi.boolean().optional(),
+  business_name: Joi.string().max(200).allow('', null).optional(),
+  about: Joi.string().max(2000).allow('', null).optional(),
+  crops_sold: Joi.array().items(Joi.string().max(100)).optional(),
+  company_name: Joi.string().max(200).allow('', null).optional(),
+  preferred_crops: Joi.array().items(Joi.string().max(100)).optional(),
+  annual_import_volume: Joi.string().max(100).allow('', null).optional(),
+  import_country: Joi.string().max(100).allow('', null).optional(),
+  destination_market: Joi.string().max(160).allow('', null).optional()
+}).min(1);
+
+const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: Joi.string().min(8).max(128).pattern(passwordPattern).required().messages({
+    'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+  }),
+  confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+    'any.only': 'Passwords do not match'
+  })
+});
+
+const contactChangeRequestSchema = Joi.object({
+  type: Joi.string().valid('email', 'phone').required(),
+  value: Joi.string().required()
+});
+
+const contactChangeConfirmSchema = Joi.object({
+  type: Joi.string().valid('email', 'phone').required(),
+  value: Joi.string().optional(),
+  token: Joi.string().optional(),
+  otp: Joi.string().optional()
+}).or('token', 'otp');
+
+const recoveryContactSchema = Joi.object({
+  type: Joi.string().valid('email', 'phone').required(),
+  value: Joi.string().required()
+});
+
+const recoveryContactConfirmSchema = Joi.object({
+  type: Joi.string().valid('email', 'phone').required(),
+  value: Joi.string().required(),
+  token: Joi.string().optional(),
+  otp: Joi.string().optional()
+}).or('token', 'otp');
+
 module.exports = {
   registerFarmerSchema,
   registerResellerSchema,
@@ -242,5 +305,11 @@ module.exports = {
   sendOtpSchema,
   confirmOtpSchema,
   forgotPasswordSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  updateMeSchema,
+  changePasswordSchema,
+  contactChangeRequestSchema,
+  contactChangeConfirmSchema,
+  recoveryContactSchema,
+  recoveryContactConfirmSchema
 };

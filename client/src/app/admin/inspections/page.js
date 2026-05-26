@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CheckCircle2, ClipboardCheck, SearchCheck } from "lucide-react";
 import {
   AdminCard,
@@ -10,10 +11,12 @@ import {
   AdminToolbar,
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function AdminInspectionsPage() {
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("inspections");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const inspections = data?.inspections || [];
   const completed = inspections.filter((item) => ["verified", "complete", "completed", "approved"].includes(String(item.status || "").toLowerCase())).length;
   const pending = inspections.filter((item) => String(item.status || "").includes("pending")).length;
@@ -25,6 +28,15 @@ export default function AdminInspectionsPage() {
         eyebrow="Admin > Inspections"
         description="Review field quality checks, inspection status, and report availability."
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-3">
@@ -35,7 +47,26 @@ export default function AdminInspectionsPage() {
 
       <AdminCard title="Inspection Records">
         <div className="border-b border-ink-100 p-6">
-          <AdminToolbar searchPlaceholder="Search inspection, crop, report..." filters={["Status: All", "Inspector: All"]} totalLabel={`${inspections.length} records`} />
+          <AdminToolbar
+            searchPlaceholder="Search inspection, crop, report..."
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "pending", label: "Pending" },
+                { value: "approved", label: "Approved" },
+                { value: "completed", label: "Completed" },
+                { value: "rejected", label: "Rejected" },
+              ] },
+              { key: "sort", label: "Sort", options: [
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ] },
+            ]}
+            totalLabel={`${inspections.length} records`}
+          />
         </div>
         <AdminDataTable
           columns={[

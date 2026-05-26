@@ -7,6 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import useAuth from "@/hooks/useAuth";
+import { EditableProfilePanel } from "@/components/account/EditableProfilePanel";
+import { ProfilePhotoEditor } from "@/components/account/ProfilePhotoEditor";
+import { buyerDisplayName, buyerInitials } from "@/components/buyer/BuyerDesignSystem";
 
 const valueOrEmpty = (value) => value || "";
 const listValue = (value) => Array.isArray(value) ? value.join(", ") : valueOrEmpty(value);
@@ -37,6 +40,23 @@ export default function BuyerProfilePage() {
         title="Company details and sourcing identity"
         description="This page shows buyer profile values saved during registration and later account updates."
       />
+
+      <Card className="rounded-[18px] p-5">
+        <div className="flex flex-col items-center gap-5 text-center md:flex-row md:text-left">
+          <ProfilePhotoEditor
+            user={user}
+            initials={buyerInitials(user)}
+            displayName={buyerDisplayName(user)}
+            size="xl"
+            avatarClassName="h-28 w-28 text-[36px]"
+            buttonClassName="mt-4 inline-flex items-center justify-center gap-2 text-[15px] font-bold text-green-800 underline-offset-4 hover:underline"
+          />
+          <div>
+            <h2 className="font-display text-[30px] leading-tight text-ink-950">{buyerDisplayName(user)}</h2>
+            <p className="mt-2 text-[16px] text-ink-500">{profile.company_name || "Buyer account"}</p>
+          </div>
+        </div>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         {accountHealth.map((item) => (
@@ -96,6 +116,8 @@ export default function BuyerProfilePage() {
           </div>
         </Card>
       </div>
+
+      <EditableProfilePanel title="Edit buyer profile, photo, and security" profile={profile} />
     </section>
   );
 }

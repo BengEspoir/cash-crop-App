@@ -57,14 +57,14 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-[radial-gradient(70%_55%_at_12%_0%,rgba(232,184,75,0.28),transparent_58%)]" />
       </div>
 
-      <div className="relative grid w-full gap-10 px-4 py-12 lg:grid-cols-12 lg:items-start lg:px-8 lg:py-16 xl:px-10">
+      <div className="relative mx-auto grid w-full max-w-[1440px] gap-10 px-4 py-12 lg:grid-cols-12 lg:items-start lg:px-8 lg:py-16 xl:px-10">
         <Reveal inView={false} className="space-y-5 lg:col-span-7">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-100 backdrop-blur-sm">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold-400" />
             {t("hero.eyebrow")}
           </p>
           <div className="space-y-4">
-            <h1 className="max-w-4xl font-sans text-[32px] font-bold leading-[1.1] tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)] sm:text-[40px] lg:text-[44px]">
+            <h1 className="max-w-4xl font-display text-[34px] font-bold leading-[1.08] tracking-normal text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)] sm:text-[44px] lg:text-[52px]">
               {t("hero.title")}
             </h1>
             <p className="max-w-2xl text-[15px] leading-7 text-white/90">{t("hero.subtitle")}</p>

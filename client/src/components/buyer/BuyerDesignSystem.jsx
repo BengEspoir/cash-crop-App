@@ -54,7 +54,7 @@ export function BuyerHeader({ title, description, action }) {
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
       <div>
-        <h1 className="font-serif text-[34px] font-bold leading-tight tracking-normal text-ink-950 md:text-[42px]">{title}</h1>
+        <h1 className="font-display text-[34px] font-bold leading-tight tracking-normal text-ink-950 md:text-[42px]">{title}</h1>
         {description ? <p className="mt-2 max-w-3xl text-[18px] leading-7 text-ink-500">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -108,7 +108,7 @@ export function BuyerMetricCard({ icon: Icon = Package, value, label, detail, ta
         </span>
         {tag ? <span className="rounded-full bg-amber-50 px-4 py-1.5 text-[13px] font-bold text-amber-800">{tag}</span> : null}
       </div>
-      <p className="mt-7 font-serif text-[42px] font-bold leading-none tracking-normal text-ink-950">{value}</p>
+      <p className="mt-7 font-display text-[42px] font-bold leading-none tracking-normal text-ink-950">{value}</p>
       <p className="mt-3 text-[14px] font-bold uppercase tracking-[0.12em] text-ink-400">{label}</p>
       {detail ? <p className="mt-2 text-[16px] text-ink-500">{detail}</p> : null}
     </article>
@@ -120,7 +120,7 @@ export function BuyerPanel({ title, action, children, className, bodyClassName }
     <section className={cn("motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 overflow-hidden rounded-2xl border border-ink-200 bg-white transition-shadow duration-200 hover:shadow-sm", className)}>
       {(title || action) ? (
         <div className="flex min-h-20 items-center justify-between gap-4 border-b border-ink-100 px-6 py-5">
-          {title ? <h2 className="text-[22px] font-bold tracking-normal text-ink-950">{title}</h2> : <span />}
+          {title ? <h2 className="font-display text-[22px] font-bold tracking-normal text-ink-950">{title}</h2> : <span />}
           {action}
         </div>
       ) : null}
@@ -207,7 +207,7 @@ export function BuyerEmptyState({ title, description, action }) {
   return (
     <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-10 text-center">
       <ShoppingBasket className="h-12 w-12 text-ink-300" />
-      <h3 className="mt-4 text-[20px] font-bold text-ink-950">{title}</h3>
+      <h3 className="mt-4 font-display text-[20px] font-bold text-ink-950">{title}</h3>
       {description ? <p className="mt-2 max-w-lg text-[15px] leading-6 text-ink-500">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
@@ -227,7 +227,7 @@ export function BuyerBrowseCard({ listing }) {
         </div>
       </div>
       <div className="p-6">
-        <h3 className="text-[21px] font-bold text-ink-950 transition-colors group-hover:text-green-800">{listing.crop}</h3>
+        <h3 className="font-display text-[21px] font-bold text-ink-950 transition-colors group-hover:text-green-800">{listing.crop}</h3>
         <p className="mt-2 inline-flex items-center gap-1.5 text-[15px] leading-6 text-ink-500">
           <MapPin className="h-4 w-4" />
           {listing.location} - {listing.quantityLabel || listing.quantity}

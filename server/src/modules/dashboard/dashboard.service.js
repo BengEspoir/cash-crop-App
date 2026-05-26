@@ -82,7 +82,7 @@ const getUsersByIds = async (ids) => {
   const users = await safeQuery(
     supabaseAdmin
       .from('users')
-      .select('id, first_name, last_name, email, phone, role, status, region, city, country, created_at')
+      .select('id, first_name, last_name, email, phone, role, status, region, city, country, profile_image_url, created_at')
       .in('id', uniqueIds),
     []
   );
@@ -380,7 +380,204 @@ const fetchConversations = async (userId) => {
   });
 };
 
-const getFarmerDashboard = async (user, req) => {
+const RESOURCE_KEYS = new Set([
+  'users',
+  'pendingUsers',
+  'listings',
+  'orders',
+  'payments',
+  'logistics',
+  'inspections',
+  'disputes',
+  'activity',
+  'quotes',
+  'documents',
+  'conversations',
+  'notifications',
+  'savedListings'
+]);
+
+const normalize = (value) => String(value || '').toLowerCase();
+
+const countryFilterTerms = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw || raw === 'all') return [];
+  const terms = [normalize(raw)];
+  if (/^[a-z]{2}$/i.test(raw)) {
+    try {
+      const display = new Intl.DisplayNames(['en'], { type: 'region' }).of(raw.toUpperCase());
+      if (display) terms.push(normalize(display));
+    } catch {
+      /* ignore unsupported region display */
+    }
+  }
+  return [...new Set(terms)];
+};
+
+const itemMatchesSearch = (item, q) => {
+  if (!q) return true;
+  const haystack = [
+    item.id,
+    item.rawId,
+    item.name,
+    item.email,
+    item.phone,
+    item.role,
+    item.status,
+    item.region,
+    item.country,
+    item.crop,
+    item.title,
+    item.subject,
+    item.location,
+    item.buyerName,
+    item.farmerName,
+    item.participant,
+    item.channel,
+    item.amountLabel,
+    item.detail
+  ].filter(Boolean).join(' ').toLowerCase();
+  return haystack.includes(q);
+};
+
+const itemMatchesFilters = (item, filters = {}) => {
+  const q = normalize(filters.q).trim();
+  if (!itemMatchesSearch(item, q)) return false;
+  if (filters.status && filters.status !== 'all' && normalize(item.status) !== normalize(filters.status)) return false;
+  if (filters.role && filters.role !== 'all' && normalize(item.role) !== normalize(filters.role)) return false;
+  if (filters.region && filters.region !== 'all') {
+    const region = normalize(item.region || item.location || item.country);
+    if (!region.includes(normalize(filters.region))) return false;
+  }
+  if (filters.country && filters.country !== 'all') {
+    const country = normalize([item.country, item.location, item.region].filter(Boolean).join(' '));
+    const terms = countryFilterTerms(filters.country);
+    if (!terms.some((term) => country.includes(term))) return false;
+  }
+  if (filters.crop && filters.crop !== 'all' && !normalize(item.crop || item.title).includes(normalize(filters.crop))) return false;
+  if (filters.grade && filters.grade !== 'all' && normalize(item.grade) !== normalize(filters.grade)) return false;
+  if (filters.priority && filters.priority !== 'all' && normalize(item.priority) !== normalize(filters.priority)) return false;
+
+  const dateValue = item.createdAt || item.created_at || item.updatedAt || item.lastMessageAt;
+  if (filters.dateFrom && dateValue && new Date(dateValue) < new Date(filters.dateFrom)) return false;
+  if (filters.dateTo && dateValue) {
+    const end = new Date(filters.dateTo);
+    end.setHours(23, 59, 59, 999);
+    if (new Date(dateValue) > end) return false;
+  }
+  return true;
+};
+
+const sortItems = (items, sort = 'newest') => {
+  const copy = [...items];
+  const value = normalize(sort);
+  if (value === 'oldest') {
+    return copy.sort((a, b) => new Date(a.createdAt || a.created_at || 0) - new Date(b.createdAt || b.created_at || 0));
+  }
+  if (value === 'amount_desc') {
+    return copy.sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+  }
+  if (value === 'name_asc') {
+    return copy.sort((a, b) => String(a.name || a.crop || a.title || '').localeCompare(String(b.name || b.crop || b.title || '')));
+  }
+  return copy.sort((a, b) => new Date(b.createdAt || b.created_at || b.updatedAt || 0) - new Date(a.createdAt || a.created_at || a.updatedAt || 0));
+};
+
+const applyDashboardFilters = (dashboard, filters = {}) => {
+  const limit = Math.min(500, Math.max(1, Number(filters.limit) || 100));
+  const resource = RESOURCE_KEYS.has(filters.resource) ? filters.resource : null;
+  const next = { ...dashboard };
+  const counts = {};
+
+  for (const key of RESOURCE_KEYS) {
+    if (!Array.isArray(dashboard[key])) continue;
+    if (resource && key !== resource) {
+      next[key] = dashboard[key];
+      counts[key] = dashboard[key].length;
+      continue;
+    }
+    const filtered = sortItems(dashboard[key].filter((item) => itemMatchesFilters(item, filters)), filters.sort).slice(0, limit);
+    next[key] = filtered;
+    counts[key] = filtered.length;
+  }
+
+  next.filters = {
+    resource,
+    q: filters.q || '',
+    status: filters.status || 'all',
+    role: filters.role || 'all',
+    region: filters.region || 'all',
+    country: filters.country || 'all',
+    crop: filters.crop || 'all',
+    grade: filters.grade || 'all',
+    priority: filters.priority || 'all',
+    dateFrom: filters.dateFrom || '',
+    dateTo: filters.dateTo || '',
+    sort: filters.sort || 'newest',
+    limit
+  };
+  next.filteredCounts = counts;
+  return next;
+};
+
+const csvEscape = (value) => {
+  const text = value === null || value === undefined ? '' : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+const flattenForCsv = (item) => ({
+  id: item.id || item.rawId || '',
+  name: item.name || item.crop || item.title || item.subject || item.participant || '',
+  status: item.status || '',
+  role: item.role || '',
+  region: item.region || item.location || item.country || '',
+  amount: item.amountLabel || item.amount || '',
+  createdAt: item.createdAt || item.created_at || '',
+  updatedAt: item.updatedAt || item.updated_at || '',
+  detail: item.detail || item.summary || item.description || item.message || ''
+});
+
+const toCsv = (items) => {
+  const headers = ['id', 'name', 'status', 'role', 'region', 'amount', 'createdAt', 'updatedAt', 'detail'];
+  const rows = items.map((item) => {
+    const flat = flattenForCsv(item);
+    return headers.map((header) => csvEscape(flat[header])).join(',');
+  });
+  return [headers.join(','), ...rows].join('\n');
+};
+
+const dashboardReportToCsv = (dashboard) => {
+  const headers = ['section', 'id', 'name', 'status', 'value', 'detail'];
+  const rows = [];
+
+  for (const [key, value] of Object.entries(dashboard.metrics || {})) {
+    rows.push(['metric', key, key, '', value, '']);
+  }
+
+  const appendRows = (section, items = []) => {
+    for (const item of items) {
+      rows.push([
+        section,
+        item.id || item.rawId || '',
+        item.name || item.crop || item.title || item.subject || '',
+        item.status || '',
+        item.amountLabel || item.amount || '',
+        item.detail || item.summary || item.description || item.location || ''
+      ]);
+    }
+  };
+
+  const needsReview = (item) => ['pending', 'open', 'under_review', 'review', 'flagged', 'disputed'].includes(String(item.status || '').toLowerCase());
+
+  appendRows('pending_user', dashboard.pendingUsers || []);
+  appendRows('pending_listing', (dashboard.listings || []).filter(needsReview));
+  appendRows('pending_order', (dashboard.orders || []).filter(needsReview));
+  appendRows('pending_dispute', (dashboard.disputes || []).filter(needsReview));
+
+  return [headers.join(','), ...rows.map((row) => row.map(csvEscape).join(','))].join('\n');
+};
+
+const getFarmerDashboard = async (user, req, filters = {}) => {
   await authRepository.logActivityEvent(user.id, 'DASHBOARD_VIEWED', req, {
     role: user.role,
     entityType: 'dashboard',
@@ -401,7 +598,7 @@ const getFarmerDashboard = async (user, req) => {
   const notifications = await fetchNotifications(user.id);
   const conversations = await fetchConversations(user.id);
 
-  return {
+  return applyDashboardFilters({
     profile,
     metrics: {
       activeListings: listings.filter((listing) => listing.status === 'verified').length,
@@ -417,10 +614,10 @@ const getFarmerDashboard = async (user, req) => {
     notifications,
     conversations,
     activity: notifications
-  };
+  }, filters);
 };
 
-const getBuyerDashboard = async (user, req) => {
+const getBuyerDashboard = async (user, req, filters = {}) => {
   await authRepository.logActivityEvent(user.id, 'DASHBOARD_VIEWED', req, {
     role: user.role,
     entityType: 'dashboard',
@@ -448,7 +645,7 @@ const getBuyerDashboard = async (user, req) => {
     )).map(mapDocument)
     : [];
 
-  return {
+  return applyDashboardFilters({
     profile,
     metrics: {
       activeOrders: orders.length,
@@ -463,10 +660,10 @@ const getBuyerDashboard = async (user, req) => {
     conversations,
     notifications,
     activity: notifications
-  };
+  }, filters);
 };
 
-const getAdminDashboard = async (user, req) => {
+const getAdminDashboard = async (user, req, filters = {}) => {
   await authRepository.logActivityEvent(user.id, 'DASHBOARD_VIEWED', req, {
     role: user.role,
     entityType: 'dashboard',
@@ -477,7 +674,7 @@ const getAdminDashboard = async (user, req) => {
   const users = await safeQuery(
     supabaseAdmin
       .from('users')
-      .select('id, role, status, first_name, last_name, email, phone, region, city, country, created_at')
+      .select('id, role, status, first_name, last_name, email, phone, region, city, country, profile_image_url, created_at')
       .order('created_at', { ascending: false })
       .limit(100),
     []
@@ -490,7 +687,7 @@ const getAdminDashboard = async (user, req) => {
   const inspections = await safeQuery(supabaseAdmin.from('inspections').select('*').order('created_at', { ascending: false }).limit(100), []);
   const disputes = await safeQuery(supabaseAdmin.from('disputes').select('*').order('created_at', { ascending: false }).limit(100), []);
 
-  return {
+  return applyDashboardFilters({
     metrics: {
       pendingReviews: pendingUsers.length,
       totalUsers: await safeCount('users'),
@@ -512,6 +709,28 @@ const getAdminDashboard = async (user, req) => {
     inspections,
     disputes,
     activity
+  }, filters);
+};
+
+const exportDashboard = async (role, user, req, filters = {}) => {
+  if (role === 'admin' && filters.resource === 'report') {
+    const dashboard = await getAdminDashboard(user, req, { ...filters, resource: undefined });
+    return {
+      filename: 'admin-dashboard-report.csv',
+      content: dashboardReportToCsv(dashboard)
+    };
+  }
+
+  const resource = RESOURCE_KEYS.has(filters.resource) ? filters.resource : role === 'admin' ? 'users' : 'orders';
+  const dashboard = role === 'admin'
+    ? await getAdminDashboard(user, req, { ...filters, resource })
+    : role === 'farmer'
+      ? await getFarmerDashboard(user, req, { ...filters, resource })
+      : await getBuyerDashboard(user, req, { ...filters, resource });
+  const items = Array.isArray(dashboard[resource]) ? dashboard[resource] : [];
+  return {
+    filename: `${role}-${resource}-${new Date().toISOString().slice(0, 10)}.csv`,
+    content: toCsv(items)
   };
 };
 
@@ -519,6 +738,7 @@ module.exports = {
   getFarmerDashboard,
   getBuyerDashboard,
   getAdminDashboard,
+  exportDashboard,
   fetchPendingUsers,
   fetchActivity
 };

@@ -4,7 +4,7 @@ import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 
-export function OrderCard({ order, href }) {
+export function OrderCard({ order, href, action }) {
   return (
     <Card variant="interactive" className="rounded-[16px] p-5">
       <div className="flex items-start justify-between gap-4">
@@ -17,6 +17,7 @@ export function OrderCard({ order, href }) {
         <OrderStatusBadge status={order.status} />
       </div>
       <div className="mt-4 flex flex-wrap gap-3">
+        {action}
         <Button asChild variant="cta" size="sm" icon={ArrowRight} iconRight>
           <Link href={href}>View order</Link>
         </Button>

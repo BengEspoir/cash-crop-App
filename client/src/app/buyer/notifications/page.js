@@ -53,7 +53,7 @@ export default function BuyerNotificationsPage() {
         ].map(([label, value, detail]) => (
           <BuyerPanel key={label} className="transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg" bodyClassName="p-5">
             <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-ink-400">{label}</p>
-            <p className="mt-4 font-serif text-[36px] font-bold leading-none text-ink-950">{value}</p>
+            <p className="mt-4 font-display text-[36px] font-bold leading-none text-ink-950">{value}</p>
             <p className="mt-2 text-[15px] text-ink-500">{detail}</p>
           </BuyerPanel>
         ))}

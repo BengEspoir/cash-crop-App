@@ -31,7 +31,7 @@ export const buyerNavigation = [
   { href: "/buyer/payments", id: "payments", label: "Payments", icon: CreditCard },
   { href: "/buyer/profile", id: "profile", label: "My Profile", icon: Users },
   { href: "/buyer/settings", id: "settings", label: "Settings", icon: Settings },
-  { href: "/help", id: "helpSupport", label: "Help & Support", icon: HelpCircle },
+  { href: "/buyer/help-support", id: "helpSupport", label: "Help & Support", icon: HelpCircle },
 ];
 
 export const farmerNavigation = [

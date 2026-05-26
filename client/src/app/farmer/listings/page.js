@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import {
   FarmerButton,
@@ -10,10 +11,12 @@ import {
   FarmerPage,
   FarmerTabs,
 } from "@/components/farmer/FarmerDesignSystem";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function FarmerListingsPage() {
-  const { data, isLoading } = useDashboardData("farmer");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("listings");
+  const { data, isLoading } = useDashboardData("farmer", filterState.queryFilters);
   const listings = data?.listings || [];
   const active = listings.filter((item) => ["verified", "active"].includes(String(item.status).toLowerCase())).length;
   const pending = listings.filter((item) => String(item.status).toLowerCase().includes("pending")).length;
@@ -38,7 +41,39 @@ export default function FarmerListingsPage() {
         ]}
       />
 
-      <FarmerFilters searchPlaceholder="Search my listings..." filters={["Crop: All", "Status: All", "Date: Newest"]} />
+      <FarmerFilters
+        searchPlaceholder="Search my listings..."
+        values={filterState.filters}
+        onChange={filterState.updateFilter}
+        onReset={filterState.resetFilters}
+        onExport={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("farmer", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
+        isExporting={isExporting}
+        filterOptions={[
+          { key: "status", label: "Status", options: [
+            { value: "all", label: "Status: All" },
+            { value: "active", label: "Active" },
+            { value: "verified", label: "Verified" },
+            { value: "pending", label: "Pending" },
+            { value: "rejected", label: "Rejected" },
+          ] },
+          { key: "grade", label: "Grade", options: [
+            { value: "all", label: "Grade: All" },
+            { value: "a", label: "Grade A" },
+            { value: "b", label: "Grade B" },
+          ] },
+          { key: "sort", label: "Sort", options: [
+            { value: "newest", label: "Newest" },
+            { value: "oldest", label: "Oldest" },
+          ] },
+        ]}
+      />
 
       {isLoading ? (
         <div className="rounded-2xl border border-ink-200 bg-white p-8 text-center text-[16px] text-ink-500">Loading live listings...</div>

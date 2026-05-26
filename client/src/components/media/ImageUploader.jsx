@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import { ImagePlus, Loader2, Star, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "../ui/button";
-import { hasCloudinary, uploadToCloudinary } from "../../lib/cloudinary";
+import { uploadAsset } from "../../lib/uploads";
 import { cn } from "../../lib/utils";
 
 /**
@@ -17,12 +17,8 @@ import { cn } from "../../lib/utils";
  *  - max: maximum number of images
  *
  * Behaviour
- *  - If Cloudinary is configured (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME +
- *    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET) we upload the File directly and
- *    store the secure_url + public_id.
- *  - If Cloudinary is NOT configured we generate a local object URL for preview.
- *    The URL is memory-only; the caller is expected to upload before treating it
- *    as a durable database value.
+ *  - Uploads go through the authenticated backend asset endpoint and return
+ *    durable public Supabase Storage URLs.
  *
  *  - The first image is treated as the cover. "Set as cover" promotes any
  *    image; "Remove" drops it and revokes the blob URL.
@@ -30,7 +26,7 @@ import { cn } from "../../lib/utils";
 export function ImageUploader({
   value = [],
   onChange,
-  folder = "agriculnet/listings",
+  folder = "listings",
   max = 6,
   hint,
   disabled,
@@ -42,8 +38,6 @@ export function ImageUploader({
 
   const remaining = Math.max(0, max - value.length);
   const hasItems = value.length > 0;
-
-  const cloudinaryReady = useMemo(() => hasCloudinary, []);
 
   const handleFiles = useCallback(
     async (fileList) => {
@@ -61,25 +55,16 @@ export function ImageUploader({
       try {
         for (let i = 0; i < files.length; i += 1) {
           const file = files[i];
-          if (cloudinaryReady) {
-            const result = await uploadToCloudinary(file, {
-              folder,
-              onProgress: (ratio) => setProgress(((i + ratio) / files.length) * 100),
-            });
-            next.push({
-              url: result.secure_url,
-              publicId: result.public_id,
-              alt: file.name,
-            });
-          } else {
-            next.push({
-              url: URL.createObjectURL(file),
-              publicId: null,
-              alt: file.name,
-              local: true,
-            });
-            setProgress(((i + 1) / files.length) * 100);
-          }
+          const result = await uploadAsset(file, {
+            folder,
+            onProgress: (ratio) => setProgress(((i + ratio) / files.length) * 100),
+          });
+          next.push({
+            url: result.url,
+            publicId: result.path,
+            bucket: result.bucket,
+            alt: file.name,
+          });
         }
         onChange?.(next);
       } catch (err) {
@@ -91,7 +76,7 @@ export function ImageUploader({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [cloudinaryReady, folder, max, onChange, remaining, value],
+    [folder, max, onChange, remaining, value],
   );
 
   const onDrop = useCallback(
@@ -165,9 +150,7 @@ export function ImageUploader({
           </p>
           <p className="text-[12px] text-ink-500">
             {hint ??
-              (cloudinaryReady
-                ? "High-quality JPG or PNG up to ~10MB. First image becomes the cover."
-                : "Local previews only. Configure Cloudinary env vars to persist uploads.")}
+              "High-quality JPG, PNG, or WebP up to 8MB. First image becomes the cover."}
           </p>
           {error ? <p className="text-[12px] font-medium text-red-600">{error}</p> : null}
         </div>

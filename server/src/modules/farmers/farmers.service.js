@@ -12,7 +12,7 @@ const getUsersByIds = async (ids) => {
 
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('id, first_name, last_name, email, phone, role, status, region, city, country, created_at')
+    .select('id, first_name, last_name, email, phone, role, status, region, city, country, profile_image_url, created_at')
     .in('id', uniqueIds);
   if (error) throw error;
 

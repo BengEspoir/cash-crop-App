@@ -6,6 +6,10 @@ import { Bell, ChevronDown, HelpCircle, LogOut, RefreshCw, Search } from "lucide
 import { Button } from "../ui/button";
 import { farmerDisplayName, farmerInitials } from "../farmer/FarmerDesignSystem";
 import { buyerDisplayName, buyerInitials } from "../buyer/BuyerDesignSystem";
+import { MediaAvatar } from "../media/Avatar";
+import { ProfilePhotoEditor } from "../account/ProfilePhotoEditor";
+import { CountrySelector } from "../common/CountrySelector";
+import { useI18n } from "../../i18n/I18nProvider";
 
 function displayDate() {
   return new Date().toLocaleDateString("en-GB", {
@@ -33,6 +37,34 @@ function TopbarIconLink({ href, label, icon: Icon, count }) {
   );
 }
 
+function DashboardSearch({ placeholder, target }) {
+  const [query, setQuery] = useState("");
+
+  const submit = (event) => {
+    event.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    const params = new URLSearchParams();
+    params.set("q", q);
+    const currentCountry = new URLSearchParams(window.location.search).get("country");
+    if (currentCountry) params.set("country", currentCountry);
+    window.location.assign(`${target}?${params.toString()}`);
+  };
+
+  return (
+    <form onSubmit={submit} className="relative max-w-3xl flex-1 xl:w-[520px] xl:flex-none">
+      <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={placeholder}
+        className="h-14 w-full rounded-full border border-ink-200 bg-ink-50 pl-14 pr-5 text-[16px] text-ink-800 outline-none transition focus:border-green-700 focus:bg-white focus:ring-4 focus:ring-green-800/10"
+      />
+    </form>
+  );
+}
+
 function AccountMenu({
   initials,
   name,
@@ -41,6 +73,7 @@ function AccountMenu({
   profileLabel = "Profile",
   settingsHref,
   toneClass = "bg-green-800",
+  user,
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -78,9 +111,7 @@ function AccountMenu({
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <span className={`inline-flex h-12 w-12 items-center justify-center rounded-full text-[17px] font-bold text-white ${toneClass}`}>
-          {initials}
-        </span>
+        <MediaAvatar src={user?.profile_image_url} alt={name || profileLabel} initials={initials} size="md" className={toneClass} />
         {name ? <span className="hidden max-w-[180px] truncate text-[16px] font-bold text-ink-950 md:inline">{name}</span> : null}
         <ChevronDown className={`h-4 w-4 text-ink-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
@@ -110,6 +141,16 @@ function AccountMenu({
               Settings
             </Link>
           ) : null}
+          <div className="border-t border-ink-100 px-4 py-3">
+            <ProfilePhotoEditor
+              user={user}
+              initials={initials}
+              displayName={name || profileLabel}
+              size="sm"
+              compact
+              buttonClassName="inline-flex items-center gap-2 text-[14px] font-semibold text-green-800 hover:text-green-700"
+            />
+          </div>
           <button
             type="button"
             role="menuitem"
@@ -126,6 +167,15 @@ function AccountMenu({
 }
 
 export function DashboardTopBar({ title, description, user, onLogout, variant = "default", dashboardData }) {
+  const { t } = useI18n();
+
+  const syncCountryFilter = (code) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("country", code);
+    window.location.assign(url.toString());
+  };
+
   if (variant === "admin") {
     const initials = [user?.first_name, user?.last_name]
       .filter(Boolean)
@@ -138,19 +188,12 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
       <header className="sticky top-0 z-30 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-5 backdrop-blur lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="text-[30px] font-bold leading-none tracking-normal text-ink-900">{title}</h1>
+            <h1 className="font-display text-[30px] font-bold leading-none tracking-normal text-ink-900">{title}</h1>
             <p className="mt-2 text-[17px] text-ink-400">Admin &gt; {title}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <div className="relative min-w-[260px] flex-1 xl:w-[520px] xl:flex-none">
-              <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
-              <input
-                type="search"
-                placeholder="Search users, listings, orders..."
-                className="h-14 w-full rounded-full border border-ink-200 bg-ink-50 pl-14 pr-5 text-[16px] text-ink-800 outline-none transition focus:border-green-700 focus:bg-white focus:ring-4 focus:ring-green-800/10"
-              />
-            </div>
+            <DashboardSearch placeholder={t("dashboard.searchAdmin")} target="/admin/users" />
 
             <TopbarIconLink href="/admin/help-support" label="Help and support" icon={HelpCircle} />
             <TopbarIconLink href="/admin/audit-logs" label="Notifications and audit logs" icon={Bell} count={dashboardData?.activity?.length || 0} />
@@ -171,6 +214,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
               profileLabel="Admin users"
               settingsHref="/admin/settings"
               toneClass="bg-[#5547BF]"
+              user={user}
             />
           </div>
         </div>
@@ -186,14 +230,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
     return (
       <header className="sticky top-0 z-30 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-4 backdrop-blur lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative max-w-3xl flex-1">
-            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
-            <input
-              type="search"
-              placeholder="Search my listings, orders, messages..."
-              className="h-14 w-full rounded-full border border-ink-200 bg-ink-50 pl-14 pr-5 text-[16px] text-ink-800 outline-none transition focus:border-green-700 focus:bg-white focus:ring-4 focus:ring-green-800/10"
-            />
-          </div>
+          <DashboardSearch placeholder={t("dashboard.searchFarmer")} target="/farmer/listings" />
 
           <div className="flex flex-wrap items-center gap-5">
             <TopbarIconLink href="/farmer/help-support" label="Help and support" icon={HelpCircle} />
@@ -206,6 +243,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
               profileHref="/farmer/profile"
               settingsHref="/farmer/settings"
               toneClass="bg-green-800"
+              user={user}
             />
             <span className="inline-flex h-10 items-center gap-2 rounded-full bg-green-100 px-5 text-[15px] font-bold text-green-800">
               <span className="h-2 w-2 rounded-full bg-green-800" />
@@ -225,23 +263,17 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
     return (
       <header className="sticky top-0 z-30 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-4 backdrop-blur lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="hidden h-10 items-center gap-2 rounded-full border border-ink-200 bg-white px-4 text-[15px] font-semibold text-ink-700 xl:inline-flex">
-            <span className="text-[18px]">CM</span>
-            Cameroon
-            <ChevronDown className="h-4 w-4 text-ink-400" />
-          </div>
+          <CountrySelector
+            compact
+            label={t("dashboard.selectedCountry")}
+            onChange={syncCountryFilter}
+            className="hidden xl:inline-flex"
+          />
 
-          <div className="relative max-w-3xl flex-1">
-            <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
-            <input
-              type="search"
-              placeholder="Search my orders, saved crops, messages..."
-              className="h-14 w-full rounded-full border border-ink-200 bg-ink-50 pl-14 pr-5 text-[16px] text-ink-800 outline-none transition focus:border-green-700 focus:bg-white focus:ring-4 focus:ring-green-800/10"
-            />
-          </div>
+          <DashboardSearch placeholder={t("dashboard.searchBuyer")} target="/buyer/orders" />
 
           <div className="flex flex-wrap items-center gap-5">
-            <TopbarIconLink href="/help" label="Help and support" icon={HelpCircle} />
+            <TopbarIconLink href="/buyer/help-support" label="Help and support" icon={HelpCircle} />
             <TopbarIconLink href="/buyer/notifications" label="Notifications" icon={Bell} count={unreadNotifications} />
             <span className="hidden h-10 w-px bg-ink-200 md:block" />
             <AccountMenu
@@ -251,6 +283,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
               profileHref="/buyer/profile"
               settingsHref="/buyer/settings"
               toneClass="bg-amber-600"
+              user={user}
             />
             <span className="inline-flex h-10 items-center gap-2 rounded-full bg-green-100 px-5 text-[15px] font-bold text-green-800">
               <span className="h-2 w-2 rounded-full bg-green-800" />

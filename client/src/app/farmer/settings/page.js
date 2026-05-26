@@ -43,22 +43,13 @@ export default function FarmerSettingsPage() {
               </label>
             </div>
             <div className="mt-8 flex justify-end">
-              <FarmerButton>Save Preferences</FarmerButton>
+              <FarmerButton variant="outline" disabled>Preference saving coming soon</FarmerButton>
             </div>
           </FarmerPanel>
 
           <FarmerPanel title="Change Password">
-            <p className="-mt-2 mb-8 text-[17px] text-ink-500">Ensure your account is using a long, random password to stay secure.</p>
-            <div className="grid gap-5">
-              <label className="space-y-2">
-                <span className="text-[15px] font-semibold text-ink-700">Current Password</span>
-                <Input type="password" placeholder="Current password" className="h-14 rounded-lg text-[16px]" />
-              </label>
-              <label className="space-y-2">
-                <span className="text-[15px] font-semibold text-ink-700">New Password</span>
-                <Input type="password" placeholder="New password" className="h-14 rounded-lg text-[16px]" />
-              </label>
-            </div>
+            <p className="-mt-2 mb-8 text-[17px] text-ink-500">Password changes are managed from the editable profile security panel.</p>
+            <FarmerButton href="/farmer/profile" variant="gold">Open profile security</FarmerButton>
           </FarmerPanel>
 
           <FarmerPanel title="Notification Settings">

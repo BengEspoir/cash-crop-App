@@ -14,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import useAuth from "@/hooks/useAuth";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { EditableProfilePanel } from "@/components/account/EditableProfilePanel";
+import { ProfilePhotoEditor } from "@/components/account/ProfilePhotoEditor";
 
 const valueOrEmpty = (value) => value || "";
 
@@ -50,10 +52,14 @@ export default function FarmerProfilePage() {
         <div className="space-y-6">
           <FarmerPanel>
             <div className="text-center">
-              <span className="mx-auto inline-flex h-32 w-32 items-center justify-center rounded-full border-8 border-green-50 bg-green-800 text-[44px] font-bold text-white">
-                {farmerInitials(user)}
-              </span>
-              <button type="button" className="mt-5 text-[16px] font-bold text-green-800 underline">Change Photo</button>
+              <ProfilePhotoEditor
+                user={user}
+                initials={farmerInitials(user)}
+                displayName={farmerDisplayName(user)}
+                size="xl"
+                avatarClassName="mx-auto h-32 w-32 border-8 border-green-50 text-[44px]"
+                buttonClassName="mt-5 inline-flex items-center justify-center gap-2 text-[16px] font-bold text-green-800 underline-offset-4 hover:underline"
+              />
               <h2 className="mt-6 text-[30px] font-medium text-ink-950">{farmerDisplayName(user)}</h2>
               <p className="mt-2 text-[17px] text-ink-500">{[profile.city || user?.city, profile.region || user?.region].filter(Boolean).join(", ") || "Location pending"}</p>
               <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4">
@@ -128,6 +134,8 @@ export default function FarmerProfilePage() {
           </div>
         </FarmerPanel>
       </div>
+
+      <EditableProfilePanel title="Edit farmer profile, photo, and security" profile={profile} />
     </FarmerPage>
   );
 }

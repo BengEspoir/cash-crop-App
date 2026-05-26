@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Box, Clock, Package, Truck } from "lucide-react";
 import {
@@ -12,10 +13,12 @@ import {
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
 
 export default function AdminOrdersPage() {
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const filterState = useDashboardFilters("orders");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const orders = data?.orders || [];
   const activeOrders = orders.filter((order) => !["delivered", "cancelled", "completed"].includes(String(order.status || "").toLowerCase())).length;
   const totalAmount = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
@@ -27,6 +30,15 @@ export default function AdminOrdersPage() {
         eyebrow={`Admin > Orders`}
         description={`${orders.length} total orders | ${activeOrders} active`}
         actionLabel="Export CSV"
+        actionLoading={isExporting}
+        onAction={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}
       />
 
       <div className="grid gap-5 md:grid-cols-4">
@@ -40,7 +52,23 @@ export default function AdminOrdersPage() {
         <div className="border-b border-ink-100 p-6">
           <AdminToolbar
             searchPlaceholder="Search by order ID, buyer, farmer..."
-            filters={["Crop: All", "Region: All", "Status: All"]}
+            values={filterState.filters}
+            onChange={filterState.updateFilter}
+            onReset={filterState.resetFilters}
+            filterOptions={[
+              { key: "status", label: "Status", options: [
+                { value: "all", label: "Status: All" },
+                { value: "pending", label: "Pending" },
+                { value: "confirmed", label: "Confirmed" },
+                { value: "transit", label: "In transit" },
+                { value: "delivered", label: "Delivered" },
+                { value: "cancelled", label: "Cancelled" },
+              ] },
+              { key: "sort", label: "Sort", options: [
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ] },
+            ]}
             totalLabel={`${orders.length} records`}
           />
         </div>

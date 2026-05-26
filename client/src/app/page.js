@@ -19,9 +19,9 @@ export default function HomePage() {
       <AnnouncementStrip />
       <Header />
       <SubNav />
-      <PageTransition className="content-shell space-y-8 py-8 lg:space-y-12 lg:py-10">
-        <main className="space-y-8 lg:space-y-12">
-          <HeroSection />
+      <main>
+        <HeroSection />
+        <PageTransition className="content-shell space-y-8 py-8 lg:space-y-12 lg:py-10">
           <HeroSearchBar />
           <TrustStrip />
           <HomeMarketplaceEcosystem />
@@ -30,8 +30,8 @@ export default function HomePage() {
           <FeaturedFarmers />
           <HowItWorks />
           <PaymentsBanner />
-        </main>
-      </PageTransition>
+        </PageTransition>
+      </main>
       <Footer />
     </div>
   );

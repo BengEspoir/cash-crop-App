@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import toast from "react-hot-toast";
 import { CreditCard, Landmark, RefreshCw, Wallet } from "lucide-react";
 import {
   AdminCard,
@@ -11,10 +13,14 @@ import {
   formatAdminDate,
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
+import { useReleasePayment } from "@/hooks/usePayments";
 
 export default function AdminPaymentsPage() {
-  const { data, isLoading } = useDashboardData("admin");
+  const [isExporting, setIsExporting] = useState(false);
+  const releasePayment = useReleasePayment();
+  const filterState = useDashboardFilters("payments");
+  const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const payments = data?.payments || [];
   const pending = payments.filter((payment) => String(payment.status || "").includes("pending")).length;
 
@@ -35,11 +41,33 @@ export default function AdminPaymentsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <AdminCard title="Transaction History" action={<Button variant="secondary" size="sm">Export</Button>}>
+        <AdminCard title="Transaction History" action={<Button variant="secondary" size="sm" isLoading={isExporting} onClick={async () => {
+          setIsExporting(true);
+          try {
+            await exportDashboardCsv("admin", filterState.queryFilters);
+          } finally {
+            setIsExporting(false);
+          }
+        }}>Export</Button>}>
           <div className="border-b border-ink-100 p-6">
             <AdminToolbar
               searchPlaceholder="Search transaction, party, or method..."
-              filters={["Month: Current", "Status: All"]}
+              values={filterState.filters}
+              onChange={filterState.updateFilter}
+              onReset={filterState.resetFilters}
+              filterOptions={[
+                { key: "status", label: "Status", options: [
+                  { value: "all", label: "Status: All" },
+                  { value: "pending", label: "Pending" },
+                  { value: "escrow", label: "Escrow" },
+                  { value: "released", label: "Released" },
+                  { value: "failed", label: "Failed" },
+                ] },
+                { key: "sort", label: "Sort", options: [
+                  { value: "newest", label: "Newest" },
+                  { value: "oldest", label: "Oldest" },
+                ] },
+              ]}
               totalLabel={`${payments.length} records`}
             />
           </div>
@@ -58,7 +86,7 @@ export default function AdminPaymentsPage() {
           />
         </AdminCard>
 
-        <AdminCard title="Pending Payouts" action={<Button variant="primary" size="sm">Release All</Button>}>
+        <AdminCard title="Pending Payouts" action={<Button variant="secondary" size="sm" disabled={!pending || releasePayment.isPending}>Release ready payouts</Button>}>
           <div className="divide-y divide-ink-100">
             {payments.filter((payment) => String(payment.status || "").includes("pending")).length ? (
               payments.filter((payment) => String(payment.status || "").includes("pending")).slice(0, 6).map((payment) => (
@@ -67,7 +95,21 @@ export default function AdminPaymentsPage() {
                     <p className="font-bold text-ink-900">{payment.party}</p>
                     <p className="mt-1 text-[13px] text-gold-800">{payment.amountLabel}</p>
                   </div>
-                  <Button variant="ghost" size="sm">Release</Button>
+                  <Button
+                    variant="accent-gold"
+                    size="sm"
+                    isLoading={releasePayment.isPending}
+                    onClick={async () => {
+                      try {
+                        await releasePayment.mutateAsync(payment.id);
+                        toast.success("Payment released.");
+                      } catch (error) {
+                        toast.error(error.response?.data?.message || "Payment could not be released.");
+                      }
+                    }}
+                  >
+                    Release
+                  </Button>
                 </div>
               ))
             ) : (

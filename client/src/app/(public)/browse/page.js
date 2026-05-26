@@ -5,7 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { Check, Search, X } from "lucide-react";
 import { BuyerBrowseCard, BuyerEmptyState } from "@/components/buyer/BuyerDesignSystem";
 import { Card } from "@/components/ui/card";
+import { CountrySelector } from "@/components/common/CountrySelector";
 import { useListings } from "@/hooks/useListings";
+import { useI18n } from "@/i18n/I18nProvider";
+import { useSitePrefsStore } from "@/store/sitePrefsStore";
 import { cn } from "@/lib/utils";
 
 const regions = ["South West", "Littoral", "West", "North West", "Centre", "North", "Adamawa", "South"];
@@ -24,22 +27,29 @@ function FilterCheck({ active, label, count, onClick }) {
 }
 
 export default function BrowsePage() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
+  const storedCountry = useSitePrefsStore((state) => state.countryCode);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [exportReadyOnly, setExportReadyOnly] = useState(false);
   const [region, setRegion] = useState("South West");
   const [crop, setCrop] = useState("");
+  const [country, setCountry] = useState(storedCountry || "CM");
 
   useEffect(() => {
     setQuery(searchParams.get("query") || "");
+    setCountry(searchParams.get("country") || storedCountry || "CM");
     const highlight = searchParams.get("highlight");
     if (highlight === "verified") setVerifiedOnly(true);
     if (highlight === "export-ready") setExportReadyOnly(true);
-  }, [searchParams]);
+  }, [searchParams, storedCountry]);
 
-  const { listings, isLoading, error } = useListings({ query: query.trim() || undefined });
+  const { listings, isLoading, error } = useListings({
+    query: query.trim() || undefined,
+    country: country && country !== "all" ? country : undefined,
+  });
 
   const filtered = useMemo(() => {
     const base = listings.filter((listing) => {
@@ -62,6 +72,7 @@ export default function BrowsePage() {
 
   const activeFilters = [
     region,
+    country && country !== "all" ? country : null,
     crop,
     verifiedOnly ? "Verified Only" : null,
     exportReadyOnly ? "Export-ready" : null,
@@ -72,26 +83,27 @@ export default function BrowsePage() {
     setExportReadyOnly(false);
     setRegion("");
     setCrop("");
+    setCountry("all");
   };
 
   return (
     <section className="space-y-7 pb-24 md:pb-8">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h1 className="font-serif text-[36px] font-bold leading-tight text-ink-950">Browse Crop Listings</h1>
-          <p className="mt-2 text-[18px] text-ink-500">Find and filter premium certified crops directly from Cameroonian farmers.</p>
+          <h1 className="font-display text-[36px] font-bold leading-tight text-ink-950">{t("browse.title")}</h1>
+          <p className="mt-2 text-[18px] text-ink-500">{t("browse.description")}</p>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[16px] text-ink-500">Sort by:</span>
+          <span className="text-[16px] text-ink-500">{t("browse.sortLabel")}</span>
           <select
             value={sort}
             onChange={(event) => setSort(event.target.value)}
             className="h-14 min-w-[220px] rounded-lg border border-ink-200 bg-white px-5 text-[16px] font-bold text-ink-700 outline-none focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
             aria-label="Sort crop listings"
           >
-            <option value="newest">Newest Listed</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
+            <option value="newest">{t("browse.sortNewest")}</option>
+            <option value="price-asc">{t("browse.sortPriceAsc")}</option>
+            <option value="price-desc">{t("browse.sortPriceDesc")}</option>
           </select>
         </div>
       </div>
@@ -99,34 +111,46 @@ export default function BrowsePage() {
       <div className="grid gap-7 xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="h-fit overflow-hidden rounded-2xl border border-ink-200 bg-white">
           <div className="flex items-center justify-between border-b border-ink-100 px-7 py-6">
-            <h2 className="text-[22px] font-bold text-ink-950">Filters</h2>
-            <button type="button" onClick={clearAll} className="text-[15px] font-bold text-green-800">Clear all</button>
+            <h2 className="font-display text-[22px] font-bold text-ink-950">{t("common.filters")}</h2>
+            <button type="button" onClick={clearAll} className="text-[15px] font-bold text-green-800">{t("common.clearAll")}</button>
           </div>
 
           <div className="space-y-7 p-7">
             <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">Search</p>
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("common.search")}</p>
               <div className="relative mt-4">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search crops..."
+                  placeholder={t("browse.searchPlaceholder")}
                   className="h-12 w-full rounded-lg border border-ink-200 bg-white pl-12 pr-4 text-[15px] outline-none focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
                 />
               </div>
             </div>
 
             <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">Verification</p>
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("common.country")}</p>
+              <CountrySelector
+                value={country || storedCountry || "CM"}
+                onChange={setCountry}
+                allowAll
+                allLabel={t("common.allCountries")}
+                className="mt-4 w-full"
+                selectClassName="h-12 w-full rounded-lg bg-white py-0 text-[15px]"
+              />
+            </div>
+
+            <div>
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("browse.verification")}</p>
               <div className="mt-4 space-y-3">
-                <FilterCheck active={verifiedOnly} label="Verified Only" onClick={() => setVerifiedOnly((value) => !value)} />
-                <FilterCheck active={exportReadyOnly} label="Export-ready Only" onClick={() => setExportReadyOnly((value) => !value)} />
+                <FilterCheck active={verifiedOnly} label={t("browse.verifiedOnly")} onClick={() => setVerifiedOnly((value) => !value)} />
+                <FilterCheck active={exportReadyOnly} label={t("browse.exportReadyOnly")} onClick={() => setExportReadyOnly((value) => !value)} />
               </div>
             </div>
 
             <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">Region</p>
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("browse.region")}</p>
               <div className="mt-4 space-y-2">
                 {regions.map((item, index) => (
                   <FilterCheck key={item} active={region === item} label={item} count={[128, 94, 71, 88, 62, 54, 38, 47][index]} onClick={() => setRegion(region === item ? "" : item)} />
@@ -135,7 +159,7 @@ export default function BrowsePage() {
             </div>
 
             <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">Crop Type</p>
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("browse.cropType")}</p>
               <div className="mt-4 space-y-2">
                 {cropTypes.map((item, index) => (
                   <FilterCheck key={item} active={crop === item} label={item} count={[312, 187, 241, 84, 52, 130][index]} onClick={() => setCrop(crop === item ? "" : item)} />
@@ -148,21 +172,21 @@ export default function BrowsePage() {
         <main className="min-w-0 space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[15px] font-semibold text-ink-500">Active Filters:</span>
+              <span className="text-[15px] font-semibold text-ink-500">{t("browse.activeFilters")}</span>
               {activeFilters.length ? activeFilters.map((filter) => (
                 <span key={filter} className="inline-flex h-10 items-center gap-2 rounded-full border border-green-800 bg-green-50 px-4 text-[15px] font-bold text-green-800">
                   {filter}
                   <X className="h-4 w-4" />
                 </span>
-              )) : <span className="text-[15px] text-ink-400">None</span>}
+              )) : <span className="text-[15px] text-ink-400">{t("browse.none")}</span>}
             </div>
-            <p className="text-[15px] text-ink-400">Showing {filtered.length ? `1 - ${filtered.length}` : "0"} of {listings.length} active listings</p>
+            <p className="text-[15px] text-ink-400">{t("browse.showing", { from: filtered.length ? `1 - ${filtered.length}` : "0", total: listings.length })}</p>
           </div>
 
           {isLoading ? (
-            <Card className="rounded-2xl p-8 text-center text-ink-500">Loading crop listings...</Card>
+            <Card className="rounded-2xl p-8 text-center text-ink-500">{t("browse.loading")}</Card>
           ) : error ? (
-            <Card className="rounded-2xl p-8 text-center text-red-700">Crop listings could not be loaded.</Card>
+            <Card className="rounded-2xl p-8 text-center text-red-700">{t("browse.error")}</Card>
           ) : filtered.length ? (
             <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
               {filtered.map((listing) => (
@@ -170,7 +194,7 @@ export default function BrowsePage() {
               ))}
             </div>
           ) : (
-            <BuyerEmptyState title="No listings match these filters" description="Clear filters or try a different crop, region, or verification option." />
+            <BuyerEmptyState title={t("browse.emptyTitle")} description={t("browse.emptyHint")} />
           )}
         </main>
       </div>

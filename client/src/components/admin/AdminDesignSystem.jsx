@@ -82,11 +82,21 @@ export function formatRole(value) {
   return String(value || "Unknown").replace(/_/g, " ");
 }
 
-export function AdminPageHeader({ title, eyebrow, description, actionLabel = "Export CSV", actionIcon: ActionIcon = Download, children }) {
+export function AdminPageHeader({
+  title,
+  eyebrow,
+  description,
+  actionLabel = "Export CSV",
+  actionIcon: ActionIcon = Download,
+  onAction,
+  actionDisabled,
+  actionLoading,
+  children,
+}) {
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <h1 className="text-[36px] font-bold leading-[1.05] tracking-normal text-ink-900 md:text-[44px]">
+        <h1 className="font-display text-[36px] font-bold leading-[1.05] tracking-normal text-ink-900 md:text-[44px]">
           {title}
         </h1>
         {eyebrow ? <p className="mt-2 text-[18px] text-ink-400">{eyebrow}</p> : null}
@@ -96,8 +106,8 @@ export function AdminPageHeader({ title, eyebrow, description, actionLabel = "Ex
         <div className="flex flex-wrap items-center gap-3">
           {children}
           {actionLabel ? (
-            <Button type="button" variant="secondary" size="lg" icon={ActionIcon}>
-              {actionLabel}
+            <Button type="button" variant="secondary" size="lg" icon={ActionIcon} onClick={onAction} disabled={actionDisabled || actionLoading}>
+              {actionLoading ? "Exporting..." : actionLabel}
             </Button>
           ) : null}
         </div>
@@ -121,7 +131,7 @@ export function AdminStatCard({ icon: Icon, value, label, tag, tone = "green", p
           </span>
         ) : null}
       </div>
-      <p className="mt-8 text-[42px] font-semibold leading-none tracking-normal text-ink-900">{value}</p>
+      <p className="mt-8 font-display text-[42px] font-semibold leading-none tracking-normal text-ink-900">{value}</p>
       <p className="mt-4 text-[14px] font-bold uppercase tracking-[0.16em] text-ink-500">{label}</p>
       <div className="mt-6 h-2 overflow-hidden rounded-full bg-ink-100">
         <div className={cn("h-full rounded-full", styles.bar)} style={{ width: `${width}%` }} />
@@ -136,7 +146,7 @@ export function AdminCard({ title, subtitle, action, className, children }) {
       {(title || action) ? (
         <div className="flex flex-col gap-3 border-b border-ink-100 px-6 py-5 md:flex-row md:items-center md:justify-between">
           <div>
-            {title ? <h2 className="text-[24px] font-bold text-ink-900">{title}</h2> : null}
+            {title ? <h2 className="font-display text-[24px] font-bold text-ink-900">{title}</h2> : null}
             {subtitle ? <p className="mt-1 text-[14px] text-ink-500">{subtitle}</p> : null}
           </div>
           {action}
@@ -147,7 +157,23 @@ export function AdminCard({ title, subtitle, action, className, children }) {
   );
 }
 
-export function AdminToolbar({ searchPlaceholder = "Search records...", filters = [], totalLabel, className }) {
+export function AdminToolbar({
+  searchPlaceholder = "Search records...",
+  filters = [],
+  filterOptions = [],
+  values = {},
+  onChange,
+  onReset,
+  totalLabel,
+  className,
+}) {
+  const selectFilters = filterOptions.length
+    ? filterOptions
+    : filters.map((label) => {
+      const key = String(label).split(":")[0].trim().toLowerCase().replace(/\s+/g, "");
+      return { key, label, options: [{ value: "all", label }] };
+    });
+
   return (
     <div className={cn("motion-safe:animate-in motion-safe:fade-in flex flex-col gap-3 lg:flex-row lg:items-center", className)}>
       <div className="relative min-h-12 flex-1">
@@ -155,20 +181,53 @@ export function AdminToolbar({ searchPlaceholder = "Search records...", filters 
         <input
           type="search"
           placeholder={searchPlaceholder}
+          value={values.q || ""}
+          onChange={(event) => onChange?.("q", event.target.value)}
           className="h-12 w-full rounded-2xl border border-ink-200 bg-white pl-12 pr-4 text-[14px] text-ink-800 outline-none transition focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
         />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        {filters.map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            className="focus-ring inline-flex h-12 items-center gap-2 rounded-2xl border border-ink-200 bg-white px-4 text-[14px] font-medium text-ink-700 transition-all duration-200 hover:border-green-700 hover:text-green-800 motion-safe:hover:-translate-y-0.5"
+        {selectFilters.map((filter) => (
+          <label
+            key={filter.key}
+            className="focus-within:ring-ring inline-flex h-12 items-center gap-2 rounded-2xl border border-ink-200 bg-white px-4 text-[14px] font-medium text-ink-700 transition-all duration-200 focus-within:border-green-700 focus-within:ring-4 focus-within:ring-green-800/10 hover:border-green-700"
           >
             <SlidersHorizontal className="h-4 w-4 text-ink-400" />
-            {filter}
-          </button>
+            <span className="sr-only">{filter.label}</span>
+            <select
+              value={values[filter.key] || "all"}
+              onChange={(event) => onChange?.(filter.key, event.target.value)}
+              className="h-full min-w-[120px] bg-transparent font-medium text-ink-700 outline-none"
+            >
+              {(filter.options || []).map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
         ))}
+        <label className="inline-flex h-12 items-center rounded-2xl border border-ink-200 bg-white px-3 text-[13px] font-medium text-ink-600">
+          From
+          <input
+            type="date"
+            value={values.dateFrom || ""}
+            onChange={(event) => onChange?.("dateFrom", event.target.value)}
+            className="ml-2 bg-transparent text-[13px] outline-none"
+          />
+        </label>
+        <label className="inline-flex h-12 items-center rounded-2xl border border-ink-200 bg-white px-3 text-[13px] font-medium text-ink-600">
+          To
+          <input
+            type="date"
+            value={values.dateTo || ""}
+            onChange={(event) => onChange?.("dateTo", event.target.value)}
+            className="ml-2 bg-transparent text-[13px] outline-none"
+          />
+        </label>
+        {onReset ? (
+          <button type="button" onClick={onReset} className="focus-ring h-12 rounded-2xl border border-ink-200 bg-white px-4 text-[14px] font-bold text-green-800 transition hover:border-green-700 hover:bg-green-50">
+            Reset
+          </button>
+        ) : null}
         {totalLabel ? <span className="px-2 text-[14px] text-ink-400">{totalLabel}</span> : null}
       </div>
     </div>
@@ -226,7 +285,7 @@ export function AdminEmptyPanel({ title = "No live records yet", description = "
       <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-800">
         <FileText className="h-7 w-7" />
       </span>
-      <h3 className="mt-4 text-[20px] font-bold text-ink-900">{title}</h3>
+      <h3 className="mt-4 font-display text-[20px] font-bold text-ink-900">{title}</h3>
       {description ? <p className="mt-2 max-w-xl text-[14px] leading-6 text-ink-500">{description}</p> : null}
     </div>
   );
@@ -248,7 +307,7 @@ export function AdminIconTile({ icon: Icon, tone = "blue", title, description })
       <span className={cn("inline-flex h-16 w-16 items-center justify-center rounded-2xl", styles.box)}>
         {Icon ? <Icon className="h-8 w-8" /> : null}
       </span>
-      <h2 className="mt-7 text-[24px] font-bold leading-tight text-ink-900">{title}</h2>
+      <h2 className="mt-7 font-display text-[24px] font-bold leading-tight text-ink-900">{title}</h2>
       {description ? <p className="mt-4 text-[16px] leading-7 text-ink-500">{description}</p> : null}
     </Card>
   );

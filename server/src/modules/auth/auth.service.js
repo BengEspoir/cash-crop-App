@@ -127,7 +127,22 @@ const normalizeIdentifier = (identifier) => {
     : helpers.normalizePhone(identifier);
 };
 
-const createOtpForUser = async (user, purpose) => {
+const normalizeContactValue = (type, value) => {
+  if (type === 'email') return String(value || '').trim().toLowerCase();
+  return helpers.normalizePhone(value);
+};
+
+const mapRecoveryContact = (row) => ({
+  id: row.id,
+  type: row.type,
+  value: row.type === 'email' ? helpers.maskEmail(row.value) : helpers.maskPhone(row.value),
+  isVerified: Boolean(row.is_verified),
+  verifiedAt: row.verified_at,
+  lastUsedAt: row.last_used_at,
+  createdAt: row.created_at
+});
+
+const createOtpForUser = async (user, purpose, targetPhone = user.phone) => {
   const otpCode = otpUtil.generateOtp();
   const otpHash = await otpUtil.hashOtp(otpCode);
   const expiresAt = new Date(Date.now() + env.OTP_EXPIRES_MINUTES * 60 * 1000);
@@ -135,13 +150,13 @@ const createOtpForUser = async (user, purpose) => {
   await repository.deleteUserOtps(user.id, purpose);
   await repository.saveOtp({
     user_id: user.id,
-    phone: user.phone,
+    phone: targetPhone,
     otp_hash: otpHash,
     purpose,
     expires_at: expiresAt.toISOString()
   });
 
-  const delivery = await sms.sendOtpSms(user.phone, otpCode);
+  const delivery = await sms.sendOtpSms(targetPhone, otpCode);
   if (delivery?.devHints) {
     delivery.devHints.otpCode = otpCode;
   }
@@ -182,6 +197,42 @@ const createPasswordResetEmailForUser = async (user) => {
 
   const resetLink = `${env.PASSWORD_RESET_URL}?token=${rawToken}`;
   return mailer.sendPasswordResetEmail(user.email, user.first_name, resetLink);
+};
+
+const createPasswordResetEmailForTarget = async (user, email) => {
+  const rawToken = tokenHelper.generateCryptoToken();
+  const tokenHash = tokenHelper.hashToken(rawToken);
+  const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+  await repository.saveToken({
+    user_id: user.id,
+    token_hash: tokenHash,
+    type: TOKEN_TYPE.PASSWORD_RESET,
+    expires_at: tokenExpires.toISOString()
+  });
+
+  const resetLink = `${env.PASSWORD_RESET_URL}?token=${rawToken}`;
+  return mailer.sendPasswordResetEmail(email, user.first_name, resetLink);
+};
+
+const createVerificationEmailForTarget = async (user, email, params = {}) => {
+  const rawToken = tokenHelper.generateCryptoToken();
+  const tokenHash = tokenHelper.hashToken(rawToken);
+  const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+  await repository.saveToken({
+    user_id: user.id,
+    token_hash: tokenHash,
+    type: TOKEN_TYPE.PASSWORD_RESET,
+    expires_at: tokenExpires.toISOString()
+  });
+
+  const search = new URLSearchParams({
+    ...params,
+    token: rawToken
+  });
+  const verifyLink = `${env.EMAIL_VERIFY_URL}?${search.toString()}`;
+  return mailer.sendVerificationEmail(email, user.first_name, verifyLink);
 };
 
 const createSession = async (user, rememberMe = false) => {
@@ -561,10 +612,40 @@ const registerBuyer = async (data, req) => {
 
 const login = async (identifier, password, rememberMe, req) => {
   const normalizedIdentifier = normalizeIdentifier(identifier);
-  const user = await repository.findUserByIdentifier(normalizedIdentifier);
+  let user = await repository.findUserByIdentifier(normalizedIdentifier);
+  let recoveryContact = null;
+
+  if (!user) {
+    recoveryContact = await repository.findRecoveryContactByValue(normalizedIdentifier);
+    if (recoveryContact) {
+      user = await repository.findUserById(recoveryContact.user_id);
+    }
+  }
 
   if (!user) {
     throw new AppError('Invalid credentials', 401, ERROR_CODES.INVALID_CREDENTIALS);
+  }
+
+  if (recoveryContact && !recoveryContact.is_verified) {
+    const delivery = recoveryContact.type === 'phone'
+      ? await runDelivery('Recovery contact SMS', () => createOtpForUser(user, OTP_PURPOSE.LOGIN_OTP, recoveryContact.normalized_value))
+      : await runDelivery('Recovery contact email', () => createVerificationEmailForTarget(user, recoveryContact.normalized_value, {
+        mode: 'recovery-contact',
+        type: 'email',
+        value: recoveryContact.normalized_value
+      }));
+    await repository.logAuditEvent(user.id, 'RECOVERY_CONTACT_LOGIN_VERIFICATION_REQUIRED', req, {
+      type: recoveryContact.type
+    });
+    return withDevHints({
+      requiresRecoveryContactVerification: true,
+      recoveryContactId: recoveryContact.id,
+      type: recoveryContact.type,
+      target: recoveryContact.type === 'phone'
+        ? helpers.maskPhone(recoveryContact.value)
+        : helpers.maskEmail(recoveryContact.value),
+      nextStep: 'verify_recovery_contact'
+    }, delivery);
   }
 
   if ([USER_STATUS.SUSPENDED, USER_STATUS.REJECTED, USER_STATUS.DEACTIVATED].includes(user.status)) {
@@ -589,6 +670,9 @@ const login = async (identifier, password, rememberMe, req) => {
 
   await repository.resetFailedAttempts(user.id);
   const refreshedUser = await repository.updateLastLogin(user.id);
+  if (recoveryContact) {
+    await repository.updateRecoveryContact(recoveryContact.id, { last_used_at: new Date().toISOString() });
+  }
 
   const session = await createSession(refreshedUser, rememberMe);
 
@@ -780,10 +864,41 @@ const confirmPhoneOtp = async (userId, otpCode, req) => {
 
 const forgotPassword = async (identifier, method, req) => {
   const normalizedIdentifier = normalizeIdentifier(identifier);
-  const user = await repository.findUserByIdentifier(normalizedIdentifier);
+  let user = await repository.findUserByIdentifier(normalizedIdentifier);
+  let recoveryContact = null;
+
+  if (!user) {
+    recoveryContact = await repository.findRecoveryContactByValue(normalizedIdentifier);
+    if (recoveryContact) {
+      user = await repository.findUserById(recoveryContact.user_id);
+    }
+  }
 
   if (!user) {
     return { message: 'If an account exists, a reset option has been sent' };
+  }
+
+  if (recoveryContact && !recoveryContact.is_verified) {
+    const delivery = recoveryContact.type === 'phone'
+      ? await runDelivery('Recovery contact verification SMS', () => createOtpForUser(user, OTP_PURPOSE.PASSWORD_RESET, recoveryContact.normalized_value))
+      : await runDelivery('Recovery contact verification email', () => createVerificationEmailForTarget(user, recoveryContact.normalized_value, {
+        mode: 'recovery-contact',
+        type: 'email',
+        value: recoveryContact.normalized_value
+      }));
+    await repository.logAuditEvent(user.id, 'RECOVERY_CONTACT_RESET_VERIFICATION_REQUIRED', req, {
+      type: recoveryContact.type
+    });
+    return withDevHints({
+      message: 'Verify this recovery contact before using it for account recovery',
+      requiresRecoveryContactVerification: true,
+      recoveryContactId: recoveryContact.id,
+      type: recoveryContact.type,
+      target: recoveryContact.type === 'phone'
+        ? helpers.maskPhone(recoveryContact.value)
+        : helpers.maskEmail(recoveryContact.value),
+      nextStep: 'verify_recovery_contact'
+    }, delivery);
   }
 
   let delivery = null;
@@ -791,9 +906,10 @@ const forgotPassword = async (identifier, method, req) => {
   let deliveryStatus = null;
 
   if (method === 'sms') {
+    const phoneTarget = recoveryContact?.type === 'phone' ? recoveryContact.normalized_value : user.phone;
     delivery = await runDelivery(
       'Password reset SMS',
-      () => createOtpForUser(user, OTP_PURPOSE.PASSWORD_RESET)
+      () => createOtpForUser(user, OTP_PURPOSE.PASSWORD_RESET, phoneTarget)
     );
     deliveryStatus = buildDeliveryStatus(delivery, 'sms');
     if (isDeliveryFailed(deliveryStatus)) {
@@ -801,11 +917,12 @@ const forgotPassword = async (identifier, method, req) => {
         smsDelivery: deliveryStatus
       });
     }
-    target = helpers.maskPhone(user.phone);
-  } else if (method === 'email' && user.email) {
+    target = helpers.maskPhone(phoneTarget);
+  } else if (method === 'email' && (recoveryContact?.type === 'email' || user.email)) {
+    const emailTarget = recoveryContact?.type === 'email' ? recoveryContact.normalized_value : user.email;
     delivery = await runDelivery(
       'Password reset email',
-      () => createPasswordResetEmailForUser(user)
+      () => createPasswordResetEmailForTarget(user, emailTarget)
     );
     deliveryStatus = buildDeliveryStatus(delivery, 'email');
     if (isDeliveryFailed(deliveryStatus)) {
@@ -813,7 +930,7 @@ const forgotPassword = async (identifier, method, req) => {
         emailDelivery: deliveryStatus
       });
     }
-    target = helpers.maskEmail(user.email);
+    target = helpers.maskEmail(emailTarget);
   }
 
   await repository.logAuditEvent(user.id, 'PASSWORD_RESET_REQUESTED', req, { method });
@@ -845,7 +962,14 @@ const resetPassword = async (payload, req) => {
 
   if (payload.otp) {
     if (!userId && payload.identifier) {
-      user = await repository.findUserByIdentifier(normalizeIdentifier(payload.identifier));
+      const normalized = normalizeIdentifier(payload.identifier);
+      user = await repository.findUserByIdentifier(normalized);
+      if (!user) {
+        const recoveryContact = await repository.findRecoveryContactByValue(normalized);
+        if (recoveryContact?.is_verified) {
+          user = await repository.findUserById(recoveryContact.user_id);
+        }
+      }
       userId = user?.id || null;
     }
 
@@ -959,7 +1083,7 @@ const getMe = async (userId) => {
 };
 
 const updateMe = async (userId, updateData) => {
-  const allowedUserFields = ['first_name', 'last_name', 'region', 'city', 'country'];
+  const allowedUserFields = ['first_name', 'last_name', 'region', 'city', 'country', 'profile_image_url'];
   const userUpdates = {};
 
   for (const field of allowedUserFields) {
@@ -1054,6 +1178,225 @@ const updateMe = async (userId, updateData) => {
   }
 
   return result;
+};
+
+const changePassword = async (userId, payload, req) => {
+  const user = await repository.findUserById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404, ERROR_CODES.ACCOUNT_NOT_FOUND);
+  }
+
+  const valid = await bcrypt.compare(payload.currentPassword, user.password_hash || '');
+  if (!valid) {
+    throw new AppError('Current password is incorrect', 401, ERROR_CODES.INVALID_CREDENTIALS);
+  }
+
+  const passwordHash = await bcrypt.hash(payload.newPassword, env.BCRYPT_SALT_ROUNDS);
+  await repository.updateUser(userId, { password_hash: passwordHash });
+  await repository.deleteUserTokens(userId, TOKEN_TYPE.REFRESH_TOKEN);
+  await repository.logAuditEvent(userId, 'PASSWORD_CHANGED', req, {});
+  return { changed: true };
+};
+
+const requestContactChange = async (userId, payload, req) => {
+  const user = await repository.findUserById(userId);
+  if (!user) throw new AppError('User not found', 404, ERROR_CODES.ACCOUNT_NOT_FOUND);
+
+  const normalizedValue = normalizeContactValue(payload.type, payload.value);
+  if (payload.type === 'email' && await repository.findUserByEmail(normalizedValue)) {
+    throw new AppError('Email is already in use', 409, ERROR_CODES.DUPLICATE_EMAIL);
+  }
+  if (payload.type === 'phone' && await repository.findUserByPhone(normalizedValue)) {
+    throw new AppError('Phone number is already in use', 409, ERROR_CODES.DUPLICATE_PHONE);
+  }
+
+  const change = await repository.createContactChange({
+    user_id: userId,
+    type: payload.type,
+    old_value: payload.type === 'email' ? user.email : user.phone,
+    new_value: payload.value,
+    normalized_value: normalizedValue,
+    status: 'pending'
+  });
+
+  const delivery = payload.type === 'phone'
+    ? await runDelivery('Primary phone change OTP', () => createOtpForUser(user, OTP_PURPOSE.PHONE_VERIFICATION, normalizedValue))
+    : await runDelivery('Primary email change verification', () => createVerificationEmailForTarget(user, normalizedValue, {
+      mode: 'contact-change',
+      type: 'email',
+      value: normalizedValue
+    }));
+
+  await repository.logAuditEvent(userId, 'CONTACT_CHANGE_REQUESTED', req, {
+    type: payload.type,
+    changeId: change.id
+  });
+
+  return withDevHints({
+    id: change.id,
+    type: payload.type,
+    target: payload.type === 'email' ? helpers.maskEmail(normalizedValue) : helpers.maskPhone(normalizedValue),
+    nextStep: payload.type === 'email' ? 'verify_email' : 'verify_phone'
+  }, delivery);
+};
+
+const confirmContactChange = async (userId, payload, req) => {
+  const normalizedValue = payload.value ? normalizeContactValue(payload.type, payload.value) : null;
+  const change = await repository.findPendingContactChange(userId, payload.type, normalizedValue);
+  if (!change) {
+    throw new AppError('Pending contact change not found', 404, ERROR_CODES.NOT_FOUND);
+  }
+
+  if (payload.type === 'phone') {
+    const otp = await repository.findLatestOtp(userId, OTP_PURPOSE.PHONE_VERIFICATION);
+    if (!otp || new Date(otp.expires_at) < new Date()) {
+      throw new AppError('OTP not found or expired', 400, ERROR_CODES.OTP_INVALID);
+    }
+    await repository.incrementOtpAttempts(otp.id);
+    if (!await otpUtil.verifyOtp(payload.otp, otp.otp_hash)) {
+      throw new AppError('Invalid OTP', 400, ERROR_CODES.OTP_INVALID);
+    }
+    await repository.markOtpVerified(otp.id);
+  } else if (payload.token) {
+    const tokenHash = tokenHelper.hashToken(payload.token);
+    const tokenRecord = await repository.findToken(tokenHash, TOKEN_TYPE.PASSWORD_RESET);
+    if (!tokenRecord || tokenRecord.user_id !== userId) {
+      throw new AppError('Invalid or expired verification token', 400, ERROR_CODES.TOKEN_INVALID);
+    }
+    await repository.markTokenUsed(tokenRecord.id);
+  } else {
+    throw new AppError('Verification token is required', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const userUpdate = payload.type === 'email'
+    ? { email: change.normalized_value, email_verified: true }
+    : { phone: change.normalized_value, phone_verified: true };
+  const updatedUser = await repository.updateUser(userId, userUpdate);
+  await repository.updateContactChange(change.id, {
+    status: 'verified',
+    verified_at: new Date().toISOString()
+  });
+  await repository.logAuditEvent(userId, 'CONTACT_CHANGE_VERIFIED', req, { type: payload.type });
+
+  return {
+    user: helpers.sanitizeUser(updatedUser),
+    type: payload.type,
+    verified: true
+  };
+};
+
+const listRecoveryContacts = async (userId) => {
+  const items = await repository.listRecoveryContacts(userId);
+  return {
+    items: items.map(mapRecoveryContact),
+    count: items.length
+  };
+};
+
+const addRecoveryContact = async (userId, payload, req) => {
+  const user = await repository.findUserById(userId);
+  const normalizedValue = normalizeContactValue(payload.type, payload.value);
+
+  if (payload.type === 'email' && normalizedValue === user.email) {
+    throw new AppError('Use a different recovery email from your primary email', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+  if (payload.type === 'phone' && normalizedValue === user.phone) {
+    throw new AppError('Use a different recovery phone from your primary phone', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const existing = await repository.findRecoveryContactByValue(normalizedValue);
+  if (existing && existing.user_id !== userId) {
+    throw new AppError('Recovery contact is already in use', 409, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const contact = await repository.upsertRecoveryContact({
+    user_id: userId,
+    type: payload.type,
+    value: payload.value,
+    normalized_value: normalizedValue,
+    is_verified: false
+  });
+  await repository.logAuditEvent(userId, 'RECOVERY_CONTACT_ADDED', req, { type: payload.type });
+  return mapRecoveryContact(contact);
+};
+
+const confirmRecoveryContact = async (userId, payload, req) => {
+  const normalizedValue = normalizeContactValue(payload.type, payload.value);
+  const contact = await repository.findRecoveryContactByValue(normalizedValue);
+  if (!contact || contact.user_id !== userId) {
+    throw new AppError('Recovery contact not found', 404, ERROR_CODES.NOT_FOUND);
+  }
+
+  if (payload.type === 'phone') {
+    const otp = await repository.findLatestOtp(userId, OTP_PURPOSE.LOGIN_OTP);
+    if (!otp || new Date(otp.expires_at) < new Date()) {
+      throw new AppError('OTP not found or expired', 400, ERROR_CODES.OTP_INVALID);
+    }
+    await repository.incrementOtpAttempts(otp.id);
+    if (!await otpUtil.verifyOtp(payload.otp, otp.otp_hash)) {
+      throw new AppError('Invalid OTP', 400, ERROR_CODES.OTP_INVALID);
+    }
+    await repository.markOtpVerified(otp.id);
+  } else if (payload.token) {
+    const tokenHash = tokenHelper.hashToken(payload.token);
+    const tokenRecord = await repository.findToken(tokenHash, TOKEN_TYPE.PASSWORD_RESET);
+    if (!tokenRecord || tokenRecord.user_id !== userId) {
+      throw new AppError('Invalid or expired verification token', 400, ERROR_CODES.TOKEN_INVALID);
+    }
+    await repository.markTokenUsed(tokenRecord.id);
+  }
+
+  const updated = await repository.updateRecoveryContact(contact.id, {
+    is_verified: true,
+    verified_at: new Date().toISOString()
+  });
+  await repository.logAuditEvent(userId, 'RECOVERY_CONTACT_VERIFIED', req, { type: payload.type });
+  return mapRecoveryContact(updated);
+};
+
+const confirmRecoveryContactPublic = async (payload, req) => {
+  const normalizedValue = normalizeContactValue(payload.type, payload.value);
+  const contact = await repository.findRecoveryContactByValue(normalizedValue);
+  if (!contact) {
+    throw new AppError('Recovery contact not found', 404, ERROR_CODES.NOT_FOUND);
+  }
+
+  if (payload.type === 'phone') {
+    const otp = await repository.findLatestOtp(contact.user_id, OTP_PURPOSE.LOGIN_OTP);
+    if (!otp || new Date(otp.expires_at) < new Date()) {
+      throw new AppError('OTP not found or expired', 400, ERROR_CODES.OTP_INVALID);
+    }
+    await repository.incrementOtpAttempts(otp.id);
+    if (!await otpUtil.verifyOtp(payload.otp, otp.otp_hash)) {
+      throw new AppError('Invalid OTP', 400, ERROR_CODES.OTP_INVALID);
+    }
+    await repository.markOtpVerified(otp.id);
+  } else if (payload.token) {
+    const tokenHash = tokenHelper.hashToken(payload.token);
+    const tokenRecord = await repository.findToken(tokenHash, TOKEN_TYPE.PASSWORD_RESET);
+    if (!tokenRecord || tokenRecord.user_id !== contact.user_id) {
+      throw new AppError('Invalid or expired verification token', 400, ERROR_CODES.TOKEN_INVALID);
+    }
+    await repository.markTokenUsed(tokenRecord.id);
+  } else {
+    throw new AppError('Verification token is required', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+
+  const updated = await repository.updateRecoveryContact(contact.id, {
+    is_verified: true,
+    verified_at: new Date().toISOString()
+  });
+  await repository.logAuditEvent(contact.user_id, 'RECOVERY_CONTACT_VERIFIED_PUBLIC', req, { type: payload.type });
+  return {
+    contact: mapRecoveryContact(updated),
+    nextStep: 'sign_in'
+  };
+};
+
+const deleteRecoveryContact = async (userId, contactId, req) => {
+  await repository.deleteRecoveryContact(userId, contactId);
+  await repository.logAuditEvent(userId, 'RECOVERY_CONTACT_DELETED', req, {});
+  return { id: contactId, deleted: true };
 };
 
 const deactivateAccount = async (userId, password, req) => {
@@ -1257,6 +1600,14 @@ module.exports = {
   resendVerification,
   getMe,
   updateMe,
+  changePassword,
+  requestContactChange,
+  confirmContactChange,
+  listRecoveryContacts,
+  addRecoveryContact,
+  confirmRecoveryContact,
+  confirmRecoveryContactPublic,
+  deleteRecoveryContact,
   deactivateAccount,
   submitIdentityVerification,
   adminReviewUser,

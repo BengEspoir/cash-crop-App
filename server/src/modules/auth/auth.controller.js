@@ -85,6 +85,46 @@ const updateMe = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Profile updated successfully');
 });
 
+const changePassword = asyncHandler(async (req, res) => {
+  const result = await authService.changePassword(req.user.id, req.body, req);
+  sendSuccess(res, result, 'Password changed successfully');
+});
+
+const requestContactChange = asyncHandler(async (req, res) => {
+  const result = await authService.requestContactChange(req.user.id, req.body, req);
+  sendSuccess(res, result, 'Contact change verification started');
+});
+
+const confirmContactChange = asyncHandler(async (req, res) => {
+  const result = await authService.confirmContactChange(req.user.id, req.body, req);
+  sendSuccess(res, result, 'Contact change verified');
+});
+
+const listRecoveryContacts = asyncHandler(async (req, res) => {
+  const result = await authService.listRecoveryContacts(req.user.id);
+  sendSuccess(res, result, 'Recovery contacts retrieved successfully');
+});
+
+const addRecoveryContact = asyncHandler(async (req, res) => {
+  const result = await authService.addRecoveryContact(req.user.id, req.body, req);
+  sendSuccess(res, result, 'Recovery contact saved successfully', 201);
+});
+
+const confirmRecoveryContact = asyncHandler(async (req, res) => {
+  const result = await authService.confirmRecoveryContact(req.user.id, req.body, req);
+  sendSuccess(res, result, 'Recovery contact verified successfully');
+});
+
+const confirmRecoveryContactPublic = asyncHandler(async (req, res) => {
+  const result = await authService.confirmRecoveryContactPublic(req.body, req);
+  sendSuccess(res, result, 'Recovery contact verified successfully');
+});
+
+const deleteRecoveryContact = asyncHandler(async (req, res) => {
+  const result = await authService.deleteRecoveryContact(req.user.id, req.params.id, req);
+  sendSuccess(res, result, 'Recovery contact deleted successfully');
+});
+
 const deactivateAccount = asyncHandler(async (req, res) => {
   const { password } = req.body;
   const result = await authService.deactivateAccount(req.user.id, password, req);
@@ -123,6 +163,14 @@ module.exports = {
   resendVerification,
   getMe,
   updateMe,
+  changePassword,
+  requestContactChange,
+  confirmContactChange,
+  listRecoveryContacts,
+  addRecoveryContact,
+  confirmRecoveryContact,
+  confirmRecoveryContactPublic,
+  deleteRecoveryContact,
   deactivateAccount,
   submitIdentityVerification,
   adminReviewUser,
