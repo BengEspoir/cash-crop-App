@@ -24,6 +24,10 @@ const uploadsRoutes = require('./modules/uploads/uploads.routes');
 
 const app = express();
 
+// Railway and similar platforms sit behind a proxy. Trust the first proxy hop
+// in production so rate limiting and client IP detection work correctly.
+app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
+
 // Security headers
 app.use(helmet());
 
