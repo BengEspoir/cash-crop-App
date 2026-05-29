@@ -52,7 +52,7 @@ function DashboardSearch({ placeholder, target }) {
   };
 
   return (
-    <form onSubmit={submit} className="relative max-w-3xl flex-1 xl:w-[520px] xl:flex-none">
+    <form onSubmit={submit} className="relative min-w-0 max-w-3xl flex-1 xl:w-[520px] xl:flex-none">
       <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
       <input
         type="search"
@@ -188,11 +188,11 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
       <header className="sticky top-0 z-30 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-5 backdrop-blur lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h1 className="font-display text-[30px] font-bold leading-none tracking-normal text-ink-900">{title}</h1>
-            <p className="mt-2 text-[17px] text-ink-400">Admin &gt; {title}</p>
+            <h1 className="break-words font-display text-[28px] font-bold leading-none tracking-normal text-ink-900 sm:text-[30px]">{title}</h1>
+            <p className="mt-2 break-words text-[15px] text-ink-400 sm:text-[17px]">Admin &gt; {title}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-4">
             <DashboardSearch placeholder={t("dashboard.searchAdmin")} target="/admin/users" />
 
             <TopbarIconLink href="/admin/help-support" label="Help and support" icon={HelpCircle} />
@@ -232,7 +232,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <DashboardSearch placeholder={t("dashboard.searchFarmer")} target="/farmer/listings" />
 
-          <div className="flex flex-wrap items-center gap-5">
+          <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-5">
             <TopbarIconLink href="/farmer/help-support" label="Help and support" icon={HelpCircle} />
             <TopbarIconLink href="/farmer/notifications" label="Notifications" icon={Bell} count={unreadNotifications} />
             <span className="hidden h-10 w-px bg-ink-200 md:block" />
@@ -272,7 +272,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
 
           <DashboardSearch placeholder={t("dashboard.searchBuyer")} target="/buyer/orders" />
 
-          <div className="flex flex-wrap items-center gap-5">
+          <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-5">
             <TopbarIconLink href="/buyer/help-support" label="Help and support" icon={HelpCircle} />
             <TopbarIconLink href="/buyer/notifications" label="Notifications" icon={Bell} count={unreadNotifications} />
             <span className="hidden h-10 w-px bg-ink-200 md:block" />

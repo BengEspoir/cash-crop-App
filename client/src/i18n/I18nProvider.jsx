@@ -2,12 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { dictionaries, getByPath, interpolate } from "./dictionaries";
-import { translatePhrase } from "./phraseTranslations";
 
 const STORAGE_KEY = "agriculnet_locale_v1";
-const SUPPORTED_LOCALES = ["en", "fr", "es"];
-const originalText = new WeakMap();
-const originalAttributes = new WeakMap();
+const SUPPORTED_LOCALES = ["en", "fr"];
 
 function normalizeLocale(value) {
   const code = String(value || "").toLowerCase().split("-")[0];
@@ -59,71 +56,6 @@ export function I18nProvider({ children }) {
     } catch {
       /* ignore */
     }
-  }, [locale, ready]);
-
-  useEffect(() => {
-    if (!ready || typeof document === "undefined") return undefined;
-    const attributes = ["placeholder", "aria-label", "title"];
-    const skipTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
-
-    const translateTextNode = (node) => {
-      const parent = node.parentElement;
-      if (!parent || skipTags.has(parent.tagName) || parent.closest("[data-i18n-skip='true']")) return;
-      const current = node.nodeValue || "";
-      const trimmed = current.trim();
-      if (!trimmed) return;
-      if (!originalText.has(node)) {
-        if (locale !== "en" && translatePhrase(trimmed, locale) === trimmed) return;
-        originalText.set(node, trimmed);
-      }
-      const source = originalText.get(node);
-      const translated = translatePhrase(source, locale);
-      if (translated === source && locale !== "en") return;
-      node.nodeValue = current.replace(trimmed, locale === "en" ? source : translated);
-    };
-
-    const translateElementAttributes = (element) => {
-      if (skipTags.has(element.tagName) || element.closest("[data-i18n-skip='true']")) return;
-      for (const attribute of attributes) {
-        if (!element.hasAttribute(attribute)) continue;
-        let map = originalAttributes.get(element);
-        if (!map) {
-          map = {};
-          originalAttributes.set(element, map);
-        }
-        if (!map[attribute]) {
-          const current = element.getAttribute(attribute);
-          if (locale !== "en" && translatePhrase(current, locale) === current) continue;
-          map[attribute] = current;
-        }
-        const source = map[attribute];
-        element.setAttribute(attribute, locale === "en" ? source : translatePhrase(source, locale));
-      }
-    };
-
-    const translateTree = (root = document.body) => {
-      if (!root) return;
-      if (root.nodeType === Node.ELEMENT_NODE) translateElementAttributes(root);
-      const elementWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
-      while (elementWalker.nextNode()) translateElementAttributes(elementWalker.currentNode);
-      const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      while (textWalker.nextNode()) translateTextNode(textWalker.currentNode);
-    };
-
-    translateTree();
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "characterData") {
-          translateTextNode(mutation.target);
-        }
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === Node.TEXT_NODE) translateTextNode(node);
-          if (node.nodeType === Node.ELEMENT_NODE) translateTree(node);
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
   }, [locale, ready]);
 
   const setLocale = useCallback((next) => {

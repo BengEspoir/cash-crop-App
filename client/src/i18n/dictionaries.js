@@ -1,4 +1,4 @@
-/** @typedef {"en"|"fr"|"es"} Locale */
+/** @typedef {"en"|"fr"} Locale */
 
 const shared = {
   brand: "AgriculNet",

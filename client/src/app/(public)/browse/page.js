@@ -90,15 +90,15 @@ export default function BrowsePage() {
     <section className="space-y-7 pb-24 md:pb-8">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h1 className="font-display text-[36px] font-bold leading-tight text-ink-950">{t("browse.title")}</h1>
-          <p className="mt-2 text-[18px] text-ink-500">{t("browse.description")}</p>
+          <h1 className="font-display text-[30px] font-bold leading-tight text-ink-950 sm:text-[36px]">{t("browse.title")}</h1>
+          <p className="mt-2 text-[16px] text-ink-500 sm:text-[18px]">{t("browse.description")}</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <span className="text-[16px] text-ink-500">{t("browse.sortLabel")}</span>
           <select
             value={sort}
             onChange={(event) => setSort(event.target.value)}
-            className="h-14 min-w-[220px] rounded-lg border border-ink-200 bg-white px-5 text-[16px] font-bold text-ink-700 outline-none focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
+            className="h-12 w-full min-w-0 rounded-lg border border-ink-200 bg-white px-4 text-[15px] font-bold text-ink-700 outline-none focus:border-green-700 focus:ring-4 focus:ring-green-800/10 sm:h-14 sm:min-w-[220px] sm:px-5 sm:text-[16px]"
             aria-label="Sort crop listings"
           >
             <option value="newest">{t("browse.sortNewest")}</option>
@@ -108,7 +108,7 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      <div className="grid gap-7 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="grid gap-7 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="h-fit overflow-hidden rounded-2xl border border-ink-200 bg-white">
           <div className="flex items-center justify-between border-b border-ink-100 px-7 py-6">
             <h2 className="font-display text-[22px] font-bold text-ink-950">{t("common.filters")}</h2>
@@ -174,7 +174,7 @@ export default function BrowsePage() {
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-[15px] font-semibold text-ink-500">{t("browse.activeFilters")}</span>
               {activeFilters.length ? activeFilters.map((filter) => (
-                <span key={filter} className="inline-flex h-10 items-center gap-2 rounded-full border border-green-800 bg-green-50 px-4 text-[15px] font-bold text-green-800">
+                <span key={filter} className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-full border border-green-800 bg-green-50 px-4 py-2 text-[14px] font-bold text-green-800 sm:text-[15px]">
                   {filter}
                   <X className="h-4 w-4" />
                 </span>

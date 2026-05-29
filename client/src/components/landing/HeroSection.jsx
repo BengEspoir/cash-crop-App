@@ -30,7 +30,7 @@ export function HeroSection() {
   const slide = slides[index] || slides[0];
 
   return (
-    <section className="relative isolate min-h-[520px] w-full overflow-hidden bg-green-900 text-white shadow-lift lg:min-h-[560px]">
+    <section className="relative isolate min-h-[500px] w-full overflow-hidden bg-green-900 text-white shadow-lift lg:min-h-[560px]">
       <div className="absolute inset-0 -z-10">
         <AnimatePresence mode="sync">
           <motion.div
@@ -57,17 +57,17 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-[radial-gradient(70%_55%_at_12%_0%,rgba(232,184,75,0.28),transparent_58%)]" />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-[1440px] gap-10 px-4 py-12 lg:grid-cols-12 lg:items-start lg:px-8 lg:py-16 xl:px-10">
+      <div className="relative mx-auto grid w-full max-w-[1440px] gap-8 px-4 py-10 sm:px-5 lg:grid-cols-12 lg:items-start lg:gap-10 lg:px-8 lg:py-16 xl:px-10">
         <Reveal inView={false} className="space-y-5 lg:col-span-7">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-100 backdrop-blur-sm">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold-400" />
             {t("hero.eyebrow")}
           </p>
           <div className="space-y-4">
-            <h1 className="max-w-4xl font-display text-[34px] font-bold leading-[1.08] tracking-normal text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)] sm:text-[44px] lg:text-[52px]">
+            <h1 className="max-w-3xl font-display text-[30px] font-bold leading-[1.08] tracking-normal text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)] sm:text-[40px] lg:text-[52px]">
               {t("hero.title")}
             </h1>
-            <p className="max-w-2xl text-[15px] leading-7 text-white/90">{t("hero.subtitle")}</p>
+            <p className="max-w-2xl text-[14px] leading-6 text-white/90 sm:text-[15px] sm:leading-7">{t("hero.subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button
@@ -100,7 +100,7 @@ export function HeroSection() {
           </div>
         </Reveal>
 
-        <div className="flex flex-col items-end gap-4 lg:col-span-5">
+        <div className="flex flex-col items-stretch gap-4 lg:col-span-5 lg:items-end">
           <div className="grid w-full max-w-md grid-cols-2 gap-3 sm:max-w-lg">
             <div className="glass-surface flex flex-col items-center rounded-2xl border border-white/20 p-4 text-center shadow-lift">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gold-400/25 ring-2 ring-gold-400/60">
@@ -118,7 +118,7 @@ export function HeroSection() {
         </div>
 
         <Stagger
-          className="col-span-full mt-4 grid gap-3 sm:grid-cols-3 lg:mt-8"
+          className="col-span-full mt-2 grid gap-3 sm:grid-cols-3 lg:mt-8"
           delay={0.12}
           stagger={0.08}
         >

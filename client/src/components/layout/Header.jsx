@@ -64,10 +64,14 @@ export function Header() {
         <div className="mx-auto flex min-h-[72px] w-full max-w-none flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
           <div className="flex flex-wrap items-center justify-between gap-3 lg:w-[320px] lg:flex-nowrap">
             <Link href="/" className="group flex items-center">
-              <BrandLogo className="h-12 w-[180px]" priority />
+              <BrandLogo className="h-11 w-[156px] sm:h-12 sm:w-[180px]" priority />
             </Link>
 
-            <CountrySelector label={t("common.country")} selectClassName="max-w-[200px]" />
+            <CountrySelector
+              label={t("common.country")}
+              className="w-full sm:w-auto"
+              selectClassName="w-full max-w-none sm:max-w-[200px]"
+            />
           </div>
 
           <form
@@ -124,16 +128,6 @@ export function Header() {
                 )}
               >
                 FR
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocale("es")}
-                className={cn(
-                  "rounded-full px-3 py-1 transition-colors",
-                  locale === "es" ? "bg-green-800 text-white" : "text-ink-600 hover:text-green-800",
-                )}
-              >
-                ES
               </button>
             </div>
 
