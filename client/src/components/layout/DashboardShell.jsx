@@ -40,6 +40,61 @@ function navBadgeCount(item, data) {
   return typeof value === "number" ? value : null;
 }
 
+function MobileDashboardNav({ heading, navigation, pathname, resolveLabel, dashboardData }) {
+  const currentItem = useMemo(
+    () => navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)),
+    [navigation, pathname],
+  );
+
+  return (
+    <div className="space-y-3 border-b border-ink-200 bg-white px-4 py-3 lg:hidden">
+      <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+        <span>{heading}</span>
+        <span>/</span>
+        <span className="truncate text-green-800">{resolveLabel(currentItem?.id, currentItem?.label) || heading}</span>
+      </div>
+
+      <nav aria-label={`${heading} mobile navigation`} className="-mx-4 overflow-x-auto px-4 pb-1">
+        <div className="flex min-w-max gap-2">
+          {navigation.map((item) => {
+            const { href, label, id, icon: Icon } = item;
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            const text = resolveLabel(id, label);
+            const badge = navBadgeCount(item, dashboardData);
+
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border px-4 py-2 text-[14px] font-semibold whitespace-nowrap transition-colors",
+                  active
+                    ? "border-green-800 bg-green-800 text-white"
+                    : "border-ink-200 bg-ink-50 text-ink-700 hover:border-green-200 hover:bg-green-50 hover:text-green-800",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{text}</span>
+                {badge ? (
+                  <span
+                    className={cn(
+                      "inline-flex min-w-5 justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold",
+                      active ? "bg-white/20 text-white" : "bg-gold-100 text-gold-800",
+                    )}
+                  >
+                    {badge}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
 export function SidebarPanel({ heading, navigation, pathname, resolveLabel, variant = "default", dashboardData, user }) {
   if (variant === "admin") {
     return (
@@ -439,6 +494,15 @@ export function DashboardShell({ heading, navigation, allowedRoles, authRedirect
             variant={isAdminShell ? "admin" : isFarmerShell ? "farmer" : isBuyerShell ? "buyer" : "default"}
             dashboardData={dashboardData}
           />
+          {(isAdminShell || isFarmerShell || isBuyerShell) ? (
+            <MobileDashboardNav
+              heading={heading}
+              navigation={navigation}
+              pathname={pathname}
+              resolveLabel={resolveNavLabel}
+              dashboardData={dashboardData}
+            />
+          ) : null}
           <div className={cn(isAdminShell || isFarmerShell || isBuyerShell ? "space-y-8" : "space-y-6")}>{children}</div>
         </main>
       </div>
