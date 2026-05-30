@@ -13,6 +13,7 @@ import { VerificationBadge } from "../../../../components/farmers/VerificationBa
 import { useListing } from "../../../../hooks/useListings";
 import { useStartConversation } from "../../../../hooks/useMessages";
 import useAuth from "../../../../hooks/useAuth";
+import { useCartStore } from "../../../../store/cartStore";
 
 const UNVERIFIED_WARNING = "This seller account is not yet verified. Please proceed carefully because this profile has not completed National ID verification.";
 
@@ -21,6 +22,7 @@ export default function CropDetailPage({ params }) {
   const { user, isBuyer } = useAuth();
   const { data: listing, isLoading, error } = useListing(params.id);
   const startConversation = useStartConversation();
+  const setListing = useCartStore((state) => state.setListing);
 
   const handleChat = async () => {
     if (!user) {
@@ -50,6 +52,22 @@ export default function CropDetailPage({ params }) {
     }
   };
 
+  const handleAddToCart = () => {
+    if (!user) {
+      toast.error("Please sign in as a buyer to continue to checkout.");
+      router.push("/sign-in");
+      return;
+    }
+
+    if (!isBuyer) {
+      toast.error("Only buyer accounts can checkout from public crop pages.");
+      return;
+    }
+
+    setListing(listing);
+    router.push(`/buyer/checkout?listingId=${listing.id}`);
+  };
+
   if (isLoading) {
     return <Card className="rounded-[16px] p-8 text-center text-ink-500">Loading crop listing...</Card>;
   }
@@ -77,6 +95,9 @@ export default function CropDetailPage({ params }) {
             ) : null}
             <Button type="button" variant="secondary" onClick={handleChat} disabled={startConversation.isPending}>
               <MessageCircle className="h-4 w-4" /> Chat
+            </Button>
+            <Button type="button" variant="outline" onClick={handleAddToCart}>
+              Add to cart
             </Button>
             <Button asChild>
               <Link href={`/request-quote?listingId=${listing.id}`}>Request Quote</Link>

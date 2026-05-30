@@ -7,10 +7,13 @@ const {
   createCheckoutIntent,
   getCheckoutIntent,
   confirmCheckoutIntent,
+  handleFapshiWebhook,
   releasePayment,
   requestWithdrawal
 } = require('./payments.controller');
 const { createPaymentSchema, createCheckoutIntentSchema } = require('./payments.validators');
+
+router.post('/webhooks/fapshi', handleFapshiWebhook);
 
 router.use(authenticate, requireDashboardAccess);
 

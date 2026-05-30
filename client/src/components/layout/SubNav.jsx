@@ -79,6 +79,9 @@ export function SubNav() {
                         <Link href="/international" className="font-semibold text-green-800 hover:underline">
                           {t("subnav.popover.exportLinkProgram")}
                         </Link>
+                        <Link href="/compliance" className="text-ink-700 hover:text-green-800">
+                          ONCC / MINADER compliance
+                        </Link>
                         <Link href="/documentation-info" className="text-ink-700 hover:text-green-800">
                           {t("subnav.popover.exportLinkDocs")}
                         </Link>

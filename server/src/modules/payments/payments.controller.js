@@ -32,6 +32,11 @@ const confirmCheckoutIntent = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Checkout intent confirmed successfully');
 });
 
+const handleFapshiWebhook = asyncHandler(async (req, res) => {
+  const result = await service.handleFapshiWebhook(req.body);
+  sendSuccess(res, result, 'Fapshi webhook processed successfully');
+});
+
 const requestWithdrawal = asyncHandler(async (req, res) => {
   const result = await service.requestWithdrawal(req.user);
   sendSuccess(res, result, 'Withdrawal request checked successfully');
@@ -43,6 +48,7 @@ module.exports = {
   createCheckoutIntent,
   getCheckoutIntent,
   confirmCheckoutIntent,
+  handleFapshiWebhook,
   releasePayment,
   requestWithdrawal
 };

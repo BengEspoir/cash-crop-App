@@ -104,6 +104,12 @@ module.exports = {
   EMAIL_VERIFY_URL: process.env.EMAIL_VERIFY_URL || 'http://localhost:3000/verify-email',
   PASSWORD_RESET_URL: process.env.PASSWORD_RESET_URL || 'http://localhost:3000/reset-password',
 
+  // Fapshi hosted checkout
+  // Add your live credentials here when you are ready to switch from sandbox.
+  FAPSHI_BASE_URL: process.env.FAPSHI_BASE_URL || 'https://sandbox.fapshi.com',
+  FAPSHI_API_USER: process.env.FAPSHI_API_USER || '',
+  FAPSHI_API_KEY: process.env.FAPSHI_API_KEY || '',
+
   // Admin
   ADMIN_ROUTE_SECRET: process.env.ADMIN_ROUTE_SECRET || '',
 

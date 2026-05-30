@@ -24,6 +24,28 @@ const uploadsRoutes = require('./modules/uploads/uploads.routes');
 
 const app = express();
 
+const buildAllowedOrigins = () => {
+  const configured = process.env.CLIENT_URL || 'http://localhost:3000';
+  const origins = new Set([configured, 'http://localhost:3000', 'http://127.0.0.1:3000']);
+
+  try {
+    const parsed = new URL(configured);
+    const { protocol, hostname, port } = parsed;
+    const hostWithoutWww = hostname.replace(/^www\./i, '');
+    const hostWithWww = hostname.startsWith('www.') ? hostname : `www.${hostWithoutWww}`;
+    const formatOrigin = (host) => `${protocol}//${host}${port ? `:${port}` : ''}`;
+
+    origins.add(formatOrigin(hostWithoutWww));
+    origins.add(formatOrigin(hostWithWww));
+  } catch {
+    // Keep the configured origin only if it is not URL-parseable.
+  }
+
+  return origins;
+};
+
+const allowedOrigins = buildAllowedOrigins();
+
 // Railway and similar platforms sit behind a proxy. Trust the first proxy hop
 // in production so rate limiting and client IP detection work correctly.
 app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
@@ -33,7 +55,14 @@ app.use(helmet());
 
 // CORS — allow requests from Next.js frontend
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key']

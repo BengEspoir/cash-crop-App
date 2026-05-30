@@ -26,6 +26,16 @@ export const seoCatalog = {
     description:
       "AgriculNet's export lane pairs international buyers with inspection-ready supply, documentation support, and logistics partners.",
   },
+  compliance: {
+    title: "ONCC and MINADER compliance",
+    description:
+      "See how AgriculNet aligns export-ready crop sourcing with ONCC and MINADER expectations for verified trade.",
+  },
+  about: {
+    title: "Our mission and story",
+    description:
+      "Learn why AgriculNet was built, the team behind it, and how the platform expands trusted crop trade from Cameroon.",
+  },
   requestQuote: {
     title: "Request a quote from AgriculNet suppliers",
     description:

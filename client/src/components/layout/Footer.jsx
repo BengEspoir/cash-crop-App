@@ -35,6 +35,7 @@ export function Footer() {
         items: [
           { labelKey: "footer.exportProgram", href: "/international" },
           { labelKey: "footer.protectedOrders", href: "/buyer-protection" },
+          { label: "Compliance standards", href: "/compliance" },
           { labelKey: "footer.logistics", href: "/logistics-info" },
           { labelKey: "footer.documentation", href: "/documentation-info" },
         ],
@@ -130,7 +131,7 @@ export function Footer() {
               {column.items.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="focus-ring rounded-sm transition-colors duration-200 hover:text-gold-300">
-                    {t(item.labelKey)}
+                    {item.labelKey ? t(item.labelKey) : item.label}
                   </Link>
                 </li>
               ))}
