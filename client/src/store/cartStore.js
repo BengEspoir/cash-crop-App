@@ -33,6 +33,9 @@ export const useCartStore = create(
           notes: "",
           shippingAddress: "",
           billingAddress: "",
+          logisticsRequired: false,
+          destinationRegion: "",
+          destinationCity: "",
         },
       }),
       updateItem: (payload) => set((state) => ({

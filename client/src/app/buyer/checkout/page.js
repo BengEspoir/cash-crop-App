@@ -9,6 +9,7 @@ import useAuth from "@/hooks/useAuth";
 import { useListing } from "@/hooks/useListings";
 import { useOrders, useCreateOrder } from "@/hooks/useOrders";
 import { useCreateCheckoutIntent } from "@/hooks/usePayments";
+import { useEstimateLogistics } from "@/hooks/useLogistics";
 import { useDashboardPreferences, useUpdateDashboardPreferences } from "@/hooks/useDashboardPreferences";
 import { useCartStore } from "@/store/cartStore";
 import { BuyerButton, BuyerEmptyState, BuyerPage, BuyerPanel, BuyerStatusBadge, compactBuyerCurrency } from "@/components/buyer/BuyerDesignSystem";
@@ -16,6 +17,7 @@ import { MediaAvatar } from "@/components/media/Avatar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { VerificationBadge } from "@/components/farmers/VerificationBadge";
+import { regions } from "@/constants/regions";
 
 const PAYMENT_METHODS = [
   {
@@ -39,6 +41,9 @@ const buildInitialState = (cartItem, listing) => ({
   notes: cartItem?.notes || "",
   quantityUnit: listing?.quantityUnit || cartItem?.listing?.quantityUnit || "kg",
   channel: "mtn_momo",
+  logisticsRequired: Boolean(cartItem?.logisticsRequired),
+  destinationRegion: cartItem?.destinationRegion || "",
+  destinationCity: cartItem?.destinationCity || "",
 });
 
 export default function BuyerCheckoutPage() {
@@ -71,8 +76,10 @@ export default function BuyerCheckoutPage() {
     setForm((current) => ({
       ...buildInitialState(cartItem, listing),
       channel: preferredChannel || current.channel || "mtn_momo",
+      destinationRegion: cartItem?.destinationRegion || current.destinationRegion || user?.region || "",
+      destinationCity: cartItem?.destinationCity || current.destinationCity || user?.city || "",
     }));
-  }, [cartItem, listing, preferencesData?.preferences?.buyerCheckoutChannel]);
+  }, [cartItem, listing, preferencesData?.preferences?.buyerCheckoutChannel, user?.city, user?.region]);
 
   const order = useMemo(
     () => orders.find((item) => item.rawId === orderId || item.id === orderId),
@@ -82,7 +89,28 @@ export default function BuyerCheckoutPage() {
   const activeListing = order ? null : (listing || cartItem?.listing);
   const quantity = Number(form.quantity || 0);
   const unitPrice = order ? Number(order.amount || 0) / Math.max(Number(order.quantity?.split(" ")?.[0] || 1), 1) : Number(activeListing?.priceValue || 0);
-  const totalAmount = order ? Number(order.amount || 0) : quantity * unitPrice;
+  const estimatedBaseAmount = order ? Number(order.baseAmount || order.amount || 0) : quantity * unitPrice;
+  const seller = order?.seller || activeListing?.seller || activeListing?.farmer;
+  const originTokens = String(seller?.location || "").split(",").map((part) => part.trim()).filter(Boolean);
+  const originCity = seller?.city || originTokens[0] || "";
+  const originRegion = seller?.region || originTokens[1] || "";
+  const estimateParams = {
+    originRegion,
+    originCity,
+    destinationRegion: form.destinationRegion || user?.region || "",
+    destinationCity: form.destinationCity || user?.city || "",
+  };
+  const { data: logisticsEstimate } = useEstimateLogistics(estimateParams, !order && Boolean(form.logisticsRequired));
+  const logisticsFee = order
+    ? Number(order.logisticsFee || 0)
+    : (form.logisticsRequired ? Number(logisticsEstimate?.fee || 0) : 0);
+  const totalAmount = order ? Number(order.amount || 0) : estimatedBaseAmount + logisticsFee;
+  const platformCommission = order
+    ? Number(order.platformCommission || 0)
+    : quantity * 200;
+  const sellerNetAmount = order
+    ? Number(order.sellerNetAmount || 0)
+    : Math.max(0, estimatedBaseAmount - platformCommission);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -93,7 +121,7 @@ export default function BuyerCheckoutPage() {
   }, [isAuthenticated, isBuyer, router]);
 
   const update = (field) => (event) => {
-    const value = event.target.value;
+    const value = event?.target?.type === "checkbox" ? event.target.checked : event.target.value;
     setForm((current) => ({ ...current, [field]: value }));
     if (!order) {
       updateItem({ [field]: value, quantity: field === "quantity" ? Number(value || 1) : Number(form.quantity || 1) });
@@ -130,11 +158,19 @@ export default function BuyerCheckoutPage() {
       return;
     }
 
+    if (!order && form.logisticsRequired && !form.destinationRegion) {
+      toast.error("Select the destination region for AgriculNet logistics.");
+      return;
+    }
+
     try {
       const liveOrder = order || await createOrder.mutateAsync({
         listingId: activeListing.id,
         quantity,
         quantityUnit: form.quantityUnit || activeListing.quantityUnit || "kg",
+        logisticsRequired: Boolean(form.logisticsRequired),
+        destinationRegion: form.destinationRegion || user?.region || null,
+        destinationCity: form.destinationCity || user?.city || null,
         shippingAddress: form.shippingAddress.trim(),
         billingAddress: form.billingAddress.trim() || null,
         notes: form.notes.trim() || null,
@@ -183,8 +219,6 @@ export default function BuyerCheckoutPage() {
       </BuyerPage>
     );
   }
-
-  const seller = order?.seller || activeListing?.seller || activeListing?.farmer;
 
   return (
     <BuyerPage className="space-y-6">
@@ -243,6 +277,72 @@ export default function BuyerCheckoutPage() {
             ) : null}
 
             <div className="mt-6 grid gap-4">
+              <div className="rounded-2xl border border-ink-200 bg-ink-50 p-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-ink-400">AgriculNet logistics</p>
+                    <h3 className="mt-2 font-display text-[22px] text-ink-950">Tracked truck delivery</h3>
+                    <p className="mt-2 text-[15px] text-ink-500">
+                      Add AgriculNet transport to track the truck from pickup through warehouse arrival.
+                    </p>
+                  </div>
+                  {!order ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !form.logisticsRequired;
+                        setForm((current) => ({ ...current, logisticsRequired: next }));
+                        updateItem({ logisticsRequired: next });
+                      }}
+                      className={`inline-flex h-12 items-center rounded-full px-5 text-[14px] font-semibold transition ${form.logisticsRequired ? "bg-green-800 text-white" : "border border-ink-200 bg-white text-ink-700"}`}
+                    >
+                      {form.logisticsRequired ? "Logistics selected" : "Add logistics"}
+                    </button>
+                  ) : (
+                    <BuyerStatusBadge status={order.logisticsRequired ? "verified" : "pending"}>
+                      {order.logisticsRequired ? "Logistics enabled" : "Buyer pickup"}
+                    </BuyerStatusBadge>
+                  )}
+                </div>
+
+                {(form.logisticsRequired || order?.logisticsRequired) ? (
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <label className="space-y-2">
+                      <span className="text-[13px] font-semibold uppercase tracking-[0.12em] text-ink-400">Destination region</span>
+                      <select
+                        value={form.destinationRegion}
+                        onChange={update("destinationRegion")}
+                        className="h-12 w-full rounded-lg border border-ink-200 bg-white px-4 text-[15px] text-ink-900"
+                        disabled={Boolean(order)}
+                      >
+                        <option value="">Select destination region</option>
+                        {regions.map((region) => (
+                          <option key={region} value={region}>{region}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-[13px] font-semibold uppercase tracking-[0.12em] text-ink-400">Destination city</span>
+                      <Input
+                        value={form.destinationCity}
+                        onChange={update("destinationCity")}
+                        placeholder="Douala, Yaounde, Bafoussam..."
+                        className="h-12"
+                        disabled={Boolean(order)}
+                      />
+                    </label>
+                    <div className="md:col-span-2 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-[14px] text-cyan-900">
+                      <p className="font-semibold">{logisticsEstimate?.matched || order?.logisticsRequired ? "Tracked route available" : "Awaiting route estimate"}</p>
+                      <p className="mt-1">
+                        {order?.logisticsRequired
+                          ? `Lane: ${order.metadata?.originCity || originCity || "Origin"} to ${order.metadata?.destinationCity || form.destinationCity || "Destination"}`
+                          : logisticsEstimate?.message || logisticsEstimate?.lane || "Pick a destination region to estimate AgriculNet logistics."}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
               <label className="space-y-2">
                 <span className="text-[13px] font-semibold uppercase tracking-[0.12em] text-ink-400">Shipping address</span>
                 <Textarea rows={3} value={form.shippingAddress} onChange={update("shippingAddress")} placeholder="Delivery address or receiving warehouse" />
@@ -315,12 +415,28 @@ export default function BuyerCheckoutPage() {
           <BuyerPanel title="Checkout summary">
             <div className="space-y-4 text-[15px] text-ink-600">
               <div className="flex items-center justify-between gap-4">
-                <span>Subtotal</span>
-                <span className="font-semibold text-ink-950">{compactBuyerCurrency(totalAmount)}</span>
+                <span>Goods subtotal</span>
+                <span className="font-semibold text-ink-950">{compactBuyerCurrency(estimatedBaseAmount)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Logistics fee</span>
+                <span className="font-semibold text-ink-950">{compactBuyerCurrency(logisticsFee)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Platform commission</span>
+                <span className="font-semibold text-ink-950">{compactBuyerCurrency(platformCommission)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span>Seller net payout</span>
+                <span className="font-semibold text-ink-950">{compactBuyerCurrency(sellerNetAmount)}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span>Payment channel</span>
                 <span className="font-semibold text-ink-950">{PAYMENT_METHODS.find((item) => item.value === form.channel)?.label || "MTN MoMo"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4 border-t border-ink-100 pt-4">
+                <span className="font-semibold text-ink-900">Buyer total</span>
+                <span className="font-display text-[24px] text-green-900">{compactBuyerCurrency(totalAmount)}</span>
               </div>
               <div className="rounded-2xl border border-gold-200 bg-gold-50 px-4 py-3 text-[14px] text-gold-900">
                 <p className="flex items-start gap-2">

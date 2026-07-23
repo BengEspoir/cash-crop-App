@@ -3,14 +3,17 @@
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
+import { ShipmentTrackerCard } from "@/components/logistics/ShipmentTrackerCard";
 import { OrderCard } from "@/components/orders/OrderCard";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { CheckoutIntentButton } from "@/components/payments/CheckoutIntentButton";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useOrders } from "@/hooks/useOrders";
+import { useShipmentByOrder } from "@/hooks/useLogistics";
 
 export default function BuyerOrderDetailPage({ params }) {
-  const { data, isLoading } = useDashboardData("buyer");
-  const order = (data?.orders || []).find((item) => item.rawId === params.id || item.id === params.id);
+  const { orders, isLoading } = useOrders();
+  const order = (orders || []).find((item) => item.rawId === params.id || item.id === params.id);
+  const { data: shipment } = useShipmentByOrder(order?.rawId);
 
   if (isLoading) {
     return <EmptyState title="Loading live order" description="Fetching order details from the database." />;
@@ -32,6 +35,7 @@ export default function BuyerOrderDetailPage({ params }) {
         />
         <OrderTimeline items={order.timeline || []} />
       </div>
+      <ShipmentTrackerCard shipment={shipment} />
     </section>
   );
 }

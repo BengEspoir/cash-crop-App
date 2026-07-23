@@ -272,12 +272,12 @@ const runDelivery = async (label, task) => {
 };
 
 const sanitizeDeliveryError = (message = '', channel = 'delivery') => {
-  if (/535-5\.7\.8|Username and Password not accepted|Invalid login/i.test(message)) {
-    return 'Gmail rejected the configured SMTP credentials. Update SMTP_PASS to a valid Gmail App Password and restart the server.';
+  if (/resend/i.test(message) && /api key|unauthorized|forbidden|invalid/i.test(message)) {
+    return 'Resend rejected the configured API key or sender identity. Verify RESEND_API_KEY and the AgriculNet sending domain in Resend.';
   }
 
-  if (/No email provider configured/i.test(message)) {
-    return 'No email provider is configured for verification emails.';
+  if (/No Resend API key configured/i.test(message)) {
+    return 'No Resend API key is configured for verification emails.';
   }
 
   if (/No SMS provider configured/i.test(message)) {

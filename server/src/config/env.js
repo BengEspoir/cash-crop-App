@@ -11,8 +11,7 @@ const required = [
 if (isProduction) {
   required.push(
     'SUPABASE_SERVICE_ROLE_KEY',
-    'SMTP_USER',
-    'SMTP_PASS',
+    'RESEND_API_KEY',
     'AT_API_KEY',
     'AT_USERNAME'
   );
@@ -30,6 +29,30 @@ const parseBooleanEnv = (value, defaultValue = false) => {
 
   return !['false', '0', 'no', 'off'].includes(String(value).trim().toLowerCase());
 };
+
+const parseListEnv = (value, defaultValue = '') =>
+  String(value === undefined || value === null ? defaultValue : value)
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+
+const parseBoundedIntegerEnv = (value, defaultValue, min, max) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return defaultValue;
+  return Math.min(max, Math.max(min, parsed));
+};
+
+// Keep the whole provider chain below the client's 50-second request timeout.
+const aiRequestTimeoutMs = parseBoundedIntegerEnv(
+  process.env.AI_REQUEST_TIMEOUT_MS,
+  45 * 1000,
+  5 * 1000,
+  45 * 1000
+);
+const aiProviderTimeoutMs = Math.min(
+  parseBoundedIntegerEnv(process.env.AI_PROVIDER_TIMEOUT_MS, 10 * 1000, 1000, 15 * 1000),
+  aiRequestTimeoutMs
+);
 
 const allowDevDeliveryFallback = !isProduction && parseBooleanEnv(process.env.ALLOW_DEV_DELIVERY_FALLBACK, true);
 const exposeDevAuthHints = !isProduction && parseBooleanEnv(process.env.EXPOSE_DEV_AUTH_HINTS, true);
@@ -59,13 +82,14 @@ module.exports = {
   BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
 
   // Email
-  EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'smtp',
+  EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'resend',
   SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
   SMTP_PORT: parseInt(process.env.SMTP_PORT, 10) || 587,
   SMTP_SECURE: process.env.SMTP_SECURE === 'true',
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
-  EMAIL_FROM: process.env.EMAIL_FROM || 'AgriculNet <no-reply@agriculnet.cm>',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'AgriculNet <inf@agriculnet.farm>',
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
   MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || '',
   MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || '',
@@ -98,6 +122,25 @@ module.exports = {
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
   AUTH_RATE_LIMIT_MAX: parseInt(process.env.AUTH_RATE_LIMIT_MAX, 10) || 10,
+
+  // AI assistant (all provider keys remain optional so the rest of the API can boot)
+  AI_PROVIDER_ORDER: parseListEnv(
+    process.env.AI_PROVIDER_ORDER,
+    'openrouter,groq,gemini,cerebras'
+  ).map(provider => provider.toLowerCase()),
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || '',
+  OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || 'openrouter/free',
+  OPENROUTER_FALLBACK_MODELS: parseListEnv(process.env.OPENROUTER_FALLBACK_MODELS),
+  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
+  GROQ_MODEL: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+  CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY || '',
+  CEREBRAS_MODEL: process.env.CEREBRAS_MODEL || 'gpt-oss-120b',
+  AI_REQUEST_TIMEOUT_MS: aiRequestTimeoutMs,
+  AI_PROVIDER_TIMEOUT_MS: aiProviderTimeoutMs,
+  AI_RATE_LIMIT_WINDOW_MS: parseInt(process.env.AI_RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
+  AI_RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.AI_RATE_LIMIT_MAX_REQUESTS, 10) || 12,
 
   // Client URLs
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',

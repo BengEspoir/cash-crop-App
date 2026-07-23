@@ -21,6 +21,28 @@ copy server\.env.example server\.env
 copy client\.env.local.example client\.env.local
 ```
 
+To enable the AgriculNet AI assistant locally, add at least one server-only provider key to `server/.env`. Configured providers are attempted in order and missing keys are skipped:
+
+```env
+AI_PROVIDER_ORDER=openrouter,groq,gemini,cerebras
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_MODEL=openrouter/free
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-20b
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.1-flash-lite
+CEREBRAS_API_KEY=
+CEREBRAS_MODEL=gpt-oss-120b
+# Total deadline for the complete provider chain (must stay below the client timeout).
+AI_REQUEST_TIMEOUT_MS=45000
+# Maximum time for each provider attempt when multiple providers are configured.
+AI_PROVIDER_TIMEOUT_MS=10000
+AI_RATE_LIMIT_WINDOW_MS=900000
+AI_RATE_LIMIT_MAX_REQUESTS=12
+```
+
+Keep every provider key out of `client/.env.local` and never prefix one with `NEXT_PUBLIC_`. Restart the backend after changing `server/.env`. Free plans are suitable for testing, but availability and quotas can change.
+
 ## Auth-critical database setup
 Run these Supabase migrations in order:
 - `001_enums_and_extensions.sql`
@@ -45,9 +67,11 @@ node verify-db-init.js
 ```
 
 ## Start the app
-```bash
-cd server && cmd /c npm start
-cd ../client && cmd /c npm start
+Run these from the repository root in two separate terminals:
+
+```powershell
+npm run dev:server
+npm run dev:client
 ```
 
 ## Local URLs

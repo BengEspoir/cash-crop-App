@@ -24,6 +24,26 @@ Backend notes:
 - `SUPABASE_URL` and `SUPABASE_ANON_KEY` must be valid.
 - `SUPABASE_SERVICE_ROLE_KEY` is strongly recommended for all backend writes.
 - `ADMIN_ROUTE_SECRET` must match `NEXT_PUBLIC_ADMIN_KEY`.
+- The AI assistant reads provider credentials only from `server/.env`. Add one or more keys; providers without keys are skipped:
+  ```env
+  AI_PROVIDER_ORDER=openrouter,groq,gemini,cerebras
+  OPENROUTER_API_KEY=your-openrouter-api-key
+  OPENROUTER_MODEL=openrouter/free
+  GROQ_API_KEY=
+  GROQ_MODEL=openai/gpt-oss-20b
+  GEMINI_API_KEY=
+  GEMINI_MODEL=gemini-3.1-flash-lite
+  CEREBRAS_API_KEY=
+  CEREBRAS_MODEL=gpt-oss-120b
+  # Total deadline for the complete provider chain.
+  AI_REQUEST_TIMEOUT_MS=45000
+  # Per-provider limit when multiple providers are configured.
+  AI_PROVIDER_TIMEOUT_MS=10000
+  AI_RATE_LIMIT_WINDOW_MS=900000
+  AI_RATE_LIMIT_MAX_REQUESTS=12
+  ```
+- Never copy an AI provider key into a client environment file or expose it through a `NEXT_PUBLIC_` variable. Restart the backend after editing `server/.env`.
+- OpenRouter, Groq, Gemini, and Cerebras free plans are intended for testing; their availability and quotas can change. If every key is omitted, the rest of the application still starts, but AI chat is unavailable.
 - Development fallback is controlled by:
   - `ALLOW_DEV_DELIVERY_FALLBACK=true`
   - `EXPOSE_DEV_AUTH_HINTS=true`
@@ -57,12 +77,11 @@ node verify-db-init.js
 The verifier checks the real auth tables (`users`, `farmer_profiles`, `buyer_profiles`, `tokens`, `otps`, `audit_logs`, `activity_events`) plus the identity-review fields added by migrations `022` through `025`.
 
 ## 5. Start local servers
-```bash
-cd server
-cmd /c npm start
+Run these from the repository root in two separate terminals:
 
-cd ../client
-cmd /c npm start
+```powershell
+npm run dev:server
+npm run dev:client
 ```
 
 ## 6. Local URLs
@@ -91,5 +110,6 @@ Typical local flow:
 ## 9. Troubleshooting
 - If buyer registration fails on `countryCode`, the backend and frontend builds are out of sync.
 - If auth writes fail, verify `SUPABASE_SERVICE_ROLE_KEY`.
+- If AI chat is unavailable, confirm the backend is running, at least one key is present in `server/.env`, and `AI_PROVIDER_ORDER` includes that provider. Restart the backend, inspect the sanitized provider-attempt entries in `server/logs/combined.log`, check provider quotas, and verify outbound HTTPS/DNS access.
 - If `verify-db-init.js` reports missing columns, apply `022_profile_extensions.sql`, `023_auto_approval_setup.sql`, `024_enhanced_verification.sql`, and `025_activity_events.sql`.
 - Check `server/logs/error.log` for backend runtime failures.

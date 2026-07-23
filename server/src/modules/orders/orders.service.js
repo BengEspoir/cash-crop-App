@@ -9,8 +9,10 @@ const {
   mapOrder,
   mapUserName
 } = require('../../utils/marketplace');
+const logisticsRepository = require('../logistics/logistics.repository');
 
 const isNotFound = (error) => error?.code === 'PGRST116';
+const COMMISSION_PER_KG_XAF = 200;
 
 const getProfileByUser = async (table, userId) => {
   const { data, error } = await supabaseAdmin.from(table).select('*').eq('user_id', userId).single();
@@ -135,6 +137,31 @@ const hydrateOrders = async (orders) => {
 
 const generateOrderNumber = () => `ORD-${Date.now().toString(36).toUpperCase()}`;
 
+const normalizeText = (value) => {
+  const text = String(value || '').trim();
+  return text || null;
+};
+
+const calculatePlatformCommission = (quantity, quantityUnit = 'kg') => {
+  const normalizedUnit = String(quantityUnit || 'kg').toLowerCase();
+  const numericQuantity = Number(quantity || 0);
+  if (!Number.isFinite(numericQuantity) || numericQuantity <= 0) return 0;
+  return normalizedUnit === 'kg' ? numericQuantity * COMMISSION_PER_KG_XAF : numericQuantity * COMMISSION_PER_KG_XAF;
+};
+
+const estimateLogisticsFee = async ({ originRegion, originCity, destinationRegion, destinationCity }) => {
+  if (!originRegion || !destinationRegion) {
+    return null;
+  }
+
+  return logisticsRepository.findLogisticsRate({
+    originRegion,
+    originCity: originCity || null,
+    destinationRegion,
+    destinationCity: destinationCity || null
+  });
+};
+
 const listOrders = async (user) => {
   let query = supabaseAdmin.from('orders').select('*').order('created_at', { ascending: false });
 
@@ -188,9 +215,37 @@ const createOrder = async (user, payload) => {
   }
 
   const sellerProfile = resellerProfile || farmerProfile;
-  await ensureFarmerCanReceiveCommerce(sellerProfile);
+  const sellerUser = await ensureFarmerCanReceiveCommerce(sellerProfile);
 
-  const totalAmount = Number(payload.quantity) * Number(unitPrice || 0);
+  const goodsSubtotal = Number(payload.quantity) * Number(unitPrice || 0);
+  const platformCommission = calculatePlatformCommission(payload.quantity, payload.quantityUnit || listing.quantity_unit || 'kg');
+  const destinationRegion = normalizeText(payload.destinationRegion) || buyerProfile.region || null;
+  const destinationCity = normalizeText(payload.destinationCity) || buyerProfile.city || null;
+  const originRegion = sellerUser?.region || null;
+  const originCity = sellerUser?.city || null;
+
+  let logisticsFee = 0;
+  if (payload.logisticsRequired) {
+    const matchedRate = await estimateLogisticsFee({
+      originRegion,
+      originCity,
+      destinationRegion,
+      destinationCity
+    });
+
+    if (!matchedRate) {
+      throw new AppError(
+        'No AgriculNet logistics rate is configured for this route yet.',
+        400,
+        ERROR_CODES.VALIDATION_ERROR
+      );
+    }
+
+    logisticsFee = Number(matchedRate.fee_amount || 0);
+  }
+
+  const sellerNetAmount = Math.max(0, goodsSubtotal - platformCommission);
+  const totalAmount = goodsSubtotal + logisticsFee;
   const { data, error } = await supabaseAdmin
     .from('orders')
     .insert({
@@ -202,12 +257,27 @@ const createOrder = async (user, payload) => {
       quantity: payload.quantity,
       quantity_unit: payload.quantityUnit || listing.quantity_unit || 'kg',
       unit_price: unitPrice,
+      base_amount: goodsSubtotal,
       total_amount: totalAmount,
+      logistics_required: Boolean(payload.logisticsRequired),
+      logistics_fee: logisticsFee,
+      platform_commission: platformCommission,
+      seller_net_amount: sellerNetAmount,
       currency: listing.currency || 'XAF',
       status: 'pending_payment',
       shipping_address: payload.shippingAddress || null,
       billing_address: payload.billingAddress || null,
       notes: payload.notes || null,
+      metadata: {
+        originRegion,
+        originCity,
+        destinationRegion,
+        destinationCity,
+        goodsSubtotal,
+        logisticsFee,
+        platformCommission,
+        sellerNetAmount
+      },
       timeline: [{ event: 'Order created', status: 'pending_payment', date: new Date().toISOString() }]
     })
     .select()

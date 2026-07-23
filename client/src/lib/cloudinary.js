@@ -11,7 +11,7 @@ export const hasCloudinary = Boolean(CLOUD_NAME);
 export function buildCldUrl(publicId, options = {}) {
   if (!publicId) return "";
 
-  if (/^https?:\/\//.test(publicId)) {
+  if (/^https?:\/\//.test(publicId) || publicId.startsWith("/")) {
     return publicId;
   }
 

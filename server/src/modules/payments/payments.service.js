@@ -10,6 +10,7 @@ const {
   FAPSHI_API_KEY
 } = require('../../config/env');
 const ordersService = require('../orders/orders.service');
+const logisticsService = require('../logistics/logistics.service');
 
 const isNotFound = (error) => error?.code === 'PGRST116';
 const FAPSHI_PROVIDER = 'fapshi';
@@ -155,6 +156,34 @@ const updateOrderStatusIfNeeded = async (order, nextStatus) => {
   return data;
 };
 
+const ensureCommissionRecorded = async (order) => {
+  if (!Number(order.platform_commission || 0)) {
+    return null;
+  }
+
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('commissions')
+    .select('*')
+    .eq('order_id', order.id)
+    .limit(1)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return existing;
+
+  const { data, error } = await supabaseAdmin
+    .from('commissions')
+    .insert({
+      order_id: order.id,
+      amount: Number(order.platform_commission || 0),
+      percentage: 0,
+      status: 'collected'
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
 const persistProviderResult = async (payment, order, providerPayload, source = 'provider') => {
   const providerStatus = readProviderStatus(providerPayload);
   const nextPaymentStatus = mapProviderStatusToPaymentStatus(providerStatus);
@@ -188,6 +217,10 @@ const persistProviderResult = async (payment, order, providerPayload, source = '
   if (error) throw error;
 
   const updatedOrder = await updateOrderStatusIfNeeded(order, nextOrderStatus);
+  if (providerStatus === 'SUCCESSFUL') {
+    await ensureCommissionRecorded(updatedOrder);
+    await logisticsService.ensureShipmentForPaidOrder(updatedOrder);
+  }
   return { payment: data, order: updatedOrder };
 };
 
@@ -279,6 +312,12 @@ const createPayment = async (user, payload) => {
       metadata: {
         provider: payload.provider || 'internal_ledger',
         mode: payload.provider === FAPSHI_PROVIDER ? 'hosted_checkout' : 'internal_ledger',
+        amountBreakdown: {
+          baseAmount: Number(order.base_amount || order.total_amount || 0),
+          logisticsFee: Number(order.logistics_fee || 0),
+          platformCommission: Number(order.platform_commission || 0),
+          sellerNetAmount: Number(order.seller_net_amount || 0)
+        },
         note: payload.provider === FAPSHI_PROVIDER
           ? 'Hosted Fapshi checkout initiated for this payment.'
           : 'No live payment provider was charged for this record.'
@@ -297,6 +336,10 @@ const mapCheckoutIntent = (payment, order = null) => ({
   orderNumber: order?.order_number || null,
   amount: Number(payment.amount || 0),
   amountLabel: mapPayment(payment).amountLabel,
+  baseAmount: Number(order?.base_amount || payment.metadata?.amountBreakdown?.baseAmount || payment.amount || 0),
+  logisticsFee: Number(order?.logistics_fee || payment.metadata?.amountBreakdown?.logisticsFee || 0),
+  platformCommission: Number(order?.platform_commission || payment.metadata?.amountBreakdown?.platformCommission || 0),
+  sellerNetAmount: Number(order?.seller_net_amount || payment.metadata?.amountBreakdown?.sellerNetAmount || 0),
   currency: payment.currency || 'XAF',
   provider: payment.metadata?.provider || 'internal_ledger',
   providerReference: payment.transaction_ref || payment.metadata?.providerReference || null,
@@ -320,7 +363,11 @@ const createCheckoutIntent = async (user, payload) => {
   const order = await ordersService.getOrderRowForAccess(user, payload.orderId);
   const [existing] = await getPaymentsByOrder(order.id, user.id);
   if (existing && !TERMINAL_PAYMENT_STATUSES.has(existing.status)) {
-    return mapCheckoutIntent(existing, order);
+    let existingIntent = existing;
+    if ((payload.provider || FAPSHI_PROVIDER) === FAPSHI_PROVIDER && isFapshiConfigured() && !existing.metadata?.checkoutUrl) {
+      existingIntent = await initiateFapshiCheckout(existing, order, user);
+    }
+    return mapCheckoutIntent(existingIntent, order);
   }
 
   const payment = existing
@@ -456,7 +503,14 @@ const releasePayment = async (user, paymentId) => {
 
   const { data, error: updateError } = await supabaseAdmin
     .from('payments')
-    .update({ status: 'released', released_at: new Date().toISOString() })
+    .update({
+      status: 'released',
+      released_at: new Date().toISOString(),
+      metadata: {
+        ...(payment.metadata || {}),
+        payoutReleasedAmount: Number(order.seller_net_amount || 0)
+      }
+    })
     .eq('id', paymentId)
     .select()
     .single();

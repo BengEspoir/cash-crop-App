@@ -11,15 +11,14 @@ try {
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     console.error(`FAIL ${url} status=${res.status}`, json);
-    process.exit(1);
-  }
-  if (!json.success) {
+    process.exitCode = 1;
+  } else if (!json.success) {
     console.error(`FAIL ${url} unexpected body`, json);
-    process.exit(1);
+    process.exitCode = 1;
+  } else {
+    console.log(`OK ${url}`, json.message || "");
   }
-  console.log(`OK ${url}`, json.message || "");
-  process.exit(0);
 } catch (e) {
   console.error(`FAIL ${url}`, e.message);
-  process.exit(1);
+  process.exitCode = 1;
 }

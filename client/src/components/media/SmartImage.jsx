@@ -8,7 +8,7 @@ import { buildCldUrl, hasCloudinary } from "../../lib/cloudinary";
 /**
  * Project-wide image wrapper.
  *
- * - If `src` starts with "http", it is used as-is (e.g. Unsplash curated URL).
+ * - Absolute web URLs and root-relative `/public` paths are used as-is.
  * - Otherwise, if Cloudinary is configured, `src` is treated as a Cloudinary
  *   publicId and a delivery URL is built with transformations.
  * - If no `src` is available, a branded gradient fallback is rendered so the
@@ -36,7 +36,7 @@ export function SmartImage({
 
   const computedSrc = (() => {
     if (!src) return null;
-    if (/^https?:\/\//.test(src)) return src;
+    if (/^https?:\/\//.test(src) || src.startsWith("/")) return src;
     if (hasCloudinary) return buildCldUrl(src, transformOptions);
     return null;
   })();

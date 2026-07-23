@@ -5,9 +5,9 @@
  * commercial-use license). Once a Cloudinary account is connected, upload these
  * assets into Cloudinary and replace the `src` with a Cloudinary publicId.
  *
- * The <SmartImage /> component treats any value that starts with "http" as a
- * direct URL and anything else as a Cloudinary public id. This lets us swap
- * delivery without touching consumer code.
+ * The <SmartImage /> component treats web URLs and root-relative `/public`
+ * paths as direct sources, and other values as Cloudinary public ids. This lets
+ * us swap delivery without touching consumer code.
  */
 
 // Unsplash URL helper. Applies `auto=format` + quality so the browser gets
@@ -127,29 +127,12 @@ export const LOGO_TRANSPARENT_SRC = "/images/agriculnet_logo-transparent.png";
 export const cropImageByKeyword = {
   cocoa: "/images/cocoa.jpg",
   coffee: "/images/coffee.jpg",
-  cassava: "/images/cassava.jpg",
-  plantain: "/images/plantain.jpg",
   banana: "/images/banana.jpg",
-  pepper: "/images/pepper.jpg",
-  penja: "/images/pepper.jpg",
-  maize: "/images/maize.jpg",
-  corn: "/images/maize.jpg",
-  rice: "/images/rice.jpg",
-  palm: "/images/palm.jpg",
-  tomato: "/images/tomato.jpg",
-  onion: "/images/onion.jpg",
-  bean: "/images/beans.jpg",
-  beans: "/images/beans.jpg",
-  groundnut: "/images/groundnut.jpg",
-  peanut: "/images/groundnut.jpg",
-  potato: "/images/potato.jpg",
-  yam: "/images/yam.jpg",
-  ginger: "/images/ginger.jpg",
-  avocado: "/images/avocado.jpg",
-  pineapple: "/images/pineapple.jpg",
-  mango: "/images/mango.jpg",
-  citrus: "/images/citrus.jpg",
-  orange: "/images/citrus.jpg",
+  maize: "/images/Maize.jpg",
+  corn: "/images/Maize.jpg",
+  rice: "/images/Rice plantation.jpg",
+  palm: "/images/palm nut.jpg",
+  pineapple: "/images/pimeaple plantation.jpg",
 };
 
 export function normalizeCropToken(name) {

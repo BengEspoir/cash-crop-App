@@ -6,6 +6,9 @@ const createOrderSchema = Joi.object({
   quantity: Joi.number().positive().required(),
   quantityUnit: Joi.string().max(20).default('kg'),
   unitPrice: Joi.number().min(0).optional(),
+  logisticsRequired: Joi.boolean().default(false),
+  destinationRegion: Joi.string().max(100).allow('', null).optional(),
+  destinationCity: Joi.string().max(120).allow('', null).optional(),
   shippingAddress: Joi.string().max(1000).allow('', null).optional(),
   billingAddress: Joi.string().max(1000).allow('', null).optional(),
   notes: Joi.string().max(2000).allow('', null).optional()

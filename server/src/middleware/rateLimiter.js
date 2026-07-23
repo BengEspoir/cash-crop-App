@@ -42,9 +42,20 @@ const passwordResetLimiter = rateLimit({
   }
 });
 
+const aiChatLimiter = rateLimit({
+  windowMs: env.AI_RATE_LIMIT_WINDOW_MS,
+  max: env.AI_RATE_LIMIT_MAX_REQUESTS,
+  message: {
+    success: false,
+    message: 'Too many AI assistant requests, please try again later',
+    error: { code: 'AI_RATE_LIMITED' }
+  }
+});
+
 module.exports = {
   generalLimiter,
   authLimiter,
   otpSendLimiter,
-  passwordResetLimiter
+  passwordResetLimiter,
+  aiChatLimiter
 };

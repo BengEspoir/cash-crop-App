@@ -18,7 +18,7 @@ export default function AdminLogisticsPage() {
   const filterState = useDashboardFilters("logistics");
   const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const logistics = data?.logistics || [];
-  const active = logistics.filter((item) => ["active", "in_transit", "in-transit"].includes(String(item.status || "").toLowerCase())).length;
+  const active = logistics.filter((item) => ["active", "assigned", "in_transit", "in-transit", "near_destination"].includes(String(item.status || "").toLowerCase())).length;
 
   return (
     <section className="space-y-8">
@@ -54,10 +54,12 @@ export default function AdminLogisticsPage() {
             filterOptions={[
               { key: "status", label: "Status", options: [
                 { value: "all", label: "Status: All" },
-                { value: "active", label: "Active" },
-                { value: "transit", label: "In transit" },
+                { value: "pending_dispatch", label: "Pending dispatch" },
+                { value: "assigned", label: "Assigned" },
+                { value: "in_transit", label: "In transit" },
+                { value: "near_destination", label: "Near destination" },
                 { value: "delivered", label: "Delivered" },
-                { value: "delayed", label: "Delayed" },
+                { value: "exception", label: "Exception" },
               ] },
               { key: "sort", label: "Sort", options: [
                 { value: "newest", label: "Newest" },

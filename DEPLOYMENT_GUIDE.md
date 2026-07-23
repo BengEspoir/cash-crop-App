@@ -61,6 +61,7 @@ NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=agriculnet_unsigned
 6. Add environment variables from `server/.env.example`.
 7. Set `NODE_ENV=production`.
 8. Set `CLIENT_URL`, `EMAIL_VERIFY_URL`, and `PASSWORD_RESET_URL` to the Vercel frontend domain.
+9. Add at least one AI provider key and the runtime variables shown in Section 7 to the Render service environment.
 
 Production URL examples:
 ```env
@@ -73,7 +74,7 @@ PASSWORD_RESET_URL=https://your-vercel-app.vercel.app/reset-password
 
 1. Create a Railway project from the GitHub repository.
 2. Select the `server` folder as the service root if prompted.
-3. Configure the same environment variables used for Render.
+3. Configure the same environment variables used for Render, including the AI provider and runtime variables in Section 7.
 4. Use `npm install` as the install/build step and `npm start` as the start command.
 5. Watch credit limits carefully; Railway is convenient but not always permanently free.
 
@@ -88,6 +89,29 @@ Required backend groups:
 - SMS: Africa's Talking or Twilio credentials
 - Client URLs: `CLIENT_URL`, `EMAIL_VERIFY_URL`, `PASSWORD_RESET_URL`
 - Admin route: set a strong `ADMIN_ROUTE_SECRET`
+- AI assistant: at least one provider key plus the runtime settings below
+
+Set these values only on the backend service in Render or Railway:
+
+```env
+AI_PROVIDER_ORDER=openrouter,groq,gemini,cerebras
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_MODEL=openrouter/free
+GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-20b
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.1-flash-lite
+CEREBRAS_API_KEY=
+CEREBRAS_MODEL=gpt-oss-120b
+# Total deadline for the complete provider chain.
+AI_REQUEST_TIMEOUT_MS=45000
+# Per-provider limit when multiple providers are configured.
+AI_PROVIDER_TIMEOUT_MS=10000
+AI_RATE_LIMIT_WINDOW_MS=900000
+AI_RATE_LIMIT_MAX_REQUESTS=12
+```
+
+Never add provider keys to Vercel frontend variables, client environment files, or any `NEXT_PUBLIC_` variable. Providers without keys are skipped. Free availability and quotas can change, so configure at least two independent providers for a more reliable deployed assistant.
 
 Required frontend groups:
 - API URL: `NEXT_PUBLIC_API_URL`
@@ -141,5 +165,6 @@ Use this only for temporary VPS/manual hosting. Managed GitHub deployments are s
 - SMS verification works with live provider credentials and sufficient balance.
 - `AT_SENDER_ID` is blank unless the sender ID is approved.
 - Cloudinary upload preset is configured if image uploads are enabled.
+- At least one AI provider key is configured only on the backend host, `AI_PROVIDER_ORDER` includes it, and the deployed chat endpoint responds successfully.
 - Frontend build passes.
 - Backend starts successfully on the hosting platform.
