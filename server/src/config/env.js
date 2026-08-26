@@ -1,20 +1,26 @@
 require('dotenv').config({ quiet: true });
 
 const isProduction = process.env.NODE_ENV === 'production';
+const smsPrimaryProvider = String(process.env.SMS_PRIMARY_PROVIDER || 'africastalking').trim().toLowerCase();
 const required = [
   'SUPABASE_URL',
-  'SUPABASE_ANON_KEY',
-  'JWT_ACCESS_SECRET',
-  'JWT_REFRESH_SECRET'
+  'SUPABASE_ANON_KEY'
 ];
 
 if (isProduction) {
   required.push(
     'SUPABASE_SERVICE_ROLE_KEY',
     'RESEND_API_KEY',
-    'AT_API_KEY',
-    'AT_USERNAME'
+    'FAPSHI_API_USER',
+    'FAPSHI_API_KEY',
+    'FAPSHI_WEBHOOK_SECRET'
   );
+
+  if (smsPrimaryProvider === 'twilio') {
+    required.push('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN');
+  } else {
+    required.push('AT_API_KEY', 'AT_USERNAME');
+  }
 }
 
 const missing = required.filter(key => !process.env[key]);
@@ -35,6 +41,34 @@ const parseListEnv = (value, defaultValue = '') =>
     .split(',')
     .map(item => item.trim())
     .filter(Boolean);
+
+const normalizeTestPhone = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
+};
+
+const parseSmsTestOtp = (value) => {
+  if (!value) return {};
+
+  let entries;
+  try {
+    entries = Object.entries(JSON.parse(value));
+  } catch {
+    entries = String(value)
+      .split(',')
+      .map(entry => entry.split('='))
+      .filter(parts => parts.length === 2);
+  }
+
+  return Object.fromEntries(entries
+    .map(([phone, otp]) => [normalizeTestPhone(phone), String(otp || '').trim()])
+    .filter(([phone, otp]) => phone && /^\d{6}$/.test(otp)));
+};
+
+const parseFixedOtp = (value) => {
+  const otp = String(value || '').trim();
+  return /^d{6}$/.test(otp) ? otp : '';
+};
 
 const parseBoundedIntegerEnv = (value, defaultValue, min, max) => {
   const parsed = Number.parseInt(value, 10);
@@ -59,6 +93,11 @@ const exposeDevAuthHints = !isProduction && parseBooleanEnv(process.env.EXPOSE_D
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   (!isProduction ? process.env.SUPABASE_ANON_KEY : undefined);
+
+if (isProduction && smsPrimaryProvider === 'twilio' &&
+    !process.env.TWILIO_MESSAGING_SERVICE_SID && !process.env.TWILIO_PHONE_NUMBER) {
+  throw new Error('Twilio requires TWILIO_MESSAGING_SERVICE_SID or TWILIO_PHONE_NUMBER');
+}
 
 module.exports = {
   // Server
@@ -95,7 +134,7 @@ module.exports = {
   MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || '',
 
   // SMS
-  SMS_PRIMARY_PROVIDER: process.env.SMS_PRIMARY_PROVIDER || 'africastalking',
+  SMS_PRIMARY_PROVIDER: smsPrimaryProvider,
   AT_API_KEY: process.env.AT_API_KEY || '',
   AT_USERNAME: process.env.AT_USERNAME || '',
   AT_SENDER_ID: process.env.AT_SENDER_ID === undefined ? '' : process.env.AT_SENDER_ID.trim(),
@@ -103,6 +142,9 @@ module.exports = {
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
   TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '',
+  TWILIO_MESSAGING_SERVICE_SID: process.env.TWILIO_MESSAGING_SERVICE_SID || '',
+  SMS_TEST_OTP: !isProduction ? parseSmsTestOtp(process.env.SMS_TEST_OTP) : {},
+  SMS_DEV_FIXED_OTP: !isProduction ? parseFixedOtp(process.env.SMS_DEV_FIXED_OTP) : '',
 
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
@@ -147,14 +189,21 @@ module.exports = {
   EMAIL_VERIFY_URL: process.env.EMAIL_VERIFY_URL || 'http://localhost:3000/verify-email',
   PASSWORD_RESET_URL: process.env.PASSWORD_RESET_URL || 'http://localhost:3000/reset-password',
 
-  // Fapshi hosted checkout
-  // Add your live credentials here when you are ready to switch from sandbox.
-  FAPSHI_BASE_URL: process.env.FAPSHI_BASE_URL || 'https://sandbox.fapshi.com',
+  // Fapshi hosted checkout. Sandbox is the safe default; live requires an
+  // explicit FAPSHI_MODE=live switch.
+  FAPSHI_MODE: process.env.FAPSHI_MODE === 'live' ? 'live' : 'sandbox',
+  FAPSHI_BASE_URL: process.env.FAPSHI_BASE_URL || (process.env.FAPSHI_MODE === 'live'
+    ? 'https://live.fapshi.com'
+    : 'https://sandbox.fapshi.com'),
   FAPSHI_API_USER: process.env.FAPSHI_API_USER || '',
   FAPSHI_API_KEY: process.env.FAPSHI_API_KEY || '',
-
-  // Admin
-  ADMIN_ROUTE_SECRET: process.env.ADMIN_ROUTE_SECRET || '',
+  FAPSHI_WEBHOOK_SECRET: process.env.FAPSHI_WEBHOOK_SECRET || '',
+  FAPSHI_REQUEST_TIMEOUT_MS: parseBoundedIntegerEnv(
+    process.env.FAPSHI_REQUEST_TIMEOUT_MS,
+    10 * 1000,
+    1000,
+    30 * 1000
+  ),
 
   // Development helpers
   ALLOW_DEV_DELIVERY_FALLBACK: allowDevDeliveryFallback,

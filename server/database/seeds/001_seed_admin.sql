@@ -1,52 +1,70 @@
--- AgriculNet — Seed default super admin account
--- Password: set a private admin password and paste its bcrypt hash below.
--- Generate a hash with your preferred bcrypt tooling before running this seed.
--- Run AFTER running all migration files
+-- AgriculNet optional administrator seed.
+--
+-- This tracked file intentionally contains no administrator identifier, password,
+-- phone number, reusable password hash, or route key.
+--
+-- Before executing the DO block, prepend private session settings in the SAME
+-- explicit transaction in your SQL editor. Use values generated outside the
+-- repository and do not save the resulting query:
+--
+-- BEGIN;
+-- SELECT set_config('agriculnet.seed_admin_email', '<private-admin-email>', true);
+-- SELECT set_config('agriculnet.seed_admin_password_hash', '<private-bcrypt-hash>', true);
+-- [paste or execute the DO block below]
+-- COMMIT;
+--
+-- Running this file without both settings fails safely.
 
--- Update admin password if exists
-UPDATE users 
-SET 
-  password_hash = 'replace-with-bcrypt-hash',
-  phone = '683077263',
-  status = 'active',
-  phone_verified = TRUE,
-  email_verified = TRUE
-WHERE email = 'mbengespoir@gmail.com';
+DO $seed_admin$
+DECLARE
+  v_admin_email TEXT := NULLIF(
+    BTRIM(current_setting('agriculnet.seed_admin_email', TRUE)),
+    ''
+  );
+  v_admin_password_hash TEXT := NULLIF(
+    current_setting('agriculnet.seed_admin_password_hash', TRUE),
+    ''
+  );
+BEGIN
+  IF v_admin_email IS NULL OR POSITION('@' IN v_admin_email) < 2 THEN
+    RAISE EXCEPTION 'A private administrator email must be supplied through the session setting.';
+  END IF;
 
--- Or if the user doesn't exist, insert fresh:
-INSERT INTO users (
-  id, 
-  role, 
-  status, 
-  first_name, 
-  last_name, 
-  phone, 
-  email, 
-  password_hash, 
-  phone_verified, 
-  email_verified, 
-  country,
-  region,
-  city
-) VALUES (
-  uuid_generate_v4(),
-  'super_admin',
-  'active',
-  'Espoir',
-  'Mbeng',
-  '683077263',
-  'mbengespoir@gmail.com',
-  'replace-with-bcrypt-hash',
-  TRUE,
-  TRUE,
-  'Cameroon',
-  'Littoral',
-  'Douala'
-) ON CONFLICT (email) DO UPDATE SET 
-  password_hash = EXCLUDED.password_hash,
-  phone = EXCLUDED.phone,
-  status = EXCLUDED.status,
-  phone_verified = EXCLUDED.phone_verified,
-  email_verified = EXCLUDED.email_verified;
+  IF v_admin_password_hash IS NULL
+    OR LENGTH(v_admin_password_hash) < 50
+    OR LEFT(v_admin_password_hash, 2) <> '$2'
+  THEN
+    RAISE EXCEPTION 'A privately generated bcrypt password hash must be supplied through the session setting.';
+  END IF;
 
--- NOTE: Never commit a real production admin password or reusable admin hash.
+  INSERT INTO users (
+    id,
+    role,
+    status,
+    first_name,
+    last_name,
+    email,
+    password_hash,
+    phone_verified,
+    email_verified,
+    country
+  ) VALUES (
+    uuid_generate_v4(),
+    'super_admin',
+    'active',
+    'Platform',
+    'Administrator',
+    LOWER(v_admin_email),
+    v_admin_password_hash,
+    FALSE,
+    TRUE,
+    'Cameroon'
+  )
+  ON CONFLICT (email) DO UPDATE SET
+    role = EXCLUDED.role,
+    status = EXCLUDED.status,
+    password_hash = EXCLUDED.password_hash,
+    email_verified = TRUE,
+    updated_at = NOW();
+END;
+$seed_admin$;

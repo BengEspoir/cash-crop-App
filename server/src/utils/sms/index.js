@@ -6,6 +6,15 @@
 const env = require('../../config/env');
 const { countries } = require('../countries');
 
+const normalizePhoneKey = (value) => {
+  const digits = String(value || '').replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
+};
+
+const getTestOtp = (phoneNumber) => (
+  env.SMS_TEST_OTP?.[normalizePhoneKey(phoneNumber)] || env.SMS_DEV_FIXED_OTP || null
+);
+
 const getAfricasTalkingUsername = () => (
   env.AT_SANDBOX ? 'sandbox' : env.AT_USERNAME
 );
@@ -78,10 +87,18 @@ const sendTwilio = async (phoneNumber, message) => {
   
   const client = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
   
+  const sender = env.TWILIO_MESSAGING_SERVICE_SID
+    ? { messagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID }
+    : { from: env.TWILIO_PHONE_NUMBER };
+
+  if (!sender.messagingServiceSid && !sender.from) {
+    throw new Error('Twilio sender is not configured');
+  }
+
   const response = await client.messages.create({
     body: message,
-    from: env.TWILIO_PHONE_NUMBER,
-    to: phoneNumber
+    to: phoneNumber,
+    ...sender
   });
 
   return {
@@ -95,6 +112,10 @@ const sendTwilio = async (phoneNumber, message) => {
 
 // Select provider based on country
 const selectProvider = (phoneNumber) => {
+  if (env.SMS_PRIMARY_PROVIDER === 'twilio') {
+    return 'twilio';
+  }
+
   if (!phoneNumber.startsWith('+')) {
     return env.SMS_PRIMARY_PROVIDER || 'africastalking';
   }
@@ -119,8 +140,21 @@ const selectProvider = (phoneNumber) => {
 // Main send function
 const sendSms = async (phoneNumber, message, options = {}) => {
   const devHints = env.EXPOSE_DEV_AUTH_HINTS
-    ? { phoneNumber, message }
+    ? {
+        phoneNumber,
+        message,
+        ...(options.otpCode ? { otpCode: options.otpCode } : {})
+      }
     : null;
+
+  if (getTestOtp(phoneNumber)) {
+    return {
+      success: true,
+      delivered: false,
+      provider: 'test-phone',
+      devHints
+    };
+  }
 
   // Development fallback
   if (!env.AT_API_KEY && !env.TWILIO_ACCOUNT_SID) {
@@ -162,7 +196,7 @@ const sendSms = async (phoneNumber, message, options = {}) => {
     };
   } catch (error) {
     // Try fallback if primary fails
-    if (options.provider !== 'twilio' && env.TWILIO_ACCOUNT_SID) {
+    if (provider !== 'twilio' && env.TWILIO_ACCOUNT_SID) {
       try {
         const fallback = await sendTwilio(phoneNumber, message);
         return {
@@ -193,11 +227,12 @@ const sendSms = async (phoneNumber, message, options = {}) => {
 // Send OTP specifically
 const sendOtpSms = async (phoneNumber, otp) => {
   const message = `Your AgriculNet code: ${otp}. Valid 10 min. Do not share.`;
-  return sendSms(phoneNumber, message);
+  return sendSms(phoneNumber, message, { otpCode: otp });
 };
 
 module.exports = {
   sendSms,
   sendOtpSms,
-  selectProvider
+  selectProvider,
+  getTestOtp
 };

@@ -1,1 +1,0 @@
-// AgriculNet — avatar.jsx — placeholder

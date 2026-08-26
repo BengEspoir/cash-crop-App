@@ -31,7 +31,7 @@ export function PendingReview() {
         if (result.success && result.data?.user?.status === "active") {
           router.push(getRoleDashboard(result.data.user));
         } else if (!result.success) {
-          router.push("/sign-in");
+          router.push("/auth/login");
         }
       } catch (error) {
         console.error("Status check failed:", error);
@@ -54,7 +54,7 @@ export function PendingReview() {
       if (result.success && result.data?.user?.status === "active") {
         router.push(getRoleDashboard(result.data.user));
       } else if (!result.success) {
-        router.push("/sign-in");
+        router.push("/auth/login");
       }
     } finally {
       setIsChecking(false);
@@ -104,7 +104,7 @@ export function PendingReview() {
           {isChecking ? "Checking..." : "Check Status"}
         </Button>
         <Button asChild variant="secondary-ghost">
-          <Link href="/sign-in">Go to Sign In</Link>
+          <Link href="/auth/login">Go to Sign In</Link>
         </Button>
       </div>
 

@@ -7,7 +7,6 @@ const morgan = require('morgan');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./modules/auth/auth.routes');
-const adminAuthRoutes = require('./modules/admin/admin.auth.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
 const listingsRoutes = require('./modules/listings/listings.routes');
@@ -17,6 +16,7 @@ const conversationsRoutes = require('./modules/conversations/conversations.route
 const messagesRoutes = require('./modules/messages/messages.routes');
 const ordersRoutes = require('./modules/orders/orders.routes');
 const paymentsRoutes = require('./modules/payments/payments.routes');
+const { handleFapshiWebhook } = require('./modules/payments/payments.controller');
 const logisticsRoutes = require('./modules/logistics/logistics.routes');
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
 const preferencesRoutes = require('./modules/preferences/preferences.routes');
@@ -67,7 +67,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Body parsing
@@ -83,10 +83,9 @@ app.use('/api', generalLimiter);
 // ── ROUTES ──────────────────────────────────────────────────
 // Public auth routes
 app.use('/api/v1/auth', authRoutes);
+app.post('/api/webhooks/fapshi', handleFapshiWebhook);
 
 // Admin hidden route — mounted at unpredictable path
-app.use('/api/v1/x-secure/admin-access', adminAuthRoutes);
-
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/listings', listingsRoutes);

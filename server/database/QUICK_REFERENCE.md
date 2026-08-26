@@ -1,39 +1,51 @@
 # Migration Quick Reference
 
-## Auth-critical migration order
+## Apply
+
 ```text
-001_enums_and_extensions.sql
-002_users_table.sql
-003_farmer_profiles.sql
-004_buyer_profiles.sql
-005_tokens_and_otps.sql
-021_audit_logs.sql
-022_profile_extensions.sql
-023_auto_approval_setup.sql
-024_enhanced_verification.sql
-025_activity_events.sql
+server/database/migrations/001_enums_and_extensions.sql
+...
+server/database/migrations/030_logistics_tracking_and_monetization.sql
+server/database/migrations/031_atomic_fapshi_settlement.sql
+server/database/migrations/032_atomic_order_creation.sql
+server/database/migrations/033_atomic_payment_intents.sql
+server/database/migrations/034_auth_proof_hardening.sql
+server/database/migrations/035_order_inventory_and_quote_guards.sql
+server/database/migrations/036_atomic_logistics_transitions.sql
+server/database/migrations/037_core_rls_lockdown.sql
+server/database/migrations/038_uuid_generation_compatibility.sql
 ```
 
+Run every intermediate file in numeric order.
+
+## Verify
+
+```powershell
+Set-Location server
+node verify-db-init.js
+```
+
+Use the read-only RPC-signature and RLS queries in `MIGRATION_GUIDE.md` after `node verify-db-init.js`.
+
+Existing-database prerequisites: before 031, reconcile duplicate non-null payment references, commissions per order, and logistics rows per order reported by `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, or `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Also reconcile duplicate order payments before 033, reissue proofs after 034, audit stock for 035, normalize shipment statuses before 036, configure the service-role key before 037, and apply the UUID compatibility repair in 038.
+
 ## Optional seeds
+
 ```text
 001_seed_admin.sql
 002_seed_regions.sql
 003_seed_crops.sql
+004_seed_marketplace_cameroon_sellers.sql
 ```
 
-## Verify
-```bash
-cd server
-node verify-db-init.js
-```
+The administrator seed requires private session settings at execution time and contains no tracked account or reusable hash.
 
-## Seeded admin
-- Email: `mbengespoir@gmail.com`
-- Password: set your own private admin password before seeding production data.
+## Runtime boundary
 
-## Notes
-- `001_seed_admin.sql` is needed for local admin login.
-- `002_seed_regions.sql` and `003_seed_crops.sql` are optional marketplace data seeds.
-- Buyers become active after phone and email verification.
-- Farmers become pending identity verification after phone and email verification.
-- Farmers move to pending review only after identity evidence is submitted.
+- Administrator login: `/auth/login` (native Supabase Auth)
+- Fapshi callback: `POST /api/webhooks/fapshi`
+- Required private callback setting: `FAPSHI_WEBHOOK_SECRET`
+- Provider request bound: `FAPSHI_REQUEST_TIMEOUT_MS`
+- Required API database credential in every environment: `SUPABASE_SERVICE_ROLE_KEY`
+
+The schema and seeds support a prototype; they do not prove live settlement or physical marketplace operations.

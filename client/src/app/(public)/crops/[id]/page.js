@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { AlertTriangle, MessageCircle } from "lucide-react";
+import { AlertTriangle, MapPin, MessageCircle, Package, ShoppingCart, Truck } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
-import { PageHeader } from "../../../../components/common/PageHeader";
 import { CropDetailGallery } from "../../../../components/crops/CropDetailGallery";
 import { CropSpecsTable } from "../../../../components/crops/CropSpecsTable";
+import { CropCard } from "../../../../components/crops/CropCard";
+import { FarmerAvatar } from "../../../../components/farmers/FarmerAvatar";
 import { VerificationBadge } from "../../../../components/farmers/VerificationBadge";
-import { useListing } from "../../../../hooks/useListings";
+import { useListing, useListings } from "../../../../hooks/useListings";
 import { useStartConversation } from "../../../../hooks/useMessages";
 import useAuth from "../../../../hooks/useAuth";
+import { getLoginRoute } from "../../../../lib/authRoutes";
 import { useCartStore } from "../../../../store/cartStore";
 
 const UNVERIFIED_WARNING = "This seller account is not yet verified. Please proceed carefully because this profile has not completed National ID verification.";
@@ -21,30 +23,23 @@ export default function CropDetailPage({ params }) {
   const router = useRouter();
   const { user, isBuyer } = useAuth();
   const { data: listing, isLoading, error } = useListing(params.id);
+  const { listings: candidateListings } = useListings({ query: listing?.crop || "", limit: 6 });
   const startConversation = useStartConversation();
   const setListing = useCartStore((state) => state.setListing);
 
   const handleChat = async () => {
     if (!user) {
       toast.error("Please sign in as a buyer to start a chat.");
-      router.push("/sign-in");
+      router.push(getLoginRoute(`/crops/${params.id}`));
       return;
     }
-
     if (!isBuyer) {
       toast.error("Buyer accounts can start chats from public crop pages.");
       return;
     }
-
-    if (listing?.farmerVerificationStatus !== "verified") {
-      toast(UNVERIFIED_WARNING);
-    }
-
+    if (listing?.farmerVerificationStatus !== "verified") toast(UNVERIFIED_WARNING);
     try {
-      const result = await startConversation.mutateAsync({
-        farmerId: listing.farmerId,
-        listingId: listing.id,
-      });
+      const result = await startConversation.mutateAsync({ farmerId: listing.farmerId, listingId: listing.id });
       if (result?.farmerWarning) toast(result.farmerWarning);
       router.push(`/buyer/messages/${result.conversation.id}`);
     } catch (err) {
@@ -55,79 +50,110 @@ export default function CropDetailPage({ params }) {
   const handleAddToCart = () => {
     if (!user) {
       toast.error("Please sign in as a buyer to continue to checkout.");
-      router.push("/sign-in");
+      router.push(getLoginRoute(`/crops/${params.id}`));
       return;
     }
-
     if (!isBuyer) {
       toast.error("Only buyer accounts can checkout from public crop pages.");
       return;
     }
-
     setListing(listing);
     router.push(`/buyer/checkout?listingId=${listing.id}`);
   };
 
-  if (isLoading) {
-    return <Card className="rounded-[16px] p-8 text-center text-ink-500">Loading crop listing...</Card>;
-  }
+  if (isLoading) return <Card className="rounded-[14px] p-10 text-center text-ink-500">Loading crop listing...</Card>;
+  if (error || !listing) return <Card className="rounded-[14px] p-10 text-center text-red-700">This crop listing could not be loaded.</Card>;
 
-  if (error || !listing) {
-    return <Card className="rounded-[16px] p-8 text-center text-red-700">This crop listing could not be loaded.</Card>;
-  }
-
+  const seller = listing.seller || listing.farmer;
   const specs = Array.isArray(listing.specs)
     ? listing.specs
     : Object.entries(listing.specs || {}).map(([label, value]) => ({ label, value }));
+  const relatedListings = candidateListings.filter((item) => item.id !== listing.id).slice(0, 3);
 
   return (
-    <section className="space-y-6">
-      <PageHeader
-        eyebrow="Crop Detail"
-        title={listing.crop}
-        description={`${listing.quantityLabel} from ${listing.location}. Review farmer verification before starting trade.`}
-        actions={(
-          <>
-            {listing.farmer ? (
-              <Button asChild variant="outline">
-                <Link href={`/farmers/${listing.farmer.id}`}>View farmer</Link>
-              </Button>
-            ) : null}
-            <Button type="button" variant="secondary" onClick={handleChat} disabled={startConversation.isPending}>
-              <MessageCircle className="h-4 w-4" /> Chat
-            </Button>
-            <Button type="button" variant="outline" onClick={handleAddToCart}>
-              Add to cart
-            </Button>
-            <Button asChild>
-              <Link href={`/request-quote?listingId=${listing.id}`}>Request Quote</Link>
-            </Button>
-          </>
-        )}
-      />
+    <section className="mx-auto max-w-[1240px] space-y-10 py-4 sm:py-8">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_370px]">
+        <CropDetailGallery listing={listing} showCaption={false} appearance="reference" />
 
-      <Card className="rounded-[18px] p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-ink-500">Supplier status</p>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <span className="font-semibold text-ink-900">{listing.farmer?.name || "Farmer profile"}</span>
-              <VerificationBadge status={listing.farmerVerificationStatus} />
+        <aside className="space-y-4 lg:sticky lg:top-28">
+          <Card className="rounded-[14px] border border-[#D9E1DA] p-6 shadow-[0_12px_34px_rgba(20,48,25,0.07)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#718077]">Target price</p>
+            <p className="mt-2 font-display text-[34px] leading-none text-[#1E5E27]">{listing.price || "Not provided"}</p>
+            <dl className="mt-6 divide-y divide-[#E6EBE7] text-[13px]">
+              <div className="flex items-center justify-between gap-4 py-3 first:pt-0">
+                <dt className="flex items-center gap-2 text-[#708078]"><Package className="h-4 w-4" /> Available</dt>
+                <dd className="text-right font-semibold text-[#27332A]">{listing.quantity || "Not provided"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="flex items-center gap-2 text-[#708078]"><Truck className="h-4 w-4" /> Delivery</dt>
+                <dd className="text-right font-semibold text-[#27332A]">{listing.deliveryWindow || "Not provided"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="flex items-center gap-2 text-[#708078]"><MapPin className="h-4 w-4" /> Location</dt>
+                <dd className="text-right font-semibold text-[#27332A]">{listing.location || "Not provided"}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 border-t border-[#E6EBE7] pt-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#718077]">Seller</p>
+              <div className="mt-3 flex items-center gap-3">
+                <FarmerAvatar initials={seller?.initials} id={seller?.id} src={seller?.avatarSrc} size="md" />
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-bold text-[#253128]">{seller?.name || "Not provided"}</p>
+                  <div className="mt-1"><VerificationBadge status={listing.farmerVerificationStatus} /></div>
+                </div>
+              </div>
+              {seller?.id ? <Link href={`/farmers/${seller.id}`} className="mt-3 inline-block text-[12px] font-semibold text-[#1E5E27] hover:underline">View seller profile</Link> : null}
+            </div>
+
+            <div className="mt-6 space-y-2.5">
+              <Button asChild className="h-11 w-full bg-[#1E5E27] hover:bg-[#174B20]"><Link href={`/request-quote?listingId=${listing.id}`}>Request a quote</Link></Button>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Button type="button" variant="outline" onClick={handleChat} disabled={startConversation.isPending}><MessageCircle className="h-4 w-4" /> Chat</Button>
+                <Button type="button" variant="outline" onClick={handleAddToCart}><ShoppingCart className="h-4 w-4" /> Checkout</Button>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </div>
+
+      <article className="max-w-[850px]">
+        <p className="text-[12px] font-bold uppercase tracking-[0.17em] text-[#1E5E27]">Crop listing</p>
+        <h1 className="mt-3 font-display text-[42px] leading-[1.08] text-[#172019] sm:text-[54px]">{listing.crop}</h1>
+        <p className="mt-5 text-[15px] leading-8 text-[#5D6A61]">{listing.description || listing.summary || "Description not provided."}</p>
+      </article>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_370px]">
+        <CropSpecsTable specs={specs} appearance="reference" />
+        <Card className="rounded-[14px] border border-[#E7D7A8] bg-[#FFF9EA] p-5 shadow-none">
+          <div className="flex gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#8A6B1F]" />
+            <div>
+              <h2 className="text-[14px] font-bold text-[#58491F]">Review seller verification</h2>
+              <p className="mt-2 text-[12.5px] leading-6 text-[#715F2D]">
+                {listing.farmerVerificationStatus === "verified"
+                  ? "This supplier has completed AgriculNet identity review. Continue to review the listing terms before paying."
+                  : UNVERIFIED_WARNING}
+              </p>
             </div>
           </div>
-          {listing.farmerVerificationStatus !== "verified" ? (
-            <div className="flex max-w-xl gap-2 rounded-[14px] border border-gold-200 bg-gold-50 px-4 py-3 text-[12.5px] text-gold-900">
-              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{UNVERIFIED_WARNING}</span>
-            </div>
-          ) : null}
-        </div>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <CropDetailGallery listing={listing} />
-        <CropSpecsTable specs={specs} />
+        </Card>
       </div>
+
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#1E5E27]">More marketplace supply</p>
+            <h2 className="mt-2 font-display text-[32px] text-[#172019]">Related listings</h2>
+          </div>
+          <Link href="/browse" className="text-[13px] font-semibold text-[#1E5E27] hover:underline">Browse all crops</Link>
+        </div>
+        {relatedListings.length ? (
+          <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {relatedListings.map((item) => <CropCard key={item.id} listing={item} />)}
+          </div>
+        ) : <p className="mt-4 rounded-[12px] bg-[#F7F9F7] p-5 text-[14px] text-[#68736B]">No related listings are available yet.</p>}
+      </section>
     </section>
   );
 }

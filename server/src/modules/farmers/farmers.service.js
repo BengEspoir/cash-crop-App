@@ -32,7 +32,7 @@ const listFarmers = async (filters = {}) => {
     profileQuery = profileQuery.eq('identity_verification_status', filters.verificationStatus);
   }
 
-  const { data: profiles, error } = await profileQuery.limit(Number(filters.limit || 80));
+  const { data: profiles, error } = await profileQuery.limit(500);
   if (error) throw error;
 
   let resellerProfiles = [];
@@ -44,7 +44,7 @@ const listFarmers = async (filters = {}) => {
   if (filters.verificationStatus) {
     resellerQuery = resellerQuery.eq('identity_verification_status', filters.verificationStatus);
   }
-  const resellerResult = await resellerQuery.limit(Number(filters.limit || 80));
+  const resellerResult = await resellerQuery.limit(500);
   resellerProfiles = resellerResult.data || [];
   resellerError = resellerResult.error;
   if (resellerError) throw resellerError;
@@ -70,7 +70,32 @@ const listFarmers = async (filters = {}) => {
     ].filter(Boolean).some((value) => String(value).toLowerCase().includes(q)));
   }
 
-  return { items, count: items.length };
+  if (filters.crop) {
+    const crop = String(filters.crop).toLowerCase();
+    items = items.filter((farmer) => [
+      farmer.primaryCrop,
+      ...(farmer.cropsGrown || [])
+    ].filter(Boolean).some((value) => String(value).toLowerCase().includes(crop)));
+  }
+
+  if (filters.region) {
+    const region = String(filters.region).toLowerCase();
+    items = items.filter((farmer) => String(farmer.region || "").toLowerCase() === region);
+  }
+
+  if (filters.sort === "rating") {
+    items.sort((a, b) => b.rating - a.rating);
+  } else if (filters.sort === "name") {
+    items.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  const count = items.length;
+  const limit = Math.min(Math.max(Number(filters.limit) || 8, 1), 50);
+  const totalPages = Math.max(Math.ceil(count / limit), 1);
+  const page = Math.min(Math.max(Number(filters.page) || 1, 1), totalPages);
+  const offset = (page - 1) * limit;
+
+  return { items: items.slice(offset, offset + limit), count, page, limit, totalPages };
 };
 
 const getFarmerById = async (id) => {

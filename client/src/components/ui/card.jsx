@@ -2,6 +2,7 @@
 
 import { cn } from "../../lib/utils";
 import { motion } from "framer-motion";
+import { SmartImage } from "../media/SmartImage";
 
 /**
  * Card — Commerce card system with interactive variants
@@ -51,9 +52,11 @@ export function Card({
 export function CardImage({ className, src, alt, aspectRatio = "aspect-[4/3]", zoomOnHover = true, overlay, ...props }) {
   return (
     <div className={cn("relative overflow-hidden", aspectRatio, className)}>
-      <img
+      <SmartImage
         src={src}
         alt={alt}
+        fill
+        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
         className={cn(
           "h-full w-full object-cover",
           zoomOnHover && "transition-transform duration-500 ease-out group-hover:scale-[1.04]",

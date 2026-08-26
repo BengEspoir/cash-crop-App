@@ -1,262 +1,75 @@
-# Authentication Diagnostic Report — AgriculNet
+# Authentication Diagnostic Guide
 
-**Date:** March 27, 2026  
-**Status:** Credentials Verified, Configuration Fix Required
+This document describes safe, repeatable authentication checks. It intentionally contains no live project identifiers, credentials, tokens, administrator accounts, password hashes, or provider response bodies.
 
----
+## Current boundary
 
-## Executive Summary
+Implemented authentication capabilities include:
 
-The authentication system architecture is correctly implemented. The Supabase project credentials **DO MATCH** between the codebase and the live project. However, the application cannot authenticate because the actual environment files (`.env`) are missing or contain placeholder values instead of real credentials.
+- native Supabase password registration and login for supported roles;
+- canonical administrator login through `/auth/login`;
+- Supabase access/refresh sessions, account status checks, and audit events;
+- email and phone verification;
+- password reset with rate limiting and OTP attempt enforcement;
+- profile, contact-change, recovery-contact, and seller identity-review flows.
 
-**Root Cause:** The `.env.example` files contain placeholder text (`replace-with-your-anon-key`) but the actual `.env` files needed for runtime are not configured with the real Supabase keys.
+Administrator OAuth exchange is intentionally unavailable. Marketplace order, payment, logistics, inspection, and settlement areas remain prototype workflows until their migrations, provider configuration, authorization checks, and end-to-end tests have been completed in the target environment.
 
----
+## Environment validation
 
-## 1. Supabase Project Verification
+Start from the tracked example files:
 
-### Project Details
-| Property | Value |
-|----------|-------|
-| **Project ID** | `jftggxxzqtmmqktvnlwc` |
-| **Project URL** | `https://jftggxxzqtmmqktvnlwc.supabase.co` |
-| **Region** | eu-west-1 (Ireland) |
-| **Status** | ACTIVE_HEALTHY |
-| **Postgres Version** | 17.6.1 |
-
-### Verified Anon Key (Legacy)
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmdGdneHh6cXRtbXFrdHZubHdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDc0MTgsImV4cCI6MjA5MDE4MzQxOH0.sK6EantJqLj7XrkF8BWAO4U94O57TCrusYSHtOe5nmk
+```powershell
+Copy-Item server/.env.example server/.env
+Copy-Item client/.env.local.example client/.env.local
 ```
 
-### Codebase Credential Match
-| File | SUPABASE_URL | Status |
-|------|--------------|--------|
-| `server/.env.example` | `https://jftggxxzqtmmqktvnlwc.supabase.co` | MATCHES |
-| `client/.env.local.example` | `https://jftggxxzqtmmqktvnlwc.supabase.co` | MATCHES |
+Replace placeholders only in the untracked local files or hosting-provider dashboards. Never paste real values into documentation, issues, screenshots, Postman collections, or `NEXT_PUBLIC_` variables unless the value is explicitly designed to be public.
 
-**Result:** Project URL is correctly configured in example files.
+The backend requires Supabase and `SUPABASE_SERVICE_ROLE_KEY` configuration to boot in every environment. Production deployments additionally require the configured email/SMS providers. Provider credentials must remain server-side.
 
----
+## Database prerequisites
 
-## 2. Database Schema Verification
+Apply `server/database/migrations/001_enums_and_extensions.sql` through `039_supabase_auth_and_rls_alignment.sql` in numeric order. Migration 039 links `public.users` to `auth.users`, adds JWT claims support, and restores least-privilege role-aware RLS.
 
-All required authentication tables exist and are healthy:
+Run the repository verifier after applying the migrations:
 
-| Table | Rows | RLS Status | Purpose |
-|-------|------|------------|---------|
-| `users` | 3 | Disabled | Core user accounts |
-| `farmer_profiles` | 0 | Disabled | Farmer-specific data |
-| `buyer_profiles` | 1 | Disabled | Buyer-specific data |
-| `tokens` | 2 | Disabled | JWT refresh, email verification, password reset |
-| `otps` | 1 | Disabled | SMS OTP codes for phone verification |
-| `audit_logs` | 4 | Disabled | Security event logging |
-
-**Result:** Database schema is complete and ready for authentication operations.
-
----
-
-## 3. Backend Architecture Review
-
-### Auth Flow Components
-```
-Frontend (Next.js) → Axios → Backend API (Express) → Supabase Client → PostgreSQL
+```powershell
+Set-Location server
+node verify-db-init.js
 ```
 
-### Key Files Verified
-| File | Purpose | Status |
-|------|---------|--------|
-| `server/src/config/supabase.js` | Creates Supabase clients (anon + admin) | OK |
-| `server/src/config/env.js` | Loads environment variables with validation | OK |
-| `server/src/modules/auth/auth.repository.js` | Database queries via Supabase | OK |
-| `server/src/modules/auth/auth.service.js` | Business logic (register/login/verify) | OK |
-| `server/src/app.js` | Express app with CORS for localhost:3000 | OK |
-| `client/src/lib/axios.js` | API client with auth interceptors | OK |
-| `client/src/store/authStore.js` | Zustand auth state management | OK |
+The verifier performs read-only checks for representative tables, columns, enum values, and RPCs through migration 038. It does not prove that a live payment, logistics, or settlement workflow is production-ready.
 
-### Environment Variable Validation (`env.js`)
-The backend requires these variables in development:
-- `SUPABASE_URL` ✓
-- `SUPABASE_ANON_KEY` ⚠️ **MUST BE SET**
-- `JWT_ACCESS_SECRET` ⚠️ **MUST BE SET**
-- `JWT_REFRESH_SECRET` ⚠️ **MUST BE SET**
+## Safe authentication checks
 
-**Result:** Architecture is sound but requires proper environment configuration.
+1. Start the API and request `GET /api/health`.
+2. Register a non-admin test account with private, disposable details.
+3. Complete email and phone verification using configured providers or development hints in local development only.
+4. Test normal sign-in at `/auth/login`.
+5. For an administrator, use the same page and confirm the linked domain role is `admin` or `super_admin` without printing tokens.
+6. Run diagnostic scripts only with local environment variables and review their generic exit status.
 
----
+## Fapshi configuration boundary
 
-## 4. Critical Issues Found
+For a deployed payment prototype, configure these values only on the backend:
 
-### Issue #1: Missing Environment Files
-**Severity:** CRITICAL — Blocks all authentication
+- `FAPSHI_BASE_URL`;
+- `FAPSHI_API_USER`;
+- `FAPSHI_API_KEY`;
+- `FAPSHI_WEBHOOK_SECRET`;
+- `FAPSHI_REQUEST_TIMEOUT_MS` (the tracked example uses 10000 milliseconds).
 
-The `.env` and `.env.local` files are gitignored and likely don't exist or contain placeholder values. The backend will throw:
-```
-Error: Missing required environment variables: SUPABASE_ANON_KEY, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
-```
+A webhook secret and migrations 031 and 033 are required before treating callbacks as eligible for atomic reconciliation. Before 031, resolve duplicate non-null payment references, commissions per order, or shipments per order reported by the three `MIGRATION_031_*_RECONCILIATION_REQUIRED` codes documented in `server/database/MIGRATION_GUIDE.md`; reconcile duplicate order payments before 033. Sandbox/provider success alone is not evidence of live settlement, escrow, payout, or logistics completion.
 
-### Issue #2: JWT Secrets Not Generated
-**Severity:** CRITICAL — Blocks token creation
+## Credential incident response
 
-The JWT secrets need to be cryptographically secure random strings (64 hex characters each).
+If a usable credential has ever been committed:
 
----
+1. rotate or revoke it at the provider;
+2. invalidate related sessions where applicable;
+3. replace local and hosted environment values;
+4. inspect Git history and published artifacts;
+5. document the rotation without copying the old or new value.
 
-## 5. Required Fixes
-
-### Step 1: Create Server `.env` File
-
-Create `server/.env` with this content:
-
-```env
-## Server
-NODE_ENV=development
-PORT=5000
-API_VERSION=v1
-BASE_URL=http://localhost:5000
-
-## Supabase (Verified Correct)
-SUPABASE_URL=https://jftggxxzqtmmqktvnlwc.supabase.co
-SUPABASE_ANON_KEY=replace-with-your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=replace-with-your-supabase-service-role-key
-
-## JWT (Generate new secrets!)
-JWT_ACCESS_SECRET=generate-a-64-char-random-hex-string-here-for-access-tokens
-JWT_REFRESH_SECRET=generate-a-64-char-random-hex-string-here-for-refresh-tokens
-JWT_ACCESS_EXPIRES=15m
-JWT_REFRESH_EXPIRES=30d
-
-## Bcrypt
-BCRYPT_SALT_ROUNDS=12
-
-## Email (optional for dev)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-EMAIL_FROM=AgriculNet <no-reply@agriculnet.cm>
-
-## SMS (optional for dev)
-AT_API_KEY=
-AT_USERNAME=
-AT_SENDER_ID=AgriculNet
-AT_SANDBOX=true
-
-## Client URLs
-CLIENT_URL=http://localhost:3000
-EMAIL_VERIFY_URL=http://localhost:3000/verify-email
-PASSWORD_RESET_URL=http://localhost:3000/reset-password
-
-## Admin
-ADMIN_ROUTE_SECRET=replace-with-strong-admin-route-secret
-
-## Development helpers
-ALLOW_DEV_DELIVERY_FALLBACK=true
-EXPOSE_DEV_AUTH_HINTS=true
-```
-
-### Step 2: Create Client `.env.local` File
-
-Create `client/.env.local` with this content:
-
-```env
-## Next.js public environment variables
-NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
-
-## Supabase (Verified Correct)
-NEXT_PUBLIC_SUPABASE_URL=https://jftggxxzqtmmqktvnlwc.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=replace-with-your-supabase-anon-key
-
-## Admin
-NEXT_PUBLIC_ADMIN_KEY=replace-with-admin-route-secret
-
-## App
-NEXT_PUBLIC_APP_NAME=AgriculNet
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-### Step 3: Generate JWT Secrets
-
-Run this command to generate secure JWT secrets:
-
-```bash
-node -e "console.log('JWT_ACCESS_SECRET=' + require('crypto').randomBytes(32).toString('hex')); console.log('JWT_REFRESH_SECRET=' + require('crypto').randomBytes(32).toString('hex'));"
-```
-
-Replace the placeholder `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` values in `server/.env` with the generated values.
-
-### Step 4: Restart Services
-
-1. **Stop** any running backend server (Ctrl+C)
-2. **Restart** the backend:
-   ```bash
-   cd server
-   npm run dev
-   ```
-3. **Restart** the frontend:
-   ```bash
-   cd client
-   npm run dev
-   ```
-
----
-
-## 6. Verification Steps
-
-After applying fixes, verify authentication works:
-
-### Test 1: Backend Health Check
-```bash
-curl http://localhost:5000/api/health
-```
-Expected: `{"success":true,"message":"AgriculNet API is running"...}`
-
-### Test 2: Registration via Postman
-1. Import `postman/agriculnet_auth.postman_collection.json`
-2. Run **Register Farmer** request
-3. Expected: Status 201 with user data
-
-### Test 3: Browser Registration
-1. Navigate to `http://localhost:3000/register`
-2. Complete farmer registration form
-3. Should redirect to `/verify-phone`
-
----
-
-## 7. Communication Flow Summary
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Next.js Client │────→│  Express API    │────→│   Supabase      │
-│  localhost:3000 │     │  localhost:5000 │     │   PostgreSQL    │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                        │                       │
-        │  POST /auth/login      │                       │
-        │───────────────────────→│                       │
-        │                        │  SELECT * FROM users  │
-        │                        │───────────────────────→│
-        │                        │                       │
-        │                        │  Return user data     │
-        │                        │←───────────────────────│
-        │                        │                       │
-        │  { accessToken, user } │                       │
-        │←───────────────────────│                       │
-```
-
-**All components are correctly implemented.** The only blocker is missing environment configuration.
-
----
-
-## 8. Conclusion
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Supabase Project | ✅ ACTIVE | Credentials verified |
-| Database Tables | ✅ COMPLETE | All auth tables exist |
-| Backend Code | ✅ CORRECT | Service/repository pattern working |
-| Frontend Code | ✅ CORRECT | Axios + Zustand configured |
-| Environment Files | ❌ MISSING | Must create `.env` and `.env.local` |
-| JWT Secrets | ❌ MISSING | Must generate secure random values |
-
-**Next Action:** Create the environment files with the provided credentials and restart both services.
+Sanitizing the current branch does not erase repository history or external copies.

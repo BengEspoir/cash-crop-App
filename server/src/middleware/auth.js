@@ -1,6 +1,4 @@
-const jwt = require('jsonwebtoken');
-const { supabaseAdmin } = require('../config/supabase');
-const env = require('../config/env');
+const { supabaseAdmin, createUserScopedClient } = require('../config/supabase');
 const { sendError } = require('../utils/response');
 const { ERROR_CODES, USER_STATUS } = require('../config/constants');
 const { isSellerRole, getSellerProfileTable, isVerifiedSellerProfile } = require('../utils/marketplace');
@@ -13,21 +11,15 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    let decoded;
-    
-    try {
-      decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
-    } catch (jwtError) {
-      if (jwtError.name === 'TokenExpiredError') {
-        return sendError(res, 'Token expired', 401, ERROR_CODES.TOKEN_EXPIRED);
-      }
-      return sendError(res, 'Invalid token', 401, ERROR_CODES.TOKEN_INVALID);
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData?.user) {
+      return sendError(res, 'Invalid or expired Supabase session', 401, ERROR_CODES.TOKEN_INVALID);
     }
 
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('id, role, status, phone_verified, email_verified, locked_until')
-      .eq('id', decoded.id)
+      .eq('auth_user_id', authData.user.id)
       .single();
 
     if (error || !user) {
@@ -50,6 +42,8 @@ const authenticate = async (req, res, next) => {
       return sendError(res, 'Account temporarily locked', 403, ERROR_CODES.ACCOUNT_LOCKED);
     }
 
+    req.auth = { authUserId: authData.user.id, accessToken: token, claims: authData.user.app_metadata || {} };
+    req.db = createUserScopedClient(token);
     req.user = user;
     next();
   } catch (error) {
@@ -76,6 +70,27 @@ const requireDashboardAccess = (req, res, next) => {
 
   if (!req.user.email_verified) {
     return sendError(res, 'Email verification required', 403, ERROR_CODES.EMAIL_NOT_VERIFIED);
+  }
+
+  next();
+};
+
+const requireMarketplaceAccess = (req, res, next) => {
+  if (!req.user) {
+    return sendError(res, 'Authentication required', 401, ERROR_CODES.UNAUTHORIZED);
+  }
+
+  if (!req.user.email_verified) {
+    return sendError(res, 'Email verification required', 403, ERROR_CODES.EMAIL_NOT_VERIFIED);
+  }
+
+  if (!req.user.phone_verified) {
+    return sendError(
+      res,
+      'Verify your phone number to continue this marketplace action.',
+      403,
+      ERROR_CODES.PHONE_NOT_VERIFIED
+    );
   }
 
   next();
@@ -148,11 +163,8 @@ const optionalAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    let decoded;
-    
-    try {
-      decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
-    } catch {
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData?.user) {
       req.user = null;
       return next();
     }
@@ -160,7 +172,7 @@ const optionalAuth = async (req, res, next) => {
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('id, role, status, phone_verified, email_verified, locked_until')
-      .eq('id', decoded.id)
+      .eq('auth_user_id', authData.user.id)
       .single();
 
     if (
@@ -171,6 +183,8 @@ const optionalAuth = async (req, res, next) => {
     ) {
       req.user = null;
     } else {
+      req.auth = { authUserId: authData.user.id, accessToken: token, claims: authData.user.app_metadata || {} };
+      req.db = createUserScopedClient(token);
       req.user = user;
     }
     
@@ -186,6 +200,7 @@ module.exports = {
   authorize,
   requireActiveAccount,
   requireDashboardAccess,
+  requireMarketplaceAccess,
   restrictUnverifiedFarmer,
   requireVerifiedFarmerForCommerce,
   optionalAuth

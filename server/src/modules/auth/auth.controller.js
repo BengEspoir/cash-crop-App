@@ -85,6 +85,11 @@ const updateMe = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Profile updated successfully');
 });
 
+const loginWithPhone = asyncHandler(async (req, res) => {
+  const result = await authService.loginWithPhone(req.body.phone, req.body.password, req);
+  sendSuccess(res, result, 'Login successful');
+});
+
 const changePassword = asyncHandler(async (req, res) => {
   const result = await authService.changePassword(req.user.id, req.body, req);
   sendSuccess(res, result, 'Password changed successfully');
@@ -153,6 +158,7 @@ module.exports = {
   registerBuyer,
   oauthExchange,
   login,
+  loginWithPhone,
   logout,
   refreshToken,
   verifyEmail,

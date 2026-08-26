@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card } from "../../../../components/ui/card";
 import { Button } from "../../../../components/ui/button";
 import { Input, inputClasses } from "../../../../components/ui/input";
 import { Label } from "../../../../components/ui/label";
@@ -16,7 +15,6 @@ import { RoleSwitcher } from "../../../../components/auth/RoleSwitcher";
 import { StepIndicator } from "../../../../components/auth/StepIndicator";
 import { registerFarmerSchemas, registerFarmerUnifiedSchema } from "../../../../lib/validators";
 import { regions } from "../../../../constants/regions";
-import { getAuthNextRoute } from "../../../../lib/authRoutes";
 import useAuthStore from "../../../../store/authStore";
 import toast from "react-hot-toast";
 
@@ -128,19 +126,19 @@ export default function RegisterFarmerPage() {
     } else {
       toast.success("Account created. Verify your email to enter your dashboard.");
     }
-    router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
+    router.push("/register/preferences");
   };
 
   return (
-    <Card className="rounded-[20px] p-6 sm:p-8">
+    <section className="w-full py-2 sm:py-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="section-eyebrow">Farmer Registration</p>
-          <h1 className="mt-2 font-display text-[22px] leading-[1.15] text-[#111827]">Create your farmer account</h1>
+          <h1 className="mt-2 font-display text-[32px] leading-[1.12] text-[#111827]">Create your farmer account</h1>
         </div>
         <p className="text-[13px] text-[#374151]">
           Already have an account?{" "}
-          <Link href="/sign-in" className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">Sign In</Link>
+          <Link href="/auth/login" className="font-semibold text-[#1A6B3C] hover:text-[#2E8B57]">Sign In</Link>
         </p>
       </div>
 
@@ -157,7 +155,7 @@ export default function RegisterFarmerPage() {
         <StepIndicator steps={steps} currentStep={currentStep} />
       </div>
 
-      <form key={currentStep} className="mt-6 space-y-5" onSubmit={handleSubmit(submitStep)}>
+      <form key={currentStep} className="mt-7 space-y-5 [&_input:not([type='checkbox'])]:border-transparent [&_input:not([type='checkbox'])]:bg-[#F6F7F6] [&_input:not([type='checkbox'])]:focus:border-[#1E5E27] [&_select]:h-12 [&_select]:border-transparent [&_select]:bg-[#F6F7F6] [&_select]:focus:border-[#1E5E27]" onSubmit={handleSubmit(submitStep)}>
         {currentStep === 0 ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -175,6 +173,7 @@ export default function RegisterFarmerPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <PhoneInput
+                appearance="reference"
                 label="Phone Number *"
                 value={watch("phone")}
                 onChange={(nextPhone) => setValue("phone", nextPhone, { shouldValidate: true })}
@@ -190,8 +189,8 @@ export default function RegisterFarmerPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <PasswordInput label="Password *" placeholder="Minimum 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
-              <PasswordInput label="Confirm Password *" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+              <PasswordInput appearance="reference" label="Password *" placeholder="Minimum 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
+              <PasswordInput appearance="reference" label="Confirm Password *" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
             </div>
 
             <PasswordStrength password={password || ""} />
@@ -264,6 +263,7 @@ export default function RegisterFarmerPage() {
               {errors.accountName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.accountName.message}</p> : null}
             </div>
             <PhoneInput
+              appearance="reference"
               label="Payout Phone *"
               value={watch("payoutPhone")}
               onChange={(nextPhone) => setValue("payoutPhone", nextPhone, { shouldValidate: true })}
@@ -287,11 +287,11 @@ export default function RegisterFarmerPage() {
             ) : null}
             <span className="font-medium text-[#6B7280]">Email verification starts after account creation.</span>
           </div>
-          <Button type="submit" disabled={!isValid || isSubmitting}>
+          <Button type="submit" className="bg-[#1E5E27] hover:bg-[#174B20]" disabled={!isValid || isSubmitting}>
             {isSubmitting ? "Processing..." : currentStep === steps.length - 1 ? "Create Farmer Account" : "Continue"}
           </Button>
         </div>
       </form>
-    </Card>
+    </section>
   );
 }

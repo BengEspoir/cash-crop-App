@@ -1,97 +1,94 @@
 # AgriculNet Database Restoration Guide
 
-This guide provides a comprehensive path to restoring your entire database schema and seed data on Supabase.
+Restore into a new or explicitly approved target. Back up existing data first. This guide does not instruct operators to drop an unknown or shared schema.
 
-## ⚠️ WARNING: Clean Slate Required
-If you haven't already, ensure your database is empty. You can run this script in the Supabase SQL Editor to drop everything before starting:
+## 1. Apply migrations sequentially
 
-```sql
--- DANGER: This will drop ALL tables and types in the public schema
-DO $$ 
-DECLARE 
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
-    END LOOP;
-    FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public' AND t.typtype = 'e') LOOP
-        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
-    END LOOP;
-END $$;
+### Phase 1: identity
+
+1. `001_enums_and_extensions.sql`
+2. `002_users_table.sql`
+3. `003_farmer_profiles.sql`
+4. `004_buyer_profiles.sql`
+5. `005_tokens_and_otps.sql`
+
+### Phase 2: marketplace foundations
+
+6. `006_listings.sql`
+7. `007_listing_images.sql`
+8. `008_inquiries.sql`
+9. `009_conversations_messages.sql`
+
+### Phase 3: transaction records
+
+10. `010_orders.sql`
+11. `011_payments.sql`
+12. `012_inspections.sql`
+13. `013_logistics.sql`
+14. `014_export_documents.sql`
+
+### Phase 4: governance and engagement
+
+15. `015_disputes.sql`
+16. `016_reviews.sql`
+17. `017_notifications.sql`
+18. `018_commissions.sql`
+19. `019_saved_listings.sql`
+20. `020_field_agents.sql`
+21. `021_audit_logs.sql`
+
+### Phase 5: account and marketplace extensions
+
+22. `022_profile_extensions.sql`
+23. `023_auto_approval_setup.sql`
+24. `024_enhanced_verification.sql`
+25. `025_activity_events.sql`
+26. `026_marketplace_verification_gating.sql`
+27. `027_reseller_marketplace_foundation.sql`
+28. `028_dashboard_operations_foundation.sql`
+29. `029_profile_contacts_and_assets.sql`
+
+### Phase 6: logistics and settlement safeguards
+
+30. `030_logistics_tracking_and_monetization.sql`
+31. `031_atomic_fapshi_settlement.sql`
+
+### Phase 7: atomicity and access safeguards
+
+32. `032_atomic_order_creation.sql`
+33. `033_atomic_payment_intents.sql`
+34. `034_auth_proof_hardening.sql`
+35. `035_order_inventory_and_quote_guards.sql`
+36. `036_atomic_logistics_transitions.sql`
+37. `037_core_rls_lockdown.sql`
+38. `038_uuid_generation_compatibility.sql`
+
+When restoring existing data rather than an empty target, migration 031 requires unique non-null payment references and one commission and logistics row per order. Resolve `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, or `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED` before retrying. Then reconcile duplicate order payments for 033, reissue proofs after 034, audit legacy stock for 035, and normalize shipment statuses for 036. Migration 037 requires `SUPABASE_SERVICE_ROLE_KEY` in every API environment, and migration 038 repairs UUID resolution for the restricted RPCs.
+
+## 2. Apply optional seeds
+
+Use region/crop/demo seeds only when the target is intended to contain demonstration data. The administrator seed requires private session settings in the same explicit transaction and contains no tracked identifier or reusable hash.
+
+Do not restore historical administrator credentials from documentation, Git history, screenshots, or old environment files. Provision a new unique credential and rotate any value that may have been exposed.
+
+## 3. Verify
+
+```powershell
+Set-Location server
+node verify-db-init.js
 ```
 
----
+Run the read-only RPC-signature and RLS checks from `MIGRATION_GUIDE.md`, then verify the hosting environment contains `SUPABASE_SERVICE_ROLE_KEY`, `FAPSHI_WEBHOOK_SECRET`, and `FAPSHI_REQUEST_TIMEOUT_MS` before sandbox callback tests.
 
-## Step 1: Run Migrations (Sequential Order)
-Open the Supabase SQL Editor and run these files **one by one** in this exact order. Copy and paste the content of each file into a new query.
+## 4. Smoke test
 
-### Phase 1: Core Identity
-1.  `001_enums_and_extensions.sql` (Creates all types and UUID support)
-2.  `002_users_table.sql` (The central identity table)
-3.  `003_farmer_profiles.sql` (Farmer-specific data)
-4.  `004_buyer_profiles.sql` (Buyer-specific data)
-5.  `005_tokens_and_otps.sql` (Auth tokens and SMS codes)
+- API health
+- disposable registration and verification
+- canonical Supabase login at `/auth/login`
+- administrator role authorization
+- representative profile/dashboard reads
+- authenticated webhook rejection and sandbox reconciliation tests
 
-### Phase 2: Marketplace Infrastructure
-6.  `006_listings.sql` (Crops, Regions, and Listing tables)
-7.  `007_listing_images.sql` (Media for listings)
-8.  `008_inquiries.sql` (Buyer expressions of interest)
-9.  `009_conversations_messages.sql` (Real-time chat engine)
+## Scope warning
 
-### Phase 3: Transactional Engine
-10. `010_orders.sql` (The core transaction table)
-11. `011_payments.sql` (Payment and Escrow management)
-12. `012_inspections.sql` (Quality control and field checks)
-13. `013_logistics.sql` (Tracking and delivery status)
-14. `014_export_documents.sql` (Documentation for international trade)
-
-### Phase 4: Operations & Governance
-15. `015_disputes.sql` (Conflict resolution)
-16. `016_reviews.sql` (Trust and rating system)
-17. `017_notifications.sql` (System and user alerts)
-18. `018_commissions.sql` (Marketplace revenue tracking)
-19. `019_saved_listings.sql` (User favorites)
-20. `020_field_agents.sql` (Ground operation assignments)
-
-### Phase 5: Extensions
-21. `021_audit_logs.sql` (Security and event tracking)
-22. `022_profile_extensions.sql` (Additional onboarding fields)
-23. `023_auto_approval_setup.sql` (Automation logic for account reviews)
-24. `024_enhanced_verification.sql` (Farmer identity evidence and status)
-25. `025_activity_events.sql` (Live dashboard and admin activity tracking)
-
----
-
-## Step 2: Seed Initial Data
-Once all migrations are complete, run the seeds to populate the platform:
-
-1.  `001_seed_admin.sql`
-    - Creates/Updates the Super Admin account.
-    - **Email**: `mbengespoir@gmail.com`
-    - **Phone**: `683077263`
-    - **Password**: set your own private admin password before seeding production data.
-2.  `002_seed_regions.sql` (Populates the 10 regions of Cameroon)
-3.  `003_seed_crops.sql` (Populates the marketplace with core crops like Cocoa and Coffee)
-
----
-
-## Step 3: Verification
-To ensure everything is working correctly:
-
-1.  **Verify Tables**:
-    ```bash
-    cd server
-    node verify-db-init.js
-    ```
-2.  **Test Admin Login**:
-    - Go to `http://localhost:3000/sign-in`
-    - Log in with your private admin email and password.
-3.  **Check Marketplace**:
-    - Browse listings and verify that the seeded regions and crops appear in the filters.
-
----
-
-## Troubleshooting
-- **Foreign Key Errors**: Ensure you run the files in the numerical order provided.
-- **Type Errors**: If you see "type already exists", you may have run `001` twice. Use the "Clean Slate" script above to start over.
-- **Permission Errors**: Ensure your Supabase user has `postgres` or `admin` role access to create extensions and tables.
+A successful restoration reconstructs the prototype schema. It does not demonstrate live funds movement, settlement, payout, physical logistics, inspection/certification, export completion, or marketplace impact.

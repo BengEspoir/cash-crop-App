@@ -12,7 +12,6 @@ const {
 const logisticsRepository = require('../logistics/logistics.repository');
 
 const isNotFound = (error) => error?.code === 'PGRST116';
-const COMMISSION_PER_KG_XAF = 200;
 
 const getProfileByUser = async (table, userId) => {
   const { data, error } = await supabaseAdmin.from(table).select('*').eq('user_id', userId).single();
@@ -135,18 +134,9 @@ const hydrateOrders = async (orders) => {
   });
 };
 
-const generateOrderNumber = () => `ORD-${Date.now().toString(36).toUpperCase()}`;
-
 const normalizeText = (value) => {
   const text = String(value || '').trim();
   return text || null;
-};
-
-const calculatePlatformCommission = (quantity, quantityUnit = 'kg') => {
-  const normalizedUnit = String(quantityUnit || 'kg').toLowerCase();
-  const numericQuantity = Number(quantity || 0);
-  if (!Number.isFinite(numericQuantity) || numericQuantity <= 0) return 0;
-  return normalizedUnit === 'kg' ? numericQuantity * COMMISSION_PER_KG_XAF : numericQuantity * COMMISSION_PER_KG_XAF;
 };
 
 const estimateLogisticsFee = async ({ originRegion, originCity, destinationRegion, destinationCity }) => {
@@ -193,7 +183,6 @@ const createOrder = async (user, payload) => {
   let listing;
   let farmerProfile;
   let resellerProfile;
-  let unitPrice = payload.unitPrice;
 
   if (payload.quoteId) {
     const quote = await getQuote(payload.quoteId);
@@ -206,19 +195,15 @@ const createOrder = async (user, payload) => {
     listing = await getListing(quote.listing_id);
     farmerProfile = quote.farmer_id ? await getProfileById('farmer_profiles', quote.farmer_id) : null;
     resellerProfile = quote.reseller_id ? await getProfileById('reseller_profiles', quote.reseller_id) : null;
-    unitPrice = unitPrice ?? quote.requested_price ?? listing.price_per_unit;
   } else {
     listing = await getListing(payload.listingId);
     farmerProfile = listing.farmer_id ? await getProfileById('farmer_profiles', listing.farmer_id) : null;
     resellerProfile = listing.reseller_id ? await getProfileById('reseller_profiles', listing.reseller_id) : null;
-    unitPrice = unitPrice ?? listing.price_per_unit;
   }
 
   const sellerProfile = resellerProfile || farmerProfile;
   const sellerUser = await ensureFarmerCanReceiveCommerce(sellerProfile);
 
-  const goodsSubtotal = Number(payload.quantity) * Number(unitPrice || 0);
-  const platformCommission = calculatePlatformCommission(payload.quantity, payload.quantityUnit || listing.quantity_unit || 'kg');
   const destinationRegion = normalizeText(payload.destinationRegion) || buyerProfile.region || null;
   const destinationCity = normalizeText(payload.destinationCity) || buyerProfile.city || null;
   const originRegion = sellerUser?.region || null;
@@ -244,44 +229,25 @@ const createOrder = async (user, payload) => {
     logisticsFee = Number(matchedRate.fee_amount || 0);
   }
 
-  const sellerNetAmount = Math.max(0, goodsSubtotal - platformCommission);
-  const totalAmount = goodsSubtotal + logisticsFee;
-  const { data, error } = await supabaseAdmin
-    .from('orders')
-    .insert({
-      order_number: generateOrderNumber(),
-      listing_id: listing.id,
-      buyer_id: buyerProfile.id,
-      farmer_id: farmerProfile?.id || null,
-      reseller_id: resellerProfile?.id || null,
-      quantity: payload.quantity,
-      quantity_unit: payload.quantityUnit || listing.quantity_unit || 'kg',
-      unit_price: unitPrice,
-      base_amount: goodsSubtotal,
-      total_amount: totalAmount,
-      logistics_required: Boolean(payload.logisticsRequired),
-      logistics_fee: logisticsFee,
-      platform_commission: platformCommission,
-      seller_net_amount: sellerNetAmount,
-      currency: listing.currency || 'XAF',
-      status: 'pending_payment',
-      shipping_address: payload.shippingAddress || null,
-      billing_address: payload.billingAddress || null,
-      notes: payload.notes || null,
-      metadata: {
-        originRegion,
-        originCity,
-        destinationRegion,
-        destinationCity,
-        goodsSubtotal,
-        logisticsFee,
-        platformCommission,
-        sellerNetAmount
-      },
-      timeline: [{ event: 'Order created', status: 'pending_payment', date: new Date().toISOString() }]
-    })
-    .select()
-    .single();
+  const { data, error } = await supabaseAdmin.rpc('create_marketplace_order', {
+    p_buyer_user_id: user.id,
+    p_listing_id: payload.quoteId ? null : listing.id,
+    p_quote_id: payload.quoteId || null,
+    p_quantity: Number(payload.quantity),
+    p_requested_quantity_unit: payload.quantityUnit || listing.quantity_unit || 'kg',
+    p_logistics_required: Boolean(payload.logisticsRequired),
+    p_logistics_fee: logisticsFee,
+    p_shipping_address: payload.shippingAddress || null,
+    p_billing_address: payload.billingAddress || null,
+    p_notes: payload.notes || null,
+    p_metadata: {
+      originRegion,
+      originCity,
+      destinationRegion,
+      destinationCity
+    },
+    p_idempotency_key: payload.idempotencyKey || null
+  });
   if (error) throw error;
 
   const [order] = await hydrateOrders([data]);

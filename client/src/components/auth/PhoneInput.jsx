@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Label } from "../ui/label";
 import { ChevronDown } from "lucide-react";
 import { getCountryByCode, getInternationalCountries, getLocalCountry, getPhonePlaceholder, getAllCountries } from "../../lib/countries";
+import { cn } from "../../lib/utils";
 
 export function PhoneInput({ 
   label = "Phone Number", 
@@ -16,7 +17,8 @@ export function PhoneInput({
   onCountryChange,
   showCountrySelector = false,
   includeAllCountries = false,
-  disabled = false
+  disabled = false,
+  appearance = "default"
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(() => getCountryByCode(countryCode) || getLocalCountry());
@@ -104,17 +106,23 @@ export function PhoneInput({
     ? (includeAllCountries ? getAllCountries() : getInternationalCountries()) 
     : [];
   const phonePlaceholder = placeholder || getPhonePlaceholder(selectedCountry?.code);
+  const isReference = appearance === "reference";
 
   return (
     <div ref={dropdownRef}>
       <Label>{label}</Label>
-      <div className="flex overflow-hidden rounded-[8px] border border-[#D1D5DB] bg-white transition-colors duration-200 focus-within:[border-width:1.5px] focus-within:border-[#1A6B3C]">
+      <div className={cn(
+        "flex overflow-hidden rounded-[8px] border bg-white transition-colors duration-200 focus-within:border-[#1E5E27]",
+        isReference
+          ? "h-12 border-transparent bg-[#F6F7F6] focus-within:ring-2 focus-within:ring-[#1E5E27]/10"
+          : "border-[#D1D5DB] focus-within:[border-width:1.5px]",
+      )}>
         {/* Country Code Display / Selector */}
         <button
           type="button"
           onClick={() => showCountrySelector && !disabled && setIsOpen(!isOpen)}
           disabled={!showCountrySelector || disabled}
-          className={`inline-flex items-center gap-1 border-r border-[#E5E7EB] bg-[#F9FAFB] px-3 text-[13px] font-semibold text-[#374151] ${
+          className={`inline-flex items-center gap-1 border-r border-[#E5E7EB] px-3 text-[13px] font-semibold text-[#374151] ${isReference ? "bg-transparent" : "bg-[#F9FAFB]"} ${
             showCountrySelector && !disabled ? "cursor-pointer hover:bg-[#F3F4F6]" : "cursor-default"
           }`}
         >
@@ -131,7 +139,10 @@ export function PhoneInput({
           onChange={handleChange}
           placeholder={phonePlaceholder}
           disabled={disabled}
-          className="h-10 w-full border-0 bg-white px-3 text-[14px] text-[#111827] outline-none placeholder:text-[#9CA3AF] disabled:bg-[#F9FAFB] disabled:text-[#6B7280]"
+          className={cn(
+            "h-full w-full border-0 px-3 text-[14px] text-[#111827] outline-none placeholder:text-[#9CA3AF] disabled:text-[#6B7280]",
+            isReference ? "bg-transparent disabled:bg-[#F1F2F1]" : "bg-white disabled:bg-[#F9FAFB]",
+          )}
         />
       </div>
 

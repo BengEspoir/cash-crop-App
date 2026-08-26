@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import api from "@/lib/axios";
 import { supabase } from "@/lib/supabaseClient";
 import useAuthStore from "@/store/authStore";
 import { getAuthNextRoute } from "@/lib/authRoutes";
@@ -12,10 +11,8 @@ import { Card } from "@/components/ui/card";
 export default function OAuthCallbackPage() {
   const router = useRouter();
   const search = useSearchParams();
-  const { setTokens, setUser, clearOnboarding } = useAuthStore();
+  const { fetchMe, clearOnboarding } = useAuthStore();
   const [error, setError] = useState("");
-
-  const provider = useMemo(() => search.get("provider") || "provider", [search]);
 
   useEffect(() => {
     let active = true;
@@ -32,28 +29,15 @@ export default function OAuthCallbackPage() {
         const { data, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
 
-        const accessToken = data?.session?.access_token;
-        if (!accessToken) {
+        if (!data?.session?.access_token) {
           throw new Error("OAuth session could not be established.");
         }
-
-        // Exchange Supabase identity for AgriculNet JWT tokens.
-        const response = await api.post("/auth/oauth/exchange", {
-          provider,
-          supabaseAccessToken: accessToken,
-        });
-
-        const payload = response.data?.data;
-        if (!payload?.accessToken || !payload?.refreshToken) {
-          throw new Error("Token exchange failed.");
-        }
-
-        setTokens(payload.accessToken, payload.refreshToken);
-        setUser(payload.user);
+        const profile = await fetchMe();
+        if (!profile.success) throw new Error(profile.error);
         clearOnboarding();
 
         toast.success("Signed in successfully.");
-        router.replace(getAuthNextRoute(payload.nextStep || "dashboard", payload.user));
+        router.replace(getAuthNextRoute("dashboard", profile.data.user));
       } catch (err) {
         const message =
           err?.response?.data?.message ||
@@ -67,7 +51,7 @@ export default function OAuthCallbackPage() {
     return () => {
       active = false;
     };
-  }, [clearOnboarding, provider, router, search, setTokens, setUser]);
+  }, [clearOnboarding, fetchMe, router, search]);
 
   if (error) {
     return (
@@ -78,7 +62,7 @@ export default function OAuthCallbackPage() {
         <button
           type="button"
           className="mt-6 inline-flex h-11 items-center justify-center rounded-[10px] bg-green-800 px-5 text-[14px] font-semibold text-white"
-          onClick={() => router.replace("/sign-in")}
+          onClick={() => router.replace("/auth/login")}
         >
           Back to sign in
         </button>

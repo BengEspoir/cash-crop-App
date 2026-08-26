@@ -2,42 +2,24 @@ const router = require('express').Router();
 const validate = require('../../middleware/validate');
 const { authenticate } = require('../../middleware/auth');
 const { identityUpload } = require('../../middleware/upload');
-const { authLimiter, otpSendLimiter, passwordResetLimiter } = require('../../middleware/rateLimiter');
+const { authLimiter, otpSendLimiter } = require('../../middleware/rateLimiter');
 
 const {
-  registerFarmerSchema,
-  registerResellerSchema,
-  registerBuyerSchema,
-  loginSchema,
   sendOtpSchema,
   confirmOtpSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
   updateMeSchema,
-  changePasswordSchema,
   contactChangeRequestSchema,
   contactChangeConfirmSchema,
   recoveryContactSchema,
-  recoveryContactConfirmSchema
+  recoveryContactConfirmSchema,
+  phonePasswordLoginSchema
 } = require('./auth.validators');
 
 const {
-  registerFarmer,
-  registerReseller,
-  registerBuyer,
-  oauthExchange,
-  login,
-  logout,
-  refreshToken,
-  verifyEmail,
   sendPhoneOtp,
   confirmPhoneOtp,
-  forgotPassword,
-  resetPassword,
-  resendVerification,
   getMe,
   updateMe,
-  changePassword,
   requestContactChange,
   confirmContactChange,
   listRecoveryContacts,
@@ -46,25 +28,15 @@ const {
   confirmRecoveryContactPublic,
   deleteRecoveryContact,
   deactivateAccount,
-  submitIdentityVerification
+  submitIdentityVerification,
+  loginWithPhone
 } = require('./auth.controller');
 
-router.post('/register/farmer', authLimiter, validate(registerFarmerSchema), registerFarmer);
-router.post('/register/reseller', authLimiter, validate(registerResellerSchema), registerReseller);
-router.post('/register/buyer', authLimiter, validate(registerBuyerSchema), registerBuyer);
-router.post('/oauth/exchange', authLimiter, oauthExchange);
-router.post('/login', authLimiter, validate(loginSchema), login);
-router.post('/logout', authenticate, logout);
-router.post('/refresh-token', refreshToken);
-router.post('/verify-email', verifyEmail);
+router.post('/login/phone', authLimiter, validate(phonePasswordLoginSchema), loginWithPhone);
 router.post('/verify-phone/send', otpSendLimiter, validate(sendOtpSchema), sendPhoneOtp);
 router.post('/verify-phone/confirm', validate(confirmOtpSchema), confirmPhoneOtp);
-router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordSchema), forgotPassword);
-router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
-router.post('/resend-verification', otpSendLimiter, resendVerification);
 router.get('/me', authenticate, getMe);
 router.patch('/me', authenticate, validate(updateMeSchema), updateMe);
-router.post('/me/change-password', authenticate, validate(changePasswordSchema), changePassword);
 router.post('/contact-change/request', authenticate, validate(contactChangeRequestSchema), requestContactChange);
 router.post('/contact-change/confirm', authenticate, validate(contactChangeConfirmSchema), confirmContactChange);
 router.get('/recovery-contacts', authenticate, listRecoveryContacts);

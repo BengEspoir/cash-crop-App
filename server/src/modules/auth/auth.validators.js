@@ -274,12 +274,12 @@ const changePasswordSchema = Joi.object({
 });
 
 const contactChangeRequestSchema = Joi.object({
-  type: Joi.string().valid('email', 'phone').required(),
+  type: Joi.string().valid('phone').required(),
   value: Joi.string().required()
 });
 
 const contactChangeConfirmSchema = Joi.object({
-  type: Joi.string().valid('email', 'phone').required(),
+  type: Joi.string().valid('phone').required(),
   value: Joi.string().optional(),
   token: Joi.string().optional(),
   otp: Joi.string().optional()
@@ -297,6 +297,13 @@ const recoveryContactConfirmSchema = Joi.object({
   otp: Joi.string().optional()
 }).or('token', 'otp');
 
+const phonePasswordLoginSchema = Joi.object({
+  phone: Joi.string().pattern(phonePattern).required().messages({
+    'string.pattern.base': 'Phone must be a valid Cameroon number (+237XXXXXXXXX)'
+  }),
+  password: Joi.string().min(1).max(128).required()
+});
+
 module.exports = {
   registerFarmerSchema,
   registerResellerSchema,
@@ -311,5 +318,6 @@ module.exports = {
   contactChangeRequestSchema,
   contactChangeConfirmSchema,
   recoveryContactSchema,
-  recoveryContactConfirmSchema
+  recoveryContactConfirmSchema,
+  phonePasswordLoginSchema
 };

@@ -1,39 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card } from "../../../../components/ui/card";
+import toast from "react-hot-toast";
+import { Apple, ArrowLeft, ArrowRight, Globe2, Home } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
 import { Label } from "../../../../components/ui/label";
+import { BrandLogo } from "../../../../components/common/BrandLogo";
 import { PhoneInput } from "../../../../components/auth/PhoneInput";
 import { PasswordInput } from "../../../../components/auth/PasswordInput";
-import { RoleSwitcher } from "../../../../components/auth/RoleSwitcher";
-import { StepIndicator } from "../../../../components/auth/StepIndicator";
-import { registerBuyerSchemas, registerBuyerUnifiedSchema } from "../../../../lib/validators";
+import { registerBuyerUnifiedSchema } from "../../../../lib/validators";
 import { getInternationalCountries, getCountryByCode } from "../../../../lib/countries";
 import { getAuthNextRoute } from "../../../../lib/authRoutes";
-import useAuthStore from "../../../../store/authStore";
-import toast from "react-hot-toast";
-import { ArrowRight, Apple, Globe2 } from "lucide-react";
 import { startOAuth } from "../../../../lib/startOAuth";
+import useAuthStore from "../../../../store/authStore";
 
-// Country Select Component for International Buyers
+const fieldClassName = "h-12 border-transparent bg-[#F6F7F6] focus:border-[#1E5E27] focus:ring-2 focus:ring-[#1E5E27]/10";
+
 function CountrySelect({ value, onChange, error }) {
   const countries = getInternationalCountries();
-  
+
   return (
     <div>
       <Label>Country *</Label>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full rounded-[8px] border border-[#D1D5DB] bg-white px-3 text-[14px] text-[#111827] outline-none focus:border-[#1A6B3C]"
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 w-full rounded-[10px] border border-transparent bg-[#F6F7F6] px-3 text-[14px] text-[#111827] outline-none transition focus:border-[#1E5E27] focus:ring-2 focus:ring-[#1E5E27]/10"
       >
-        <option value="">Select a country</option>
+        <option value="">Select Country</option>
         {countries.map((country) => (
           <option key={country.code} value={country.name}>
             {country.flag} {country.name} ({country.dialCode})
@@ -45,24 +44,18 @@ function CountrySelect({ value, onChange, error }) {
   );
 }
 
-const steps = ["Buyer Profile"];
-
 export default function RegisterBuyerPage() {
   const router = useRouter();
   const { registerBuyer } = useAuthStore();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [submitState, setSubmitState] = useState({ error: "" });
+  const [stage, setStage] = useState("selection");
+  const [submitError, setSubmitError] = useState("");
   const [selectedCountryCode, setSelectedCountryCode] = useState("CM");
-  
-  // Use unified schema to prevent data loss between steps
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    setError,
-    clearErrors,
-    getValues,
     formState: { errors, isSubmitting, isValid },
   } = useForm({
     resolver: zodResolver(registerBuyerUnifiedSchema),
@@ -84,87 +77,38 @@ export default function RegisterBuyerPage() {
   const buyerType = watch("buyerType");
   const selectedCountry = watch("country");
 
-  // Handle buyer type change
   useEffect(() => {
     if (buyerType === "local") {
       setValue("country", "Cameroon");
       setValue("countryCode", "CM");
       setSelectedCountryCode("CM");
-    } else {
-      // Clear country for international buyers
-      setValue("country", "");
-      setValue("countryCode", "");
-      setSelectedCountryCode("");
-      setValue("phone", "");
-    }
-  }, [buyerType, setValue]);
-
-  // Handle country selection change
-  const handleCountryChange = (countryName) => {
-    const country = getInternationalCountries().find(c => c.name === countryName);
-    if (country) {
-      setValue("country", country.name);
-      setValue("countryCode", country.code);
-      setSelectedCountryCode(country.code);
-      setValue("phone", ""); // Clear phone when country changes
-    }
-  };
-
-  const handlePhoneCountryChange = (countryCode) => {
-    const country = getCountryByCode(countryCode);
-    if (country) {
-      setSelectedCountryCode(countryCode);
-      if (buyerType === "international") {
-        setValue("country", country.name);
-        setValue("countryCode", countryCode);
-      }
-    }
-  };
-
-  const validateStep = async (stepNum) => {
-    const step0Fields = ["buyerType", "companyName", "contactName", "country", "countryCode", "phone", "email", "password", "confirmPassword", "agreedToPolicy"];
-    const fieldsToCheck = [step0Fields][stepNum] || [];
-    const stepSchema = registerBuyerSchemas[stepNum];
-
-    clearErrors(fieldsToCheck);
-
-    if (!stepSchema) {
-      return true;
-    }
-
-    const result = stepSchema.safeParse(getValues());
-    if (result.success) {
-      return true;
-    }
-
-    result.error.issues.forEach((issue) => {
-      const field = issue.path[0];
-      if (typeof field === "string") {
-        setError(field, { type: "manual", message: issue.message });
-      }
-    });
-
-    return false;
-  };
-
-  const submitStep = async (values) => {
-    setSubmitState({ error: "" });
-    
-    // Validate current step before proceeding
-    const isStepValid = await validateStep(currentStep);
-    if (!isStepValid) {
-      return; // Validation failed, stay on current step
-    }
-    
-    if (currentStep < steps.length - 1) {
-      setCurrentStep((step) => step + 1);
       return;
     }
 
+    setValue("country", "");
+    setValue("countryCode", "");
+    setSelectedCountryCode("");
+    setValue("phone", "");
+  }, [buyerType, setValue]);
+
+  const selectBuyerType = (nextType) => {
+    setValue("buyerType", nextType, { shouldValidate: true });
+  };
+
+  const handleCountryChange = (countryName) => {
+    const country = getInternationalCountries().find((item) => item.name === countryName);
+    if (!country) return;
+    setValue("country", country.name, { shouldValidate: true });
+    setValue("countryCode", country.code, { shouldValidate: true });
+    setSelectedCountryCode(country.code);
+    setValue("phone", "", { shouldValidate: true });
+  };
+
+  const submit = async (values) => {
+    setSubmitError("");
     const result = await registerBuyer(values);
     if (!result.success) {
-      const detailMessage = result.details?.[0]?.message;
-      setSubmitState({ error: detailMessage || result.error });
+      setSubmitError(result.details?.[0]?.message || result.error);
       return;
     }
 
@@ -173,167 +117,197 @@ export default function RegisterBuyerPage() {
         duration: 8000,
       });
     } else {
-      toast.success("Account created. Verify your email to enter your dashboard.");
+      toast.success("Account created. Verify your email to continue.");
     }
     router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
   };
 
-  return (
-    <div className="mx-auto w-full max-w-[560px]">
-      <Card className="rounded-[20px] p-6 sm:p-8">
-        <div className="space-y-2">
-          <p className="section-eyebrow">Buyer onboarding</p>
-          <h1 className="font-display text-[24px] leading-[1.12] text-ink-900">Create your buyer account</h1>
-          <p className="text-[14px] leading-6 text-ink-700">
-            A premium sourcing profile built for verified supply, protected settlement rails, and export-ready workflows.
+  if (stage === "selection") {
+    return (
+      <div className="w-full">
+        <div className="flex items-center justify-between gap-4">
+          <BrandLogo className="h-9 w-[118px]" priority />
+          <p className="text-[11px] text-[#9CA3AF]">
+            Already a member?{" "}
+            <Link href="/auth/login" className="font-semibold text-[#1E5E27] hover:underline">Sign in</Link>
           </p>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-          <RoleSwitcher
-            className="w-full justify-start sm:w-auto"
-            value={watch("buyerType")}
-            onChange={(nextValue) => setValue("buyerType", nextValue, { shouldValidate: true })}
-            options={[
-              { label: "Local Buyer", value: "local" },
-              { label: "International Buyer", value: "international" },
-            ]}
-          />
-          <StepIndicator steps={steps} currentStep={currentStep} />
+        <div className="mt-16">
+          <h1 className="font-display text-[35px] leading-[1.08] text-[#151515]">Create your buyer account</h1>
+          <p className="mt-3 max-w-[48ch] text-[13px] leading-6 text-[#6B7280]">
+            Choose how you source agricultural commodities on AgriculNet.
+          </p>
         </div>
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit(submitStep)}>
-        {currentStep === 0 ? (
+        <div className="mt-8 space-y-3" role="radiogroup" aria-label="Buyer type">
+          {[
+            {
+              value: "local",
+              title: "Local Buyer",
+              description: "I source goods within the Cameroonian market.",
+              icon: Home,
+            },
+            {
+              value: "international",
+              title: "International Buyer",
+              description: "I source across borders and global markets.",
+              icon: Globe2,
+            },
+          ].map(({ value, title, description, icon: Icon }) => {
+            const selected = buyerType === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => selectBuyerType(value)}
+                className={`flex w-full items-center gap-4 rounded-[12px] border px-4 py-4 text-left transition ${selected ? "border-[#1E5E27] bg-[#F1F8F2]" : "border-[#E5E7EB] bg-white hover:border-[#9BC7A2]"}`}
+              >
+                <span className={`inline-flex h-11 w-11 items-center justify-center rounded-[10px] ${selected ? "bg-white text-[#1E5E27]" : "bg-[#F6F7F6] text-[#6B7280]"}`}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold text-[#1F2937]">{title}</span>
+                  <span className="mt-1 block text-[11px] leading-5 text-[#6B7280]">{description}</span>
+                </span>
+                <span className={`h-4 w-4 rounded-full border-[4px] ${selected ? "border-[#1E5E27] bg-white" : "border-[#D1D5DB]"}`} />
+              </button>
+            );
+          })}
+        </div>
+
+        <Button
+          type="button"
+          onClick={() => setStage("profile")}
+          className="mt-5 h-12 w-full bg-[#1E5E27] hover:bg-[#174B1F]"
+        >
+          Continue to Profile <ArrowRight className="h-4 w-4" />
+        </Button>
+
+        {buyerType === "local" ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Company or Buyer Name *</Label>
-                <Input placeholder="Agri Export Ltd." autoComplete="organization" {...register("companyName")} />
-                {errors.companyName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.companyName.message}</p> : null}
-              </div>
-              <div>
-                <Label>Contact Name *</Label>
-                <Input placeholder="Amina Kofi" autoComplete="name" {...register("contactName")} />
-                {errors.contactName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.contactName.message}</p> : null}
-              </div>
+            <div className="my-7 flex items-center gap-3">
+              <span className="h-px flex-1 bg-[#E5E7EB]" />
+              <span className="text-[11px] text-[#9CA3AF]">OR SIGN UP WITH</span>
+              <span className="h-px flex-1 bg-[#E5E7EB]" />
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {buyerType === "local" ? (
-                <div>
-                  <Label>Country *</Label>
-                  <Input 
-                    value="Cameroon" 
-                    disabled 
-                    className="bg-[#F9FAFB] text-[#6B7280]"
-                  />
-                  <input type="hidden" {...register("country")} value="Cameroon" />
-                  <input type="hidden" {...register("countryCode")} value="CM" />
-                </div>
-              ) : (
-                <CountrySelect
-                  value={selectedCountry}
-                  onChange={handleCountryChange}
-                  error={errors.country?.message}
-                />
-              )}
-              <PhoneInput
-                label="Phone Number *"
-                value={watch("phone")}
-                onChange={(nextPhone) => setValue("phone", nextPhone, { shouldValidate: true })}
-                error={errors.phone?.message}
-                countryCode={selectedCountryCode}
-                onCountryChange={handlePhoneCountryChange}
-                showCountrySelector={buyerType === "international"}
-                disabled={buyerType === "international" && !selectedCountry}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => startOAuth("google")} className="inline-flex h-11 items-center justify-center gap-2 rounded-[9px] border border-[#E5E7EB] text-[12px] font-semibold text-[#374151] hover:bg-[#F9FAFB]">
+                <Globe2 className="h-4 w-4 text-[#1E5E27]" /> Google
+              </button>
+              <button type="button" onClick={() => startOAuth("apple")} className="inline-flex h-11 items-center justify-center gap-2 rounded-[9px] border border-[#E5E7EB] text-[12px] font-semibold text-[#374151] hover:bg-[#F9FAFB]">
+                <Apple className="h-4 w-4 text-black" /> Apple
+              </button>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Email Address *</Label>
-                <Input placeholder="example@yahoo.com" autoComplete="email" {...register("email")} />
-                {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
-              </div>
-              <div className="rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-4 text-[13px] leading-6 text-[#374151]">
-                Buyer country is stored separately from destination market so trade and logistics records stay accurate.
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <PasswordInput label="Password *" placeholder="Minimum 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
-              <PasswordInput label="Confirm Password *" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
-            </div>
-
-            <label className="flex items-start gap-3 rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-4 text-[13px] text-[#374151]">
-              <input type="checkbox" className="mt-1 h-4 w-4 rounded border-[#D1D5DB]" {...register("agreedToPolicy")} />
-              <span>I agree to AgriculNet buyer terms, marketplace policies, and protected payment conditions.</span>
-            </label>
-            {errors.agreedToPolicy ? <p className="-mt-3 text-[12px] text-[#922B21]">{errors.agreedToPolicy.message}</p> : null}
           </>
-        ) : null}
+        ) : (
+          <p className="mt-6 rounded-[10px] bg-[#F1F8F2] px-4 py-3 text-[12px] leading-5 text-[#1E5E27]">
+            International registration uses email so country and phone details remain attached to the correct buyer type.
+          </p>
+        )}
+      </div>
+    );
+  }
 
-        {submitState.error ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitState.error}</p> : null}
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {currentStep > 0 ? (
-            <Button type="button" variant="outline" onClick={() => setCurrentStep((step) => step - 1)}>
-              Back
-            </Button>
-          ) : <span />}
-          <Button type="submit" disabled={!isValid || isSubmitting} variant="cta">
-            {isSubmitting ? "Processing..." : currentStep === steps.length - 1 ? "Create Buyer Account" : "Continue"}
-          </Button>
-        </div>
-
-        <div className="pt-2">
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-ink-200" />
-            <p className="text-[12px] font-semibold text-ink-500">Or continue with</p>
-            <div className="h-px flex-1 bg-ink-200" />
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <button
-              type="button"
-              onClick={() => startOAuth("google")}
-              className="group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift"
-            >
-              <Globe2 className="h-4 w-4 text-green-800" />
-              Continue with Google
-              <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
-            </button>
-            <button
-              type="button"
-              onClick={() => startOAuth("apple")}
-              className="group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift"
-            >
-              <Apple className="h-4 w-4" />
-              Continue with Apple
-              <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
-            </button>
-            <button
-              type="button"
-              onClick={() => startOAuth("facebook")}
-              className="group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift"
-            >
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                f
-              </span>
-              Continue with Facebook
-              <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
-            </button>
-          </div>
-        </div>
-
-        <p className="pt-1 text-[12.5px] text-ink-500">
-          Already have an account?{" "}
-          <Link className="font-semibold text-green-800 hover:text-green-700" href="/sign-in">
-            Sign in
-          </Link>
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between gap-4 text-[11px]">
+        <button type="button" onClick={() => setStage("selection")} className="inline-flex items-center gap-1 text-[#6B7280] hover:text-[#1E5E27]">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to selection
+        </button>
+        <p className="text-[#9CA3AF]">
+          Already a member?{" "}
+          <Link href="/auth/login" className="font-semibold text-[#1E5E27] hover:underline">Sign in</Link>
         </p>
+      </div>
+
+      <div className="mt-12">
+        <h1 className="font-display text-[35px] leading-[1.08] text-[#151515]">Complete Your Onboarding</h1>
+        <p className="mt-3 text-[13px] leading-6 text-[#6B7280]">
+          {buyerType === "local"
+            ? "Create your local sourcing profile for the Cameroonian marketplace."
+            : "Create your international sourcing profile with accurate country and contact details."}
+        </p>
+      </div>
+
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit(submit)}>
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9CA3AF]">Company details</p>
+          <div className="space-y-3">
+            <div>
+              <Label>Company or Buyer Name *</Label>
+              <Input className={fieldClassName} placeholder="Company or Buyer Name" autoComplete="organization" {...register("companyName")} />
+              {errors.companyName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.companyName.message}</p> : null}
+            </div>
+            <div>
+              <Label>Contact Name *</Label>
+              <Input className={fieldClassName} placeholder="Contact Name" autoComplete="name" {...register("contactName")} />
+              {errors.contactName ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.contactName.message}</p> : null}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9CA3AF]">Contact information</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {buyerType === "local" ? (
+              <div>
+                <Label>Country *</Label>
+                <Input className={fieldClassName} value="Cameroon" disabled />
+                <input type="hidden" {...register("country")} value="Cameroon" />
+                <input type="hidden" {...register("countryCode")} value="CM" />
+              </div>
+            ) : (
+              <CountrySelect value={selectedCountry} onChange={handleCountryChange} error={errors.country?.message} />
+            )}
+            <PhoneInput
+              label="Phone Number *"
+              value={watch("phone")}
+              onChange={(phone) => setValue("phone", phone, { shouldValidate: true })}
+              error={errors.phone?.message}
+              countryCode={selectedCountryCode}
+              showCountrySelector={buyerType === "international"}
+              includeAllCountries
+              disabled={buyerType === "international" && !selectedCountry}
+              appearance="reference"
+              onCountryChange={(code) => {
+                const country = getCountryByCode(code);
+                if (!country) return;
+                setSelectedCountryCode(code);
+                setValue("countryCode", code, { shouldValidate: true });
+                setValue("country", country.name, { shouldValidate: true });
+              }}
+            />
+          </div>
+          <div className="mt-3">
+            <Label>Email Address *</Label>
+            <Input className={fieldClassName} placeholder="Email Address" autoComplete="email" {...register("email")} />
+            {errors.email ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.email.message}</p> : null}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9CA3AF]">Security</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PasswordInput appearance="reference" label="Password *" placeholder="Password" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
+            <PasswordInput appearance="reference" label="Confirm Password *" placeholder="Confirm Password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
+          </div>
+        </div>
+
+        <label className="flex items-start gap-3 text-[11px] leading-5 text-[#6B7280]">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-[#D1D5DB] accent-[#1E5E27]" {...register("agreedToPolicy")} />
+          <span>I accept the Buyer Terms, Marketplace Policies, and Protected-Payment Conditions.</span>
+        </label>
+        {errors.agreedToPolicy ? <p className="-mt-3 text-[12px] text-[#922B21]">{errors.agreedToPolicy.message}</p> : null}
+
+        {submitError ? <p role="alert" className="rounded-[10px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitError}</p> : null}
+
+        <Button type="submit" disabled={!isValid || isSubmitting} className="h-12 w-full bg-[#1E5E27] hover:bg-[#174B1F]">
+          {isSubmitting ? "Creating account..." : <>Create Buyer Account <ArrowRight className="h-4 w-4" /></>}
+        </Button>
       </form>
-      </Card>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const validate = require('../../middleware/validate');
-const { authenticate, requireDashboardAccess } = require('../../middleware/auth');
+const { authenticate, requireDashboardAccess, requireMarketplaceAccess } = require('../../middleware/auth');
 const {
   createConversation,
   listConversations,
@@ -12,8 +12,8 @@ const { createConversationSchema, sendMessageSchema } = require('./conversations
 router.use(authenticate, requireDashboardAccess);
 
 router.get('/', listConversations);
-router.post('/', validate(createConversationSchema), createConversation);
+router.post('/', requireMarketplaceAccess, validate(createConversationSchema), createConversation);
 router.get('/:id', getConversation);
-router.post('/:id/messages', validate(sendMessageSchema), sendMessage);
+router.post('/:id/messages', requireMarketplaceAccess, validate(sendMessageSchema), sendMessage);
 
 module.exports = router;

@@ -4,9 +4,7 @@ const { ERROR_CODES, USER_ROLES } = require('../../config/constants');
 const {
   mapFarmerProfile,
   mapResellerProfile,
-  mapListing,
-  mapUserName,
-  normalizeVerificationStatus
+  mapListing
 } = require('../../utils/marketplace');
 
 const isNotFound = (error) => error?.code === 'PGRST116';

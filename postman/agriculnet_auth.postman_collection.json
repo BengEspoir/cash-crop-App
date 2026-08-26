@@ -1,94 +1,40 @@
 {
   "info": {
-    "name": "AgriculNet API — Authentication",
-    "description": "Complete API collection for AgriculNet authentication endpoints",
+    "name": "AgriculNet API - Supabase-authenticated endpoints",
+    "description": "Obtain access_token through the client Supabase Auth flow at /auth/login. The Express API does not accept passwords or issue sessions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "base_url", "value": "http://localhost:5000", "type": "string" },
     { "key": "api_version", "value": "v1", "type": "string" },
     { "key": "access_token", "value": "", "type": "string" },
-    { "key": "refresh_token", "value": "", "type": "string" },
-    { "key": "farmer_id", "value": "", "type": "string" },
-    { "key": "buyer_id", "value": "", "type": "string" },
-    { "key": "admin_key", "value": "", "type": "string" },
-    { "key": "admin_identifier", "value": "", "type": "string" },
-    { "key": "admin_password", "value": "", "type": "string" }
+    { "key": "user_id", "value": "", "type": "string" }
   ],
   "item": [
     {
-      "name": "Health",
-      "item": [
-        {
-          "name": "Health Check",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/api/health", "host": ["{{base_url}}"], "path": ["api", "health"] } },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"], "type": "text/javascript" } }]
-        }
-      ]
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/api/health", "host": ["{{base_url}}"], "path": ["api", "health"] }
+      }
     },
     {
-      "name": "Registration",
-      "item": [
-        {
-          "name": "Register Farmer",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Ngum\",\n  \"phone\": \"+237674000123\",\n  \"email\": \"jean@test.agriculnet.cm\",\n  \"password\": \"FarmerPass@2025\",\n  \"confirmPassword\": \"FarmerPass@2025\",\n  \"region\": \"South West\",\n  \"city\": \"Kumba\",\n  \"farmName\": \"Green Valley\",\n  \"agreeToTerms\": true\n}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/register/farmer", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "register", "farmer"] } },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "const d = pm.response.json().data; if (d?.user) pm.collectionVariables.set('farmer_id', d.user.id);"], "type": "text/javascript" } }]
-        },
-        {
-          "name": "Register Buyer",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Alain\",\n  \"lastName\": \"Tabe\",\n  \"phone\": \"+237699000456\",\n  \"email\": \"alain@test.agriculnet.cm\",\n  \"password\": \"BuyerPass@2025\",\n  \"confirmPassword\": \"BuyerPass@2025\",\n  \"buyerType\": \"local\",\n  \"country\": \"Cameroon\",\n  \"countryCode\": \"CM\",\n  \"city\": \"Douala\",\n  \"agreeToTerms\": true\n}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/register/buyer", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "register", "buyer"] } },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 201', () => pm.response.to.have.status(201));", "const d = pm.response.json().data; if (d?.user) pm.collectionVariables.set('buyer_id', d.user.id);"], "type": "text/javascript" } }]
-        }
-      ]
+      "name": "Get Linked Profile",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/me", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "me"] }
+      }
     },
     {
-      "name": "Phone Verification",
-      "item": [
-        { "name": "Send OTP", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"userId\":\"{{farmer_id}}\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/verify-phone/send", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "verify-phone", "send"] } } },
-        { "name": "Confirm OTP", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"userId\":\"{{farmer_id}}\",\"otp\":\"123456\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/verify-phone/confirm", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "verify-phone", "confirm"] } } }
-      ]
-    },
-    {
-      "name": "Email Verification",
-      "item": [
-        { "name": "Verify Email", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"token\":\"sample-token\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/verify-email", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "verify-email"] } } }
-      ]
-    },
-    {
-      "name": "Login",
-      "item": [
-        {
-          "name": "Login",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"identifier\":\"+237674000123\",\"password\":\"FarmerPass@2025\",\"rememberMe\":false}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/login", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "login"] } },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const d = pm.response.json().data; if (d) { pm.collectionVariables.set('access_token', d.accessToken); pm.collectionVariables.set('refresh_token', d.refreshToken); }"], "type": "text/javascript" } }]
-        },
-        { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refresh_token}}\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/logout", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "logout"] } } },
-        { "name": "Refresh Token", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refresh_token}}\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/refresh-token", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "refresh-token"] } } }
-      ]
-    },
-    {
-      "name": "Password Reset",
-      "item": [
-        { "name": "Forgot Password (SMS)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"identifier\":\"+237674000123\",\"method\":\"sms\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/forgot-password", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "forgot-password"] } } },
-        { "name": "Reset Password", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"userId\":\"{{farmer_id}}\",\"otp\":\"123456\",\"newPassword\":\"NewPass@2025!\",\"confirmPassword\":\"NewPass@2025!\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/reset-password", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "reset-password"] } } }
-      ]
-    },
-    {
-      "name": "Profile",
-      "item": [
-        { "name": "Get Profile", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }], "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/me", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "me"] } } },
-        { "name": "Update Profile", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" }], "body": { "mode": "raw", "raw": "{\"city\":\"Buea\"}" }, "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/me", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "me"] } } }
-      ]
-    },
-    {
-      "name": "Admin",
-      "item": [
-        {
-          "name": "Admin Login",
-          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-admin-key", "value": "{{admin_key}}" }], "body": { "mode": "raw", "raw": "{\"identifier\":\"{{admin_identifier}}\",\"password\":\"{{admin_password}}\"}" }, "url": { "raw": "{{base_url}}/api/v1/x-secure/admin-access/authenticate", "host": ["{{base_url}}"], "path": ["api", "v1", "x-secure", "admin-access", "authenticate"] } },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "const role = pm.response.json().data?.user?.role; pm.expect(role).to.be.oneOf(['admin','super_admin']);"], "type": "text/javascript" } }]
-        }
-      ]
+      "name": "Send Domain Phone OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"userId\":\"{{user_id}}\",\"purpose\":\"phone_verification\"}" },
+        "url": { "raw": "{{base_url}}/api/{{api_version}}/auth/verify-phone/send", "host": ["{{base_url}}"], "path": ["api", "{{api_version}}", "auth", "verify-phone", "send"] }
+      }
     }
   ]
 }

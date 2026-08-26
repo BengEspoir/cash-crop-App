@@ -17,7 +17,7 @@ import useAuthStore from "../../../store/authStore";
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const token = searchParams.get("code");
   const { onboarding, resetPassword, syncOnboarding } = useAuthStore();
   const [feedback, setFeedback] = useState({ error: "", success: "" });
   const {
@@ -38,16 +38,10 @@ export default function ResetPasswordPage() {
   const onSubmit = async (values) => {
     setFeedback({ error: "", success: "" });
 
-    if (!token && !onboarding?.identifier) {
-      setFeedback({ error: "Start from password recovery so we know which account to reset.", success: "" });
-      return;
-    }
-
     const result = await resetPassword({
       password: values.password,
       confirmPassword: values.confirmPassword,
-      code: values.code,
-      token,
+      code: token,
     });
 
     if (!result.success) {
@@ -56,7 +50,7 @@ export default function ResetPasswordPage() {
     }
 
     setFeedback({ success: result.data.message, error: "" });
-    router.push("/sign-in");
+    router.push("/auth/login");
   };
 
   return (
@@ -64,20 +58,10 @@ export default function ResetPasswordPage() {
       <p className="section-eyebrow">Password Reset</p>
       <h1 className="mt-2 font-display text-[22px] leading-[1.15] text-[#111827]">Create a new password</h1>
       <p className="mt-3 text-[14px] leading-6 text-[#374151]">
-        {token
-          ? "Your email link is active. Choose a stronger password before your next trade."
-          : "Use the reset code we sent you and choose a stronger password before your next trade."}
+        Your secure email recovery session is active. Choose a stronger password before your next trade.
       </p>
 
       <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
-        {!token ? (
-          <div>
-            <Label>Reset Code</Label>
-            <Input placeholder="Enter 6-digit code" autoComplete="one-time-code" {...register("code")} />
-            {errors.code ? <p className="mt-2 text-[12px] text-[#922B21]">{errors.code.message}</p> : null}
-          </div>
-        ) : null}
-
         <PasswordInput label="New Password" placeholder="At least 8 characters" autoComplete="new-password" error={errors.password?.message} {...register("password")} />
         <PasswordInput label="Confirm Password" placeholder="Repeat password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register("confirmPassword")} />
         <PasswordStrength password={watch("password") || ""} />
@@ -87,7 +71,7 @@ export default function ResetPasswordPage() {
 
         <DevHintsPanel hints={onboarding?.devHints} />
 
-        <Button type="submit" className="w-full" disabled={(!token && !isValid) || isSubmitting}>
+        <Button type="submit" className="w-full" disabled={!isValid || isSubmitting}>
           {isSubmitting ? "Saving..." : "Set New Password"}
         </Button>
       </form>

@@ -1,122 +1,66 @@
-# AgriculNet Deployment Guide
+# AgriculNet Render/Vercel Deployment Notes
 
-## Frontend freeze recovery
+Use Vercel for `client/`, one Render Web Service for `server/`, and the existing Supabase project for PostgreSQL and Storage. See `../RENDER_BACKEND_DEPLOYMENT_GUIDE.md` for the complete walkthrough.
 
-The frontend should now run with dictionary-based localization only.
+## Backend cutover
 
-1. Keep supported locales to `en` and `fr`.
-2. Do not use any DOM-wide translation observer or phrase rewriter.
-3. If a browser previously saved `agriculnet_locale_v1=es`, the app should fall back to `en`.
-4. Validate these routes locally after restart:
-   - `/`
-   - `/sign-in`
-   - `/browse`
-   - `/buyer/dashboard`
-   - `/farmer/dashboard`
-   - `/admin/dashboard`
+1. Create a Git-backed Render Web Service with Root Directory `server`.
+2. Set Build Command to `npm ci --omit=dev` and Start Command to `npm start`.
+3. Select the Free instance and let Render provide `PORT` automatically.
+4. Leave Health Check Path blank so Render uses its default TCP probe; test `GET /api/health` manually.
+5. Add private values from `server/.env.example` through Render's Environment settings.
+6. Set `NODE_ENV=production`, `CLIENT_URL`, `BASE_URL`, verification URLs, and storage bucket names.
+7. Confirm `GET /api/health` on the generated `onrender.com` domain.
 
-Success criteria:
-- scrolling stays responsive
-- route navigation renders the target page
-- refreshing the page does not hang the browser
+Do not configure an administrator route secret. Administrators use `/auth/login`, Supabase sessions, and the same JWT/RLS role boundary as other users.
 
-## Railway backend cutover
+## Database cutover
 
-This project keeps:
-- frontend on Vercel
-- backend on Railway
-- database and storage on Supabase
+For the existing Supabase project, identify the applied versions and run only missing migrations through `039_supabase_auth_and_rls_alignment.sql`, always in numeric order. Do not rerun the full schema blindly. Then run:
 
-### 1. Create the Railway service
-
-1. Create a new Railway project.
-2. Add an empty service or connect the GitHub repository.
-3. Set the service root directory to `server`.
-4. Set the start command to `npm start`.
-5. Confirm the backend health route is `/api/health`.
-
-### 2. Configure Railway environment variables
-
-Copy the production values from `server/.env` into Railway.
-
-Required production variables:
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `JWT_ACCESS_SECRET`
-- `JWT_REFRESH_SECRET`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `AT_API_KEY`
-- `AT_USERNAME`
-
-Also set these app variables:
-- `PORT=5000`
-- `NODE_ENV=production`
-- `CLIENT_URL=https://<your-vercel-frontend-domain>`
-- `BASE_URL=https://<your-railway-public-domain>`
-- `EMAIL_VERIFY_URL=https://<your-vercel-frontend-domain>/verify-email`
-- `PASSWORD_RESET_URL=https://<your-vercel-frontend-domain>/reset-password`
-- `ADMIN_ROUTE_SECRET=<same-admin-secret>`
-- `SUPABASE_VERIFICATION_BUCKET=farmer-verifications`
-- `SUPABASE_ASSETS_BUCKET=agriculnet-assets`
-
-Set any other existing email, SMS, Cloudinary, and admin variables your current backend already depends on.
-
-### 3. Deploy and verify Railway
-
-1. Trigger the Railway deployment.
-2. Open the generated Railway public domain.
-3. Verify:
-
-```text
-https://<railway-domain>/api/health
+```powershell
+Set-Location server
+node verify-db-init.js
 ```
 
-Expected result: JSON success response from the AgriculNet API.
+Before 031, reconcile duplicate non-null payment references, commissions per order, and logistics rows per order. The explicit failures are `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, and `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Then reconcile duplicate order payments for 033, reissue proofs invalidated by 034, audit legacy stock for 035, and normalize unknown shipment statuses for 036. Migration 037 forces RLS and requires `SUPABASE_SERVICE_ROLE_KEY` in every API environment; migration 038 repairs UUID resolution in restricted RPCs. Schema verification does not prove live provider operation.
 
-If Railway fails to boot, first check:
-- missing production env vars
-- wrong root directory
-- wrong start command
-- CORS mismatch on `CLIENT_URL`
+## Fapshi backend values
 
-### 4. Point Vercel frontend to Railway
+Configure provider credentials privately and include:
 
-In the Vercel project settings, update:
-
-```text
-NEXT_PUBLIC_API_URL=https://<railway-domain>/api/v1
+```env
+FAPSHI_WEBHOOK_SECRET=<private-random-hmac-secret>
+FAPSHI_REQUEST_TIMEOUT_MS=10000
 ```
 
-Redeploy the Vercel frontend after saving the variable.
+The callback route is `POST /api/webhooks/fapshi`. Keep `FAPSHI_MODE=sandbox` until callback authentication, amount/currency checks, duplicate delivery, timeout, retry, refund, and reconciliation behavior are validated.
 
-### 5. Post-cutover smoke test
+## Point Vercel to the backend
 
-After the Vercel redeploy, test:
+Set:
 
-1. open the home page and `/sign-in`
-2. sign in with an existing account
-3. open one buyer, farmer, and admin dashboard route
-4. verify one authenticated API-backed list loads
-5. verify one upload-backed flow if it is part of the presentation
+```text
+NEXT_PUBLIC_API_URL=https://<backend-domain>/api/v1
+```
 
-Minimum backend checks:
-- sign-in request reaches Railway
-- dashboard data loads from Railway
-- support routes respond
-- uploads still write to Supabase storage
+Redeploy the frontend after changing the value. No server credential belongs in Vercel's public environment variables.
+
+## Post-cutover smoke test
+
+- open the home and sign-in pages;
+- sign in with a disposable non-admin account;
+- test administrator login through the canonical endpoint;
+- load one authenticated dashboard/profile request;
+- verify one upload boundary if used in the demonstration;
+- exercise Fapshi only in the intended provider environment.
 
 ## Rollback
 
-If Railway is not stable before the presentation:
+Keep the previous backend deployment and configuration available until smoke tests pass. To roll back, restore the prior `NEXT_PUBLIC_API_URL`, redeploy the frontend, and re-run health/auth checks.
 
-1. restore `NEXT_PUBLIC_API_URL` in Vercel to the previous Render backend URL
-2. redeploy the Vercel frontend
-3. confirm `/api/health` on the Render backend
-4. retest sign-in and one dashboard route
+Render's Free instance sleeps after 15 minutes without inbound traffic and can take about one minute to wake. It is suitable for prototype testing, but the server's in-process scheduler cannot run while the instance is sleeping.
 
-## Notes
+## Scope statement
 
-- Railway public domain is enough for the presentation; do not move a custom backend domain in this pass.
-- The backend currently enforces strict production env validation through `server/src/config/env.js`, so missing provider credentials will prevent boot.
+AgriculNet remains a prototype. Authentication and selected persisted workflows are implemented, while live settlement, payouts, carrier operations, inspection/certification, export documentation, and impact claims require further implementation and operational validation.

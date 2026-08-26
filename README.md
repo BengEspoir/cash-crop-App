@@ -1,97 +1,99 @@
 # AgriculNet
 
-AgriculNet connects Cameroonian farmers with local and international buyers.
+AgriculNet is a research and demonstration prototype for reducing information asymmetry and trust barriers in Cameroon's cash-crop trade. It combines public discovery screens with authenticated role-based workflows backed by an Express API and Supabase.
+
+## Implementation status
+
+Implemented and testable in the repository:
+
+- password authentication, verification, recovery, and role-based access;
+- buyer, farmer, reseller, and administrator account/profile flows;
+- seller identity submission and administrator review;
+- persisted marketplace domain foundations and dashboard APIs;
+- sandbox-oriented Fapshi integration with an atomic reconciliation migration.
+
+Prototype or deployment-dependent areas:
+
+- live payment collection, escrow, release, refunds, and payouts;
+- real carrier dispatch, GPS tracking, inspections, certification, and export processing;
+- production-grade provider monitoring, reconciliation operations, and measured marketplace impact.
+
+A rendered dashboard or seeded record is not evidence that an external service or end-to-end transaction is operational.
 
 ## Stack
-- Next.js 14 App Router frontend
-- Tailwind CSS, React Hook Form, Zod, Zustand
-- Express API with Supabase-backed auth
-- Development `devHints` for local OTP and email verification fallback
 
-## Local mode
-- Real backend: auth, admin-auth, admin review, and authenticated dashboard data
-- Public browse/marketing pages can still use seed-friendly preview data
+- Next.js App Router frontend in `client/`
+- Express API in `server/`
+- Supabase PostgreSQL and Storage
+- Jest backend tests and Vitest frontend tests
 
 ## Quick start
-```bash
-cd client && cmd /c npm install
-cd ../server && cmd /c npm install
 
-copy server\.env.example server\.env
-copy client\.env.local.example client\.env.local
+```powershell
+npm --prefix client install
+npm --prefix server install
+Copy-Item server/.env.example server/.env
+Copy-Item client/.env.local.example client/.env.local
 ```
 
-To enable the AgriculNet AI assistant locally, add at least one server-only provider key to `server/.env`. Configured providers are attempted in order and missing keys are skipped:
+Replace placeholders only in the untracked environment files. Never commit live credentials, reusable password hashes, access tokens, or administrator identifiers.
 
-```env
-AI_PROVIDER_ORDER=openrouter,groq,gemini,cerebras
-OPENROUTER_API_KEY=your-openrouter-api-key
-OPENROUTER_MODEL=openrouter/free
-GROQ_API_KEY=
-GROQ_MODEL=openai/gpt-oss-20b
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.1-flash-lite
-CEREBRAS_API_KEY=
-CEREBRAS_MODEL=gpt-oss-120b
-# Total deadline for the complete provider chain (must stay below the client timeout).
-AI_REQUEST_TIMEOUT_MS=45000
-# Maximum time for each provider attempt when multiple providers are configured.
-AI_PROVIDER_TIMEOUT_MS=10000
-AI_RATE_LIMIT_WINDOW_MS=900000
-AI_RATE_LIMIT_MAX_REQUESTS=12
-```
-
-Keep every provider key out of `client/.env.local` and never prefix one with `NEXT_PUBLIC_`. Restart the backend after changing `server/.env`. Free plans are suitable for testing, but availability and quotas can change.
-
-## Auth-critical database setup
-Run these Supabase migrations in order:
-- `001_enums_and_extensions.sql`
-- `002_users_table.sql`
-- `003_farmer_profiles.sql`
-- `004_buyer_profiles.sql`
-- `005_tokens_and_otps.sql`
-- `021_audit_logs.sql`
-- `022_profile_extensions.sql`
-- `023_auto_approval_setup.sql`
-- `024_enhanced_verification.sql`
-- `025_activity_events.sql`
-
-Then run these seeds as needed:
-- `001_seed_admin.sql` for seeded admin access
-- `002_seed_regions.sql` and `003_seed_crops.sql` for marketplace seed data
-
-Verify the auth schema:
-```bash
-cd server
-node verify-db-init.js
-```
-
-## Start the app
-Run these from the repository root in two separate terminals:
+Start the services in separate terminals:
 
 ```powershell
 npm run dev:server
 npm run dev:client
 ```
 
-## Local URLs
+Local endpoints:
+
 - Frontend: `http://localhost:3000`
 - API health: `http://localhost:5000/api/health`
-- Sign in: `http://localhost:3000/sign-in`
-- Admin portal: `http://localhost:3000/admin-portal`
+- Canonical sign-in: `http://localhost:3000/auth/login`
 
-## Local auth behavior
-- Buyers become `active` immediately after both phone and email verification.
-- Farmers move to `pending_identity_verification` after phone and email verification.
-- Farmers submit ID front, ID back, and selfie evidence, then move to `pending_review` for manual admin approval.
-- If SMS or email providers are not configured, the UI can still complete local flows by using `devHints`.
+## Database setup
 
-## Seeded admin
-After running `server/database/seeds/001_seed_admin.sql`, the default admin account is:
-- Email: `mbengespoir@gmail.com`
-- Password: set your own private admin password before seeding production data.
+Apply every file in `server/database/migrations/` in numeric order, from `001_enums_and_extensions.sql` through `039_supabase_auth_and_rls_alignment.sql`. Migrations 032-036 add atomic order, payment, authentication-proof, inventory/quote, and logistics operations. Migration 037 forces RLS, migration 038 repairs UUID resolution, and migration 039 links domain users to Supabase Auth identities and installs role-aware policies/hooks.
 
-## Useful docs
-- Setup guide: `docs/setup-guide.md`
-- Admin access: `ADMIN_ACCESS_GUIDE.md`
-- Database setup: `server/database/MIGRATION_GUIDE.md`
+Before migration 031, reconcile duplicate non-null `payments.transaction_ref` values, duplicate `commissions.order_id` rows, and duplicate `logistics.order_id` rows; the migration fails with the corresponding `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, or `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED` code. Also reconcile duplicate order payments before 033, reissue credentials invalidated by 034, audit legacy inventory for 035, and normalize unknown shipment statuses for 036. Every API environment must use `SUPABASE_SERVICE_ROLE_KEY`.
+
+Verify representative schema checkpoints:
+
+```powershell
+Set-Location server
+node verify-db-init.js
+```
+
+Seeds are optional. The administrator seed contains no tracked account or reusable hash; it requires private session settings at execution time. The other seeds are demonstration data and do not establish production readiness.
+
+## Authentication boundary
+
+All password users, including administrators, sign in through the client’s native Supabase flow:
+
+```text
+http://localhost:3000/auth/login
+```
+
+There is no backend password-login endpoint, hidden administrator route, public administrator key, or custom session token. Express validates Supabase access tokens; administrator accounts must already be linked to Supabase Auth with an `admin` or `super_admin` domain role.
+
+Development delivery hints may be enabled locally. Disable them in production and configure real email/SMS providers.
+
+## Fapshi configuration
+
+Keep all Fapshi values on the backend. In addition to the provider base URL and API credentials, configure:
+
+```env
+FAPSHI_WEBHOOK_SECRET=<private-random-hmac-secret>
+FAPSHI_REQUEST_TIMEOUT_MS=10000
+```
+
+The webhook endpoint is `POST /api/webhooks/fapshi`. Its signed `externalId` is validated with the HMAC secret, then the transaction is fetched from Fapshi and reconciled atomically through migrations 031 and 033.
+
+## Documentation
+
+- `docs/setup-guide.md`
+- `DEPLOYMENT_GUIDE.md`
+- `RENDER_BACKEND_DEPLOYMENT_GUIDE.md`
+- `ADMIN_ACCESS_GUIDE.md`
+- `server/database/MIGRATION_GUIDE.md`
+- `server/database/RESTORATION_GUIDE.md`

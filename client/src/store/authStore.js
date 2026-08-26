@@ -1,28 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import api from "@/lib/axios";
+import { supabase } from "@/lib/supabaseClient";
 import { maskIdentifier, normalizeCameroonPhone } from "@/lib/formatters";
+import { formatPhoneInternational } from "@/lib/countries";
 
 const onboardingStorageKey = "agriculnet-onboarding";
-const normalizeAuthIdentifier = (identifier = "") => {
-  const normalized = String(identifier).trim();
-
-  if (!normalized) {
-    return normalized;
-  }
-
-  if (normalized.includes("@") || normalized.startsWith("+")) {
-    return normalized;
-  }
-
-  return normalizeCameroonPhone(normalized);
-};
 
 const readOnboardingState = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   try {
     const rawValue = window.sessionStorage.getItem(onboardingStorageKey);
     return rawValue ? JSON.parse(rawValue) : null;
@@ -32,28 +18,110 @@ const readOnboardingState = () => {
 };
 
 const writeOnboardingState = (value) => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  if (!value) {
-    window.sessionStorage.removeItem(onboardingStorageKey);
-    return;
-  }
-
-  window.sessionStorage.setItem(onboardingStorageKey, JSON.stringify(value));
+  if (typeof window === "undefined") return;
+  if (value) window.sessionStorage.setItem(onboardingStorageKey, JSON.stringify(value));
+  else window.sessionStorage.removeItem(onboardingStorageKey);
 };
 
-const getErrorPayload = (error, fallbackMessage) => {
-  const response = error.response?.data;
-  const details = response?.error?.details;
-  const deliveryMessage = details?.smsDelivery?.message || details?.emailDelivery?.message;
+const errorResult = (error, fallback) => ({
+  success: false,
+  error: error?.response?.data?.message || error?.message || fallback,
+  errorCode: error?.code || error?.response?.data?.error?.code,
+  details: error?.response?.data?.error?.details,
+});
+
+const loginErrorResult = (error) => {
+  const code = error?.code;
+  let message = "We could not sign you in. Please try again.";
+
+  if (code === "invalid_credentials") {
+    message = "The email or password is incorrect. Check your details and try again.";
+  } else if (code === "email_not_confirmed") {
+    message = "Confirm your email address before signing in.";
+  } else if (code === "over_request_rate_limit") {
+    message = "Too many sign-in attempts. Wait a moment and try again.";
+  } else if (error?.message === "Use your verified email address to sign in.") {
+    message = error.message;
+  } else if (error?.status === 400) {
+    message = "The email or password is incorrect. Check your details and try again.";
+  }
 
   return {
     success: false,
-    error: deliveryMessage || response?.message || fallbackMessage,
-    errorCode: response?.error?.code,
-    details,
+    error: message,
+    errorCode: code,
+  };
+};
+
+const roleForBuyer = (buyerType) => buyerType === "international"
+  ? "international_buyer"
+  : "local_buyer";
+
+const getNextStepForUser = (user) => {
+  if (!user?.email_verified) return "verify_email";
+  if (["farmer", "reseller"].includes(user?.role) && user?.status === "pending_identity_verification") {
+    return "verify_identity";
+  }
+  if (["farmer", "reseller"].includes(user?.role) && user?.status === "pending_review") {
+    return "pending_review";
+  }
+  return "dashboard";
+};
+
+const getRegistrationNames = (values) => {
+  if (values.firstName && values.lastName) {
+    return { firstName: values.firstName, lastName: values.lastName };
+  }
+  const [firstName = "Buyer", ...rest] = String(values.contactName || "").trim().split(/\s+/).filter(Boolean);
+  return { firstName, lastName: rest.join(" ") || "Buyer" };
+};
+
+const profileForRole = (role, values) => {
+  const common = {
+    first_name: values.firstName,
+    last_name: values.lastName,
+    country: values.country || "Cameroon",
+    region: values.region,
+    city: values.city,
+  };
+
+  if (role === "farmer") {
+    return {
+      ...common,
+      cooperative_name: values.cooperative,
+      primary_crop: values.primaryCrop,
+      crops_grown: values.cropsGrown || [],
+      harvest_volume: values.harvestVolume,
+      export_ready: values.exportReady,
+      inspection_preference: values.inspectionPreference,
+      payout_method: values.payoutMethod,
+      payout_account_name: values.accountName,
+      payout_phone: values.payoutPhone ? normalizeCameroonPhone(values.payoutPhone) : undefined,
+      notification_opt_in: values.notificationOptIn,
+    };
+  }
+
+  if (role === "reseller") {
+    return {
+      ...common,
+      business_name: values.businessName,
+      primary_crop: values.primaryCrop,
+      crops_sold: values.cropsSold || [],
+      about: values.about,
+      payout_method: values.payoutMethod,
+      payout_account_name: values.accountName,
+      payout_phone: values.payoutPhone ? normalizeCameroonPhone(values.payoutPhone) : undefined,
+      notification_opt_in: values.notificationOptIn,
+    };
+  }
+
+  return {
+    ...common,
+    company_name: values.companyName,
+    preferred_crops: values.preferredCrops,
+    annual_import_volume: values.annualImportVolume,
+    import_country: values.importCountry,
+    destination_market: values.destinationMarket,
   };
 };
 
@@ -61,25 +129,17 @@ const useAuthStore = create(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       onboarding: null,
 
-      syncOnboarding: () => {
-        set({ onboarding: readOnboardingState() });
-      },
+      syncOnboarding: () => set({ onboarding: readOnboardingState() }),
 
       setOnboarding: (payload) => {
-        const nextOnboarding = {
-          ...(get().onboarding || {}),
-          ...payload,
-        };
-
-        writeOnboardingState(nextOnboarding);
-        set({ onboarding: nextOnboarding });
-        return nextOnboarding;
+        const next = { ...(get().onboarding || {}), ...payload };
+        writeOnboardingState(next);
+        set({ onboarding: next });
+        return next;
       },
 
       clearOnboarding: () => {
@@ -87,461 +147,246 @@ const useAuthStore = create(
         set({ onboarding: null });
       },
 
-      setTokens: (accessToken, refreshToken) => {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("agriculnet_access_token", accessToken);
-          localStorage.setItem("agriculnet_refresh_token", refreshToken);
-        }
-
-        set({ accessToken, refreshToken, isAuthenticated: true });
-      },
-
-      setUser: (user) => set({ user }),
-
-      hydrateSession: async () => {
-        const accessToken = typeof window !== "undefined"
-          ? localStorage.getItem("agriculnet_access_token")
-          : null;
-
-        if (!accessToken) {
-          set({ isAuthenticated: false, user: null });
-          return { success: false };
-        }
-
-        return get().fetchMe();
-      },
-
-      login: async (identifier, password, rememberMe = false) => {
-        set({ isLoading: true });
-
-        try {
-          const formattedIdentifier = normalizeAuthIdentifier(identifier);
-
-          const { data } = await api.post("/auth/login", {
-            identifier: formattedIdentifier,
-            password,
-            rememberMe,
-          });
-
-          if (data.data?.requiresRecoveryContactVerification) {
-            get().setOnboarding({
-              identifier: formattedIdentifier,
-              recoveryContactId: data.data.recoveryContactId,
-              recoveryContactType: data.data.type,
-              recoveryContactTarget: data.data.target,
-              nextStep: data.data.nextStep,
-              emailDelivery: data.data.emailDelivery || null,
-              smsDelivery: data.data.smsDelivery || null,
-              devHints: data.data.devHints || null,
-            });
-            set({ isLoading: false, isAuthenticated: false });
-            return { success: true, data: data.data };
-          }
-
-          const { accessToken, refreshToken, user } = data.data;
-          get().setTokens(accessToken, refreshToken);
-          if (data.data.nextStep && data.data.nextStep !== "dashboard") {
-            get().setOnboarding({
-              userId: user.id,
-              role: user.role,
-              phone: data.data.phone,
-              email: data.data.email,
-              identifier: formattedIdentifier,
-              nextStep: data.data.nextStep,
-              devHints: data.data.devHints || null,
-            });
-          } else {
-            get().clearOnboarding();
-          }
-          set({ user, isLoading: false, isAuthenticated: true });
-          return { success: true, data: data.data };
-        } catch (error) {
-          const payload = getErrorPayload(error, "Login failed");
-          const details = payload.details;
-
-          if (payload.errorCode === "PHONE_NOT_VERIFIED" && details?.userId) {
-            get().setOnboarding({
-              userId: details.userId,
-              role: details.role,
-              phone: details.phone,
-              email: details.email,
-              identifier,
-              nextStep: details.nextStep,
-              devHints: details.devHints || null,
-            });
-          }
-
-          set({ isLoading: false });
-          return payload;
-        }
-      },
-
-      logout: async () => {
-        try {
-          const refreshToken = typeof window !== "undefined"
-            ? localStorage.getItem("agriculnet_refresh_token")
-            : null;
-
-          if (refreshToken) {
-            await api.post("/auth/logout", { refreshToken });
-          }
-        } finally {
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("agriculnet_access_token");
-            localStorage.removeItem("agriculnet_refresh_token");
-          }
-
-          set({
-            user: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false,
-          });
-        }
-      },
+      setUser: (user) => set({ user, isAuthenticated: Boolean(user) }),
 
       fetchMe: async () => {
         try {
           const { data } = await api.get("/auth/me");
-          set({ user: data.data.user, isAuthenticated: true });
-          return { success: true, data: data.data };
+          const user = data.data.user;
+          const pendingProfile = get().onboarding?.pendingProfile;
+          if (pendingProfile) {
+            await api.patch("/auth/me", pendingProfile);
+            get().setOnboarding({ pendingProfile: null });
+          }
+          set({ user, isAuthenticated: true });
+          return { success: true, data: { ...data.data, user } };
         } catch (error) {
-          get().clearAuth();
-          return {
-            success: false,
-            error: error.response?.data?.message || "Failed to fetch profile",
-          };
+          set({ user: null, isAuthenticated: false });
+          return errorResult(error, "Failed to fetch profile");
         }
       },
 
-      registerFarmer: async (farmerData) => {
-        set({ isLoading: true });
-
-        try {
-          const payload = {
-            ...farmerData,
-            phone: normalizeCameroonPhone(farmerData.phone),
-            payoutPhone: normalizeCameroonPhone(farmerData.payoutPhone),
-          };
-
-          const { data } = await api.post("/auth/register/farmer", payload);
-          get().setOnboarding({
-            userId: data.data.user.id,
-            role: data.data.user.role,
-            phone: data.data.phone,
-            email: data.data.user.email ? maskIdentifier(data.data.user.email) : null,
-            identifier: data.data.user.email || normalizeCameroonPhone(farmerData.phone),
-            nextStep: data.data.nextStep,
-            emailDelivery: data.data.emailDelivery || null,
-            smsDelivery: data.data.smsDelivery || null,
-            devHints: data.data.devHints || null,
-          });
-
-          set({ isLoading: false });
-          return { success: true, data: data.data };
-        } catch (error) {
-          set({ isLoading: false });
-          return getErrorPayload(error, "Registration failed");
+      hydrateSession: async () => {
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          set({ user: null, isAuthenticated: false });
+          return { success: false, error: error?.message };
         }
+        return get().fetchMe();
       },
 
-      registerReseller: async (resellerData) => {
+      login: async (identifier, password, mode = "email") => {
         set({ isLoading: true });
-
         try {
-          const payload = {
-            ...resellerData,
-            phone: normalizeCameroonPhone(resellerData.phone),
-            payoutPhone: resellerData.payoutPhone ? normalizeCameroonPhone(resellerData.payoutPhone) : undefined,
-          };
-
-          const { data } = await api.post("/auth/register/reseller", payload);
-          get().setOnboarding({
-            userId: data.data.user.id,
-            role: data.data.user.role,
-            phone: data.data.phone,
-            email: data.data.user.email ? maskIdentifier(data.data.user.email) : null,
-            identifier: data.data.user.email || normalizeCameroonPhone(resellerData.phone),
-            nextStep: data.data.nextStep,
-            emailDelivery: data.data.emailDelivery || null,
-            smsDelivery: data.data.smsDelivery || null,
-            devHints: data.data.devHints || null,
-          });
-
-          set({ isLoading: false });
-          return { success: true, data: data.data };
-        } catch (error) {
-          set({ isLoading: false });
-          return getErrorPayload(error, "Registration failed");
-        }
-      },
-
-      registerBuyer: async (buyerData) => {
-        set({ isLoading: true });
-
-        try {
-          // Prepare payload with proper phone formatting
-          const payload = { ...buyerData };
-          
-          // For local buyers, use Cameroon phone normalization
-          // For international buyers, keep as-is (server will handle)
-          if (buyerData.buyerType === "local") {
-            payload.phone = normalizeCameroonPhone(buyerData.phone);
+          if (mode === "phone") {
+            const phone = normalizeCameroonPhone(identifier);
+            const response = await api.post("/auth/login/phone", { phone, password });
+            const authData = response.data.data;
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: authData.session.accessToken,
+              refresh_token: authData.session.refreshToken,
+            });
+            if (sessionError) throw sessionError;
+          } else {
+            const email = String(identifier).trim().toLowerCase();
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
           }
 
-          const { data } = await api.post("/auth/register/buyer", payload);
-          get().setOnboarding({
-            userId: data.data.user.id,
-            role: data.data.user.role,
-            phone: data.data.phone,
-            email: maskIdentifier(data.data.user.email),
-            identifier: data.data.user.email,
-            nextStep: data.data.nextStep,
-            emailDelivery: data.data.emailDelivery || null,
-            smsDelivery: data.data.smsDelivery || null,
-            devHints: data.data.devHints || null,
-          });
-
+          const result = await get().fetchMe();
           set({ isLoading: false });
-          return { success: true, data: data.data };
+          if (!result.success) {
+            await supabase.auth.signOut();
+            return result;
+          }
+          get().clearOnboarding();
+          return {
+            success: true,
+            data: { user: result.data.user, nextStep: getNextStepForUser(result.data.user) },
+          };
         } catch (error) {
           set({ isLoading: false });
-          return getErrorPayload(error, "Registration failed");
+          return error?.response ? errorResult(error, "We could not sign you in.") : loginErrorResult(error);
         }
       },
+
+      logout: async () => {
+        await supabase.auth.signOut();
+        writeOnboardingState(null);
+        set({ user: null, isAuthenticated: false, onboarding: null });
+      },
+
+      register: async (role, values) => {
+        set({ isLoading: true });
+        try {
+          const names = getRegistrationNames(values);
+          const email = String(values.email || "").trim().toLowerCase();
+          const phone = values.phone
+            ? formatPhoneInternational(values.phone, values.countryCode || "CM")
+            : null;
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password: values.password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/oauth/callback?flow=email-verification`,
+              data: {
+                requested_role: role,
+                first_name: names.firstName,
+                last_name: names.lastName,
+                phone,
+                country: values.country || "Cameroon",
+              },
+            },
+          });
+          if (error) throw error;
+
+          const user = {
+            id: data.user?.id,
+            role,
+            email,
+            phone,
+            email_verified: Boolean(data.user?.email_confirmed_at),
+            phone_verified: false,
+            status: "pending_verification",
+          };
+          const nextStep = data.session ? getNextStepForUser(user) : "verify_email";
+          get().setOnboarding({
+            userId: data.user?.id,
+            role,
+            email: maskIdentifier(email),
+            identifier: email,
+            phone,
+            nextStep,
+            pendingProfile: profileForRole(role, values),
+          });
+
+          if (data.session) await get().fetchMe();
+          set({ isLoading: false });
+          return {
+            success: true,
+            data: {
+              user,
+              email: maskIdentifier(email),
+              phone,
+              nextStep,
+              emailDelivery: { status: "queued" },
+            },
+          };
+        } catch (error) {
+          set({ isLoading: false });
+          return errorResult(error, "Registration failed");
+        }
+      },
+
+      registerFarmer: (values) => get().register("farmer", values),
+      registerReseller: (values) => get().register("reseller", values),
+      registerBuyer: (values) => get().register(roleForBuyer(values.buyerType), values),
 
       verifyPhone: async (userId, otp) => {
         try {
-          const { data } = await api.post("/auth/verify-phone/confirm", {
-            userId,
-            otp,
-          });
-
-          if (data.data.accessToken && data.data.refreshToken) {
-            get().setTokens(data.data.accessToken, data.data.refreshToken);
-            set({ user: data.data.user, isAuthenticated: true });
-          }
-
-          if (data.data.nextStep === "dashboard") {
-            get().clearOnboarding();
-          } else {
-          get().setOnboarding({
-            userId,
-            role: data.data.user?.role || get().onboarding?.role,
-            nextStep: data.data.nextStep,
-            emailDelivery: data.data.emailDelivery || get().onboarding?.emailDelivery || null,
-            smsDelivery: data.data.smsDelivery || get().onboarding?.smsDelivery || null,
-          });
-          }
-
+          const { data } = await api.post("/auth/verify-phone/confirm", { userId, otp });
+          if (data.data.nextStep === "dashboard") get().clearOnboarding();
+          else get().setOnboarding({ nextStep: data.data.nextStep });
+          await get().hydrateSession();
           return { success: true, data: data.data };
         } catch (error) {
-          return getErrorPayload(error, "Verification failed");
+          return errorResult(error, "Verification failed");
         }
       },
 
       verifyEmail: async (token) => {
         try {
-          const { data } = await api.post("/auth/verify-email", { token });
-
-          if (data.data.accessToken && data.data.refreshToken) {
-            get().setTokens(data.data.accessToken, data.data.refreshToken);
-            set({ user: data.data.user, isAuthenticated: true });
+          let exchange = await supabase.auth.exchangeCodeForSession(token);
+          if (exchange.error) {
+            exchange = await supabase.auth.verifyOtp({ token_hash: token, type: "email" });
           }
+          if (exchange.error) throw exchange.error;
+          const me = await get().fetchMe();
+          if (!me.success) return me;
+          const nextStep = getNextStepForUser(me.data.user);
+          if (nextStep === "dashboard") get().clearOnboarding();
+          else get().setOnboarding({ nextStep });
+          return { success: true, data: { user: me.data.user, nextStep } };
+        } catch (error) {
+          return errorResult(error, "Email verification failed");
+        }
+      },
 
-          if (data.data.nextStep === "dashboard" || data.data.nextStep === "sign_in") {
-            get().clearOnboarding();
-          } else {
-            get().setOnboarding({
-              userId: data.data.user?.id || get().onboarding?.userId,
-              role: data.data.user?.role || get().onboarding?.role,
-              phone: data.data.phone || get().onboarding?.phone,
-              email: data.data.email || get().onboarding?.email,
-              nextStep: data.data.nextStep,
-              emailDelivery: data.data.emailDelivery || get().onboarding?.emailDelivery || null,
-              smsDelivery: data.data.smsDelivery || get().onboarding?.smsDelivery || null,
-            });
+      resendVerification: async (type = "email", requestedUserId) => {
+        try {
+          if (type === "phone") {
+            const userId = requestedUserId || get().onboarding?.userId || get().user?.id;
+            return get().sendOtp(userId);
           }
-
-          return { success: true, data: data.data };
+          const email = get().onboarding?.identifier;
+          if (!email?.includes("@")) throw new Error("No registration email is available.");
+          const { error } = await supabase.auth.resend({
+            type: "signup",
+            email,
+            options: { emailRedirectTo: `${window.location.origin}/oauth/callback?flow=email-verification` },
+          });
+          if (error) throw error;
+          return { success: true, data: { nextStep: "verify_email", emailDelivery: { status: "queued" } } };
         } catch (error) {
-          return getErrorPayload(error, "Email verification failed");
+          return errorResult(error, "Failed to resend verification");
         }
       },
 
-      resendVerification: async (type = "phone") => {
-        const onboarding = get().onboarding;
-        const user = get().user;
-        const userId = onboarding?.userId || user?.id;
-
-        if (!userId) {
-          return {
-            success: false,
-            error: "No onboarding session is available.",
-          };
-        }
-
+      forgotPassword: async ({ identifier }) => {
         try {
-          const { data } = await api.post("/auth/resend-verification", {
-            userId,
-            type,
+          const email = String(identifier || "").trim().toLowerCase();
+          if (!email.includes("@")) throw new Error("Password recovery requires your verified email address.");
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
           });
-
-          get().setOnboarding({
-            userId,
-            role: onboarding?.role || user?.role,
-            phone: onboarding?.phone || data.data.phone || user?.phone,
-            email: onboarding?.email || data.data.email || user?.email,
-            emailDelivery: data.data.emailDelivery || onboarding?.emailDelivery || null,
-            smsDelivery: data.data.smsDelivery || onboarding?.smsDelivery || null,
-            devHints: data.data.devHints || null,
-            nextStep: data.data.nextStep || onboarding?.nextStep,
-          });
-
-          return { success: true, data: data.data };
+          if (error) throw error;
+          get().setOnboarding({ identifier: email, recoveryMethod: "email", nextStep: "reset_password" });
+          return { success: true, data: { nextStep: "reset_password", emailDelivery: { status: "queued" } } };
         } catch (error) {
-          return getErrorPayload(error, "Failed to resend verification");
+          return errorResult(error, "Failed to send password reset email");
         }
       },
 
-      forgotPassword: async ({ identifier, method }) => {
+      resetPassword: async ({ password, confirmPassword, code }) => {
         try {
-          const formattedIdentifier = method === "email"
-            ? identifier
-            : normalizeAuthIdentifier(identifier);
-
-          const { data } = await api.post("/auth/forgot-password", {
-            identifier: formattedIdentifier,
-            method,
-          });
-
-          get().setOnboarding({
-            identifier: formattedIdentifier,
-            recoveryMethod: method,
-            nextStep: data.data.nextStep,
-            emailDelivery: data.data.emailDelivery || null,
-            smsDelivery: data.data.smsDelivery || null,
-            devHints: data.data.devHints || null,
-          });
-
-          return { success: true, data: data.data };
-        } catch (error) {
-          return getErrorPayload(error, "Failed to send reset option");
-        }
-      },
-
-      resetPassword: async ({ password, confirmPassword, code, token }) => {
-        const onboarding = get().onboarding;
-        const payload = {
-          newPassword: password,
-          confirmPassword,
-        };
-
-        if (token) {
-          payload.token = token;
-        } else {
-          payload.otp = code;
-          payload.identifier = onboarding?.identifier?.includes("@")
-            ? onboarding.identifier
-            : normalizeAuthIdentifier(onboarding?.identifier || "");
-        }
-
-        try {
-          const { data } = await api.post("/auth/reset-password", payload);
+          if (password !== confirmPassword) throw new Error("Passwords do not match");
+          if (code) {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) throw exchangeError;
+          }
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
           get().clearOnboarding();
-          return { success: true, data: data.data };
+          return { success: true, data: { nextStep: "sign_in" } };
         } catch (error) {
-          return getErrorPayload(error, "Password reset failed");
+          return errorResult(error, "Password reset failed");
         }
       },
 
       sendOtp: async (userId, purpose = "phone_verification") => {
         try {
+          if (!userId) throw new Error("No onboarding user is available.");
           const { data } = await api.post("/auth/verify-phone/send", { userId, purpose });
-          get().setOnboarding({
-            smsDelivery: data.data.smsDelivery || null,
-            devHints: data.data.devHints || null,
-          });
+          get().setOnboarding({ smsDelivery: data.data.smsDelivery || null, devHints: data.data.devHints || null });
           return { success: true, data: data.data };
         } catch (error) {
-          return getErrorPayload(error, "Failed to send OTP");
+          return errorResult(error, "Failed to send OTP");
         }
       },
 
-      clearAuth: () => {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("agriculnet_access_token");
-          localStorage.removeItem("agriculnet_refresh_token");
-        }
-
-        get().clearOnboarding();
-        set({
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false,
-        });
+      clearAuth: async () => {
+        await supabase.auth.signOut();
+        writeOnboardingState(null);
+        set({ user: null, isAuthenticated: false, onboarding: null });
       },
     }),
     {
       name: "agriculnet-auth",
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.syncOnboarding();
-      },
+      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => state?.syncOnboarding(),
     },
   ),
 );
 
-export const useAuth = () => {
-  const {
-    user,
-    isAuthenticated,
-    isLoading,
-    onboarding,
-    login,
-    logout,
-    fetchMe,
-    hydrateSession,
-    registerFarmer,
-    registerReseller,
-    registerBuyer,
-    verifyPhone,
-    verifyEmail,
-    resendVerification,
-    forgotPassword,
-    resetPassword,
-    sendOtp,
-    clearAuth,
-    clearOnboarding,
-    syncOnboarding,
-  } = useAuthStore();
-
-  return {
-    user,
-    isAuthenticated,
-    isLoading,
-    onboarding,
-    login,
-    logout,
-    fetchMe,
-    hydrateSession,
-    registerFarmer,
-    registerReseller,
-    registerBuyer,
-    verifyPhone,
-    verifyEmail,
-    resendVerification,
-    forgotPassword,
-    resetPassword,
-    sendOtp,
-    clearAuth,
-    clearOnboarding,
-    syncOnboarding,
-  };
-};
-
+export const useAuth = () => useAuthStore();
 export default useAuthStore;

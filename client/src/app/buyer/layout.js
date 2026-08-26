@@ -10,7 +10,7 @@ export default function BuyerRouteLayout({ children }) {
       navNamespace="buyer"
       navigation={buyerNavigation}
       allowedRoles={["local_buyer", "international_buyer"]}
-      authRedirect="/sign-in"
+      authRedirect="/auth/login"
       description="Review protected orders, buyer messages, and sourcing documents from one clean workspace."
     >
       {children}

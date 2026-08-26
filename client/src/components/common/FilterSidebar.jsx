@@ -1,1 +1,0 @@
-// AgriculNet — FilterSidebar.jsx — placeholder

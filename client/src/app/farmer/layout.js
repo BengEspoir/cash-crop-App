@@ -10,7 +10,7 @@ export default function FarmerRouteLayout({ children }) {
       navNamespace="farmer"
       navigation={farmerNavigation}
       allowedRoles={["farmer", "reseller"]}
-      authRedirect="/sign-in"
+      authRedirect="/auth/login"
       description="Manage listings, buyer conversations, payouts, and verification progress with a single view."
     >
       {children}

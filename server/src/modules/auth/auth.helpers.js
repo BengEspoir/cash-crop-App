@@ -1,7 +1,7 @@
 const { USER_ROLES, USER_STATUS } = require('../../config/constants');
 
 const normalizePhone = (phone) => {
-  const cleaned = phone.replace(/[\s\-]/g, '');
+  const cleaned = phone.replace(/[\s-]/g, '');
   if (!cleaned.startsWith('+')) {
     if (cleaned.startsWith('237')) {
       return '+' + cleaned;
@@ -91,11 +91,26 @@ const getNextStep = (user) => {
     return 'verify_email';
   }
 
+  if (
+    [USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role) &&
+    user.status === USER_STATUS.PENDING_IDENTITY_VERIFICATION
+  ) {
+    return 'verify_identity';
+  }
+
+  if (
+    [USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role) &&
+    user.status === USER_STATUS.PENDING_REVIEW
+  ) {
+    return 'pending_review';
+  }
+
   return 'dashboard';
 };
 
 const sanitizeUser = (user) => {
-  const { password_hash, ...sanitized } = user;
+  const sanitized = { ...user };
+  delete sanitized.password_hash;
   return sanitized;
 };
 

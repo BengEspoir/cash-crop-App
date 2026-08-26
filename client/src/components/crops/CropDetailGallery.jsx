@@ -16,7 +16,7 @@ function resolveGalleryImages(listing) {
   return [main, ...neighbours].slice(0, 4);
 }
 
-export function CropDetailGallery({ listing }) {
+export function CropDetailGallery({ listing, showCaption = true, appearance = "default" }) {
   const images = resolveGalleryImages(listing);
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -36,11 +36,11 @@ export function CropDetailGallery({ listing }) {
 
   return (
     <>
-      <Card className="overflow-hidden rounded-[18px]">
+      <Card className={cn("overflow-hidden rounded-[18px]", appearance === "reference" && "rounded-[14px] border-[#DDE4DE] shadow-none")}>
         <button
           type="button"
           onClick={() => setLightboxOpen(true)}
-          className="group relative block h-[280px] w-full overflow-hidden bg-ink-100 focus-ring"
+          className={cn("group relative block w-full overflow-hidden bg-ink-100 focus-ring", appearance === "reference" ? "h-[420px] sm:h-[520px]" : "h-[280px]")}
           aria-label="Open gallery"
         >
           <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]">
@@ -86,11 +86,11 @@ export function CropDetailGallery({ listing }) {
           </div>
         ) : null}
 
-        <div className="p-5">
+        {showCaption ? <div className="p-5">
           <p className="section-eyebrow">Listing Visual</p>
           <h2 className="mt-2 font-display text-[22px] text-ink-800">{listing.crop}</h2>
           <p className="mt-2 body-copy">{listing.summary}</p>
-        </div>
+        </div> : null}
       </Card>
 
       {lightboxOpen ? (

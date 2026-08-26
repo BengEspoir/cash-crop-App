@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, Search, User } from "lucide-react";
 import { BrandLogo } from "../common/BrandLogo";
 import { Button } from "../ui/button";
@@ -10,6 +10,39 @@ import useAuth from "../../hooks/useAuth";
 import { useI18n } from "../../i18n/I18nProvider";
 import { startOAuth } from "../../lib/startOAuth";
 import { CountrySelector } from "../common/CountrySelector";
+
+const ROLE_HEADER_LINKS = {
+  admin: {
+    dashboard: "/admin/dashboard",
+    notifications: "/admin/dashboard",
+    orders: "/admin/orders",
+    messages: null,
+    account: "/admin/settings",
+    settings: "/admin/settings",
+  },
+  farmer: {
+    dashboard: "/farmer/dashboard",
+    notifications: "/farmer/notifications",
+    orders: "/farmer/orders",
+    messages: "/farmer/messages",
+    account: "/farmer/profile",
+    settings: "/farmer/settings",
+  },
+  buyer: {
+    dashboard: "/buyer/dashboard",
+    notifications: "/buyer/notifications",
+    orders: "/buyer/orders",
+    messages: "/buyer/messages",
+    account: "/buyer/profile",
+    settings: "/buyer/settings",
+  },
+};
+
+export function getHeaderLinks(role) {
+  if (["admin", "super_admin"].includes(role)) return ROLE_HEADER_LINKS.admin;
+  if (["farmer", "reseller"].includes(role)) return ROLE_HEADER_LINKS.farmer;
+  return ROLE_HEADER_LINKS.buyer;
+}
 
 function GoogleGlyph({ className }) {
   return (
@@ -43,8 +76,11 @@ function FacebookGlyph({ className }) {
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null);
+  const menuRootRef = useRef(null);
   const { user, isAuthenticated, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
+  const accountLinks = getHeaderLinks(user?.role);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -52,6 +88,24 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!openMenu) return undefined;
+
+    const closeOnOutsidePress = (event) => {
+      if (!menuRootRef.current?.contains(event.target)) setOpenMenu(null);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpenMenu(null);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openMenu]);
 
   return (
     <header
@@ -134,35 +188,53 @@ export function Header() {
             {isAuthenticated ? (
               <>
                 <Button asChild variant="secondary" className="h-10 w-10 px-0" aria-label={t("header.notifications")}>
-                  <Link href="/buyer/dashboard">
+                  <Link href={accountLinks.notifications}>
                     <Bell className="h-4 w-4" />
                   </Link>
                 </Button>
 
-                <div className="group relative">
-                  <Button type="button" className="h-10 w-10 px-0" aria-label={t("header.accountMenu")}>
+                <div ref={menuRootRef} className="group relative">
+                  <Button
+                    type="button"
+                    className="h-10 w-10 px-0"
+                    aria-label={t("header.accountMenu")}
+                    aria-expanded={openMenu === "account"}
+                    aria-controls="header-account-menu"
+                    onClick={() => setOpenMenu((current) => current === "account" ? null : "account")}
+                  >
                     <User className="h-5 w-5" />
                   </Button>
-                  <div className="invisible absolute right-0 top-full z-50 mt-2 w-56 rounded-[12px] border border-ink-200 bg-white p-2 opacity-0 shadow-soft transition-all group-hover:visible group-hover:opacity-100">
+                  <div
+                    id="header-account-menu"
+                    className={cn(
+                      "absolute right-0 top-full z-50 mt-2 w-56 rounded-[12px] border border-ink-200 bg-white p-2 shadow-soft transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
+                      openMenu === "account" ? "visible opacity-100" : "invisible opacity-0",
+                    )}
+                  >
                     <p className="px-3 py-2 text-[12px] font-semibold text-ink-500">{user?.email || "AgriculNet"}</p>
-                    <Link href="/buyer/dashboard" className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
+                    <Link href={accountLinks.dashboard} className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
                       {t("header.myAgriculNet")}
                     </Link>
-                    <Link href="/buyer/orders" className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
+                    <Link href={accountLinks.orders} className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
                       {t("header.orders")}
                     </Link>
-                    <Link href="/buyer/messages" className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
-                      {t("header.messages")}
-                    </Link>
-                    <Link href="/buyer/profile" className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
+                    {accountLinks.messages ? (
+                      <Link href={accountLinks.messages} className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
+                        {t("header.messages")}
+                      </Link>
+                    ) : null}
+                    <Link href={accountLinks.account} className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
                       {t("header.account")}
                     </Link>
-                    <Link href="/buyer/settings" className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
+                    <Link href={accountLinks.settings} className="block rounded-[8px] px-3 py-2 text-[13px] text-ink-800 hover:bg-ink-50">
                       {t("header.settings")}
                     </Link>
                     <button
                       type="button"
-                      onClick={logout}
+                      onClick={() => {
+                        setOpenMenu(null);
+                        void logout();
+                      }}
                       className="mt-1 block w-full rounded-[8px] px-3 py-2 text-left text-[13px] font-semibold text-red-700 hover:bg-red-50"
                     >
                       {t("common.signOut")}
@@ -172,17 +244,33 @@ export function Header() {
               </>
             ) : (
               <>
-                <div className="group relative inline-flex items-center">
+                <div ref={menuRootRef} className="group relative inline-flex items-center">
                   <Link
-                    href="/sign-in"
+                    href="/auth/login"
                     className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-gold-600 underline-offset-4 hover:text-gold-700 hover:underline"
                   >
                     <User className="h-4 w-4 text-gold-600" aria-hidden />
                     {t("common.signIn")}
                   </Link>
-                  <div className="invisible absolute right-0 top-full z-50 mt-2 w-[280px] rounded-[14px] border border-ink-200 bg-white p-4 opacity-0 shadow-lift transition-all group-hover:visible group-hover:opacity-100">
+                  <button
+                    type="button"
+                    className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-gold-700 hover:bg-gold-50"
+                    aria-label={`${t("common.signIn")} options`}
+                    aria-expanded={openMenu === "signin"}
+                    aria-controls="header-signin-menu"
+                    onClick={() => setOpenMenu((current) => current === "signin" ? null : "signin")}
+                  >
+                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <div
+                    id="header-signin-menu"
+                    className={cn(
+                      "absolute right-0 top-full z-50 mt-2 w-[280px] rounded-[14px] border border-ink-200 bg-white p-4 shadow-lift transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
+                      openMenu === "signin" ? "visible opacity-100" : "invisible opacity-0",
+                    )}
+                  >
                     <Button asChild className="h-10 w-full bg-green-800 hover:bg-green-900">
-                      <Link href="/sign-in">{t("common.signIn")}</Link>
+                      <Link href="/auth/login">{t("common.signIn")}</Link>
                     </Button>
                     <p className="mt-3 text-center text-[11px] font-semibold uppercase tracking-wider text-ink-500">
                       {t("common.continueWith")}

@@ -8,8 +8,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'dm-serif': ['"DM Serif Display"', 'serif'],
-        'dm-sans': ['"DM Sans"', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'Arial', 'sans-serif'],
+        fraunces: ['var(--font-display)', 'Georgia', 'serif'],
+        'public-sans': ['var(--font-sans)', 'Arial', 'sans-serif'],
       },
       colors: {
         trust: {

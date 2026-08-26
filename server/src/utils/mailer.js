@@ -114,14 +114,11 @@ const sendWelcomeEmail = async (email, firstName, role) => {
 
 const sendAccountApprovedEmail = async (email, firstName, role) => {
   let roleText = '';
-  let dashboardUrl = env.CLIENT_URL;
   
   if (role === 'farmer') {
     roleText = 'Your farmer profile is now visible to buyers worldwide.';
-    dashboardUrl = `${env.CLIENT_URL}/farmer/dashboard`;
   } else if (role.includes('buyer')) {
     roleText = 'You can now browse verified crop listings and connect with farmers.';
-    dashboardUrl = `${env.CLIENT_URL}/buyer/dashboard`;
   }
 
   const html = `
@@ -135,7 +132,7 @@ const sendAccountApprovedEmail = async (email, firstName, role) => {
           Great news! Your AgriculNet account has been approved and activated. ${roleText}
         </p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${env.CLIENT_URL}/sign-in" style="background: #1A6B3C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+          <a href="${env.CLIENT_URL}/auth/login" style="background: #1A6B3C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
             Sign In to Your Account
           </a>
         </div>
@@ -155,7 +152,7 @@ const sendAccountApprovedEmail = async (email, firstName, role) => {
     html,
     devHints: {
       approvedEmail: email,
-      signInLink: `${env.CLIENT_URL}/sign-in`
+      signInLink: `${env.CLIENT_URL}/auth/login`
     }
   });
 };

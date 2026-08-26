@@ -17,82 +17,60 @@ import {
 import { cn } from "@/lib/utils";
 import { SmartImage } from "@/components/media/SmartImage";
 import { resolveListingImage } from "@/lib/imagery";
+import {
+  WorkspaceButton,
+  WorkspaceEmptyState,
+  WorkspaceHeader,
+  WorkspaceMetricCard,
+  WorkspacePage,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+  compactWorkspaceCurrency,
+  formatWorkspaceDate,
+  workspaceDisplayName,
+  workspaceInitials,
+} from "@/components/workspace/WorkspacePrimitives";
 
 export function buyerInitials(user, fallback = "BY") {
-  return [user?.first_name, user?.last_name]
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || fallback;
+  return workspaceInitials(user, fallback);
 }
 
 export function buyerDisplayName(user, fallback = "Buyer") {
-  return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || fallback;
+  return workspaceDisplayName(user, fallback);
 }
 
 export function formatBuyerDate(value) {
-  if (!value) return "Pending";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Pending";
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return formatWorkspaceDate(value);
 }
 
 export function compactBuyerCurrency(value) {
-  if (typeof value === "string") return value;
-  const amount = Number(value || 0);
-  if (amount >= 1000000) return `XAF ${(amount / 1000000).toFixed(amount % 1000000 === 0 ? 0 : 1)}M`;
-  if (amount >= 1000) return `XAF ${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}K`;
-  return `XAF ${amount.toLocaleString("en-US")}`;
+  return compactWorkspaceCurrency(value);
 }
 
 export function BuyerPage({ children, className }) {
-  return <section className={cn("space-y-8", className)}>{children}</section>;
+  return <WorkspacePage className={className}>{children}</WorkspacePage>;
 }
 
 export function BuyerHeader({ title, description, action }) {
-  return (
-    <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-      <div>
-        <h1 className="font-display text-[34px] font-bold leading-tight tracking-normal text-ink-950 md:text-[42px]">{title}</h1>
-        {description ? <p className="mt-2 max-w-3xl text-[18px] leading-7 text-ink-500">{description}</p> : null}
-      </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
-    </div>
-  );
+  return <WorkspaceHeader title={title} description={description} action={action} />;
 }
 
 export function BuyerButton({ href, children, variant = "primary", icon: Icon, className, disabled, ...props }) {
-  const classes = cn(
-    "inline-flex h-14 items-center justify-center gap-3 rounded-lg px-6 text-[16px] font-bold transition-all duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md",
-    variant === "primary" && "bg-green-800 text-white hover:bg-green-900",
-    variant === "gold" && "bg-amber-600 text-white hover:bg-amber-700",
-    variant === "outline" && "border border-ink-200 bg-white text-ink-700 hover:border-green-700 hover:text-green-800",
-    variant === "ghost" && "bg-transparent text-green-800 hover:bg-green-50",
-    disabled && "pointer-events-none opacity-60",
-    className,
-  );
-  const content = (
-    <>
-      {Icon ? <Icon className="h-5 w-5" /> : null}
-      <span>{children}</span>
-    </>
-  );
-  if (href && !disabled) {
-    return (
-      <Link href={href} className={classes}>
-        {content}
-      </Link>
-    );
-  }
   return (
-    <button type="button" className={classes} disabled={disabled} {...props}>
-      {content}
-    </button>
+    <WorkspaceButton
+      href={href}
+      variant={variant}
+      icon={Icon}
+      className={className}
+      disabled={disabled}
+      {...props}
+    >
+      {children}
+    </WorkspaceButton>
   );
 }
 
-const toneClasses = {
+const buyerMetricTones = {
   green: "bg-green-50 text-green-800",
   blue: "bg-cyan-50 text-cyan-800",
   gold: "bg-amber-50 text-amber-800",
@@ -101,44 +79,38 @@ const toneClasses = {
 
 export function BuyerMetricCard({ icon: Icon = Package, value, label, detail, tag, tone = "green" }) {
   return (
-    <article className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 rounded-2xl border border-ink-200 bg-white p-7 transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
-      <div className="flex items-start justify-between gap-4">
-        <span className={cn("inline-flex h-14 w-14 items-center justify-center rounded-xl", toneClasses[tone] || toneClasses.green)}>
-          <Icon className="h-7 w-7" />
-        </span>
-        {tag ? <span className="rounded-full bg-amber-50 px-4 py-1.5 text-[13px] font-bold text-amber-800">{tag}</span> : null}
-      </div>
-      <p className="mt-7 font-display text-[42px] font-bold leading-none tracking-normal text-ink-950">{value}</p>
-      <p className="mt-3 text-[14px] font-bold uppercase tracking-[0.12em] text-ink-400">{label}</p>
-      {detail ? <p className="mt-2 text-[16px] text-ink-500">{detail}</p> : null}
-    </article>
+    <WorkspaceMetricCard
+      icon={Icon}
+      value={value}
+      label={label}
+      detail={detail}
+      tag={tag}
+      tone={tone}
+      toneClasses={buyerMetricTones}
+      tagClassName="bg-amber-50 text-amber-800"
+      valueClassName="font-bold"
+    />
   );
 }
 
 export function BuyerPanel({ title, action, children, className, bodyClassName }) {
-  return (
-    <section className={cn("motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 overflow-hidden rounded-2xl border border-ink-200 bg-white transition-shadow duration-200 hover:shadow-sm", className)}>
-      {(title || action) ? (
-        <div className="flex min-h-20 items-center justify-between gap-4 border-b border-ink-100 px-6 py-5">
-          {title ? <h2 className="font-display text-[22px] font-bold tracking-normal text-ink-950">{title}</h2> : <span />}
-          {action}
-        </div>
-      ) : null}
-      <div className={cn("p-6", bodyClassName)}>{children}</div>
-    </section>
-  );
+  return <WorkspacePanel title={title} action={action} className={className} bodyClassName={bodyClassName}>{children}</WorkspacePanel>;
 }
 
 export function BuyerStatusBadge({ status = "pending", children, className }) {
-  const normalized = String(status).toLowerCase();
-  const tone = normalized.includes("verified") || normalized.includes("delivered") || normalized.includes("complete")
-    ? "bg-green-50 text-green-800"
-    : normalized.includes("transit") || normalized.includes("escrow")
-      ? "bg-cyan-50 text-cyan-800"
-      : normalized.includes("cancel") || normalized.includes("reject")
-        ? "bg-red-50 text-red-800"
-        : "bg-amber-50 text-amber-800";
-  return <span className={cn("inline-flex rounded-full px-4 py-1.5 text-[13px] font-bold", tone, className)}>{children || status}</span>;
+  return (
+    <WorkspaceStatusBadge
+      status={status}
+      className={className}
+      terms={{
+        positive: ["verified", "delivered", "complete"],
+        informational: ["transit", "escrow"],
+        negative: ["cancel", "reject"],
+      }}
+    >
+      {children}
+    </WorkspaceStatusBadge>
+  );
 }
 
 const orderSteps = ["Inquiry", "Confirmed", "Payment", "In Transit", "Delivered"];
@@ -204,14 +176,7 @@ export function BuyerConversationPreview({ conversation }) {
 }
 
 export function BuyerEmptyState({ title, description, action }) {
-  return (
-    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-10 text-center">
-      <ShoppingBasket className="h-12 w-12 text-ink-300" />
-      <h3 className="mt-4 font-display text-[20px] font-bold text-ink-950">{title}</h3>
-      {description ? <p className="mt-2 max-w-lg text-[15px] leading-6 text-ink-500">{description}</p> : null}
-      {action ? <div className="mt-5">{action}</div> : null}
-    </div>
-  );
+  return <WorkspaceEmptyState icon={ShoppingBasket} title={title} description={description} action={action} />;
 }
 
 export function BuyerBrowseCard({ listing }) {

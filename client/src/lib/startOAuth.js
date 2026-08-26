@@ -2,7 +2,7 @@ import toast from "react-hot-toast";
 import { supabase } from "./supabaseClient";
 
 /**
- * Start Supabase OAuth; callback exchanges session for AgriculNet JWTs.
+ * Start Supabase OAuth; the callback keeps the native Supabase session.
  * @param {"google"|"apple"|"facebook"} provider
  */
 export async function startOAuth(provider) {

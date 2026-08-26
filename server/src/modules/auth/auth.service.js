@@ -7,7 +7,7 @@ const tokenHelper = require('../../utils/tokenHelper');
 const otpUtil = require('../../utils/otp');
 const mailer = require('../../utils/mailer');
 const sms = require('../../utils/sms');
-const { supabaseAdmin } = require('../../config/supabase');
+const { supabaseAdmin, createAnonAuthClient } = require('../../config/supabase');
 const { FARMER_VERIFICATION_STATUS } = require('../../utils/marketplace');
 const {
   USER_ROLES,
@@ -143,7 +143,7 @@ const mapRecoveryContact = (row) => ({
 });
 
 const createOtpForUser = async (user, purpose, targetPhone = user.phone) => {
-  const otpCode = otpUtil.generateOtp();
+  const otpCode = sms.getTestOtp(targetPhone) || otpUtil.generateOtp();
   const otpHash = await otpUtil.hashOtp(otpCode);
   const expiresAt = new Date(Date.now() + env.OTP_EXPIRES_MINUTES * 60 * 1000);
 
@@ -181,22 +181,6 @@ const createEmailVerificationForUser = async (user) => {
 
   const verifyLink = `${env.EMAIL_VERIFY_URL}?token=${rawToken}`;
   return mailer.sendVerificationEmail(user.email, user.first_name, verifyLink);
-};
-
-const createPasswordResetEmailForUser = async (user) => {
-  const rawToken = tokenHelper.generateCryptoToken();
-  const tokenHash = tokenHelper.hashToken(rawToken);
-  const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
-
-  await repository.saveToken({
-    user_id: user.id,
-    token_hash: tokenHash,
-    type: TOKEN_TYPE.PASSWORD_RESET,
-    expires_at: tokenExpires.toISOString()
-  });
-
-  const resetLink = `${env.PASSWORD_RESET_URL}?token=${rawToken}`;
-  return mailer.sendPasswordResetEmail(user.email, user.first_name, resetLink);
 };
 
 const createPasswordResetEmailForTarget = async (user, email) => {
@@ -331,6 +315,16 @@ const buildDeliveryStatus = (delivery, channel) => {
       delivered: false,
       provider: delivery.provider || 'development-fallback',
       message: `${channel === 'email' ? 'Email' : 'SMS'} was not delivered by a live provider. Use the development hint to continue locally.`
+    };
+  }
+
+  if (delivery.provider === 'test-phone') {
+    return {
+      channel,
+      status: 'test-phone',
+      delivered: false,
+      provider: delivery.provider,
+      message: `${channel === 'email' ? 'Email' : 'SMS'} test code is configured. No live message was sent.`
     };
   }
 
@@ -835,24 +829,11 @@ const confirmPhoneOtp = async (userId, otpCode, req) => {
 
   const nextStep = helpers.getNextStep(updatedUser);
 
-  if (nextStep === 'dashboard' || nextStep === 'verify_identity') {
-    const session = await createSession(updatedUser);
-
-    return {
-      verified: true,
-      message: 'Phone verified successfully',
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken,
-      user: helpers.sanitizeUser(updatedUser),
-      phone: helpers.maskPhone(updatedUser.phone),
-      email: updatedUser.email ? helpers.maskEmail(updatedUser.email) : null,
-      nextStep
-    };
-  }
-
   return {
     verified: true,
-    message: nextStep === 'pending_review'
+    message: nextStep === 'dashboard' || nextStep === 'verify_identity'
+      ? 'Phone verified successfully'
+      : nextStep === 'pending_review'
       ? 'Phone verified successfully. Your account is now under review.'
       : 'Phone verified successfully. Please continue verification.',
     user: helpers.sanitizeUser(updatedUser),
@@ -1178,6 +1159,51 @@ const updateMe = async (userId, updateData) => {
   }
 
   return result;
+};
+
+const loginWithPhone = async (phone, password, req) => {
+  const normalizedPhone = helpers.normalizePhone(phone);
+  const user = await repository.findUserByPhone(normalizedPhone);
+
+  if (!user?.email || !user?.auth_user_id) {
+    throw new AppError('Invalid credentials', 401, ERROR_CODES.INVALID_CREDENTIALS);
+  }
+
+  const authClient = createAnonAuthClient();
+  const { data, error } = await authClient.auth.signInWithPassword({
+    email: user.email,
+    password
+  });
+
+  if (error || !data?.session) {
+    await repository.logAuditEvent(user.id, 'LOGIN_FAILED', req, { method: 'phone' });
+    throw new AppError('Invalid credentials', 401, ERROR_CODES.INVALID_CREDENTIALS);
+  }
+
+  if ([USER_STATUS.SUSPENDED, USER_STATUS.REJECTED, USER_STATUS.DEACTIVATED].includes(user.status)) {
+    await authClient.auth.signOut();
+    throw new AppError('Account unavailable', 403, ERROR_CODES.ACCOUNT_SUSPENDED);
+  }
+
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    await authClient.auth.signOut();
+    throw new AppError('Account temporarily locked', 403, ERROR_CODES.ACCOUNT_LOCKED, {
+      lockedUntil: user.locked_until
+    });
+  }
+
+  const refreshedUser = await repository.updateLastLogin(user.id);
+  await repository.logAuditEvent(user.id, 'LOGIN_SUCCESS', req, { method: 'phone' });
+
+  return {
+    user: helpers.sanitizeUser(refreshedUser),
+    session: {
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresAt: data.session.expires_at
+    },
+    nextStep: helpers.getNextStep(refreshedUser)
+  };
 };
 
 const changePassword = async (userId, payload, req) => {
@@ -1590,6 +1616,7 @@ module.exports = {
   registerReseller,
   registerBuyer,
   login,
+  loginWithPhone,
   logout,
   refreshAccessToken,
   verifyEmail,

@@ -1,6 +1,6 @@
 const { supabaseAdmin } = require('../../config/supabase');
 const AppError = require('../../utils/AppError');
-const { ERROR_CODES, USER_ROLES, USER_STATUS } = require('../../config/constants');
+const { ERROR_CODES, USER_ROLES } = require('../../config/constants');
 const {
   FARMER_VERIFICATION_STATUS,
   isBuyerRole,
@@ -118,7 +118,7 @@ const hydrateQuotes = async (quotes) => {
   });
 };
 
-const createQuote = async (user, payload, req) => {
+const createQuote = async (user, payload, _req) => {
   if (!isBuyerRole(user.role)) {
     throw new AppError('Only buyers can request quotes', 403, ERROR_CODES.FORBIDDEN);
   }
@@ -237,7 +237,7 @@ const updateQuoteStatus = async (user, quoteId, status) => {
   const row = await getQuoteRow(quoteId);
   const { farmerProfile, resellerProfile } = await assertQuoteAccess(user, row);
 
-  if (['accepted', 'completed'].includes(status)) {
+  if (status === 'accepted') {
     if (![USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role)) {
       throw new AppError('Only sellers can accept or complete quote requests', 403, ERROR_CODES.FORBIDDEN);
     }
@@ -255,12 +255,12 @@ const updateQuoteStatus = async (user, quoteId, status) => {
     throw new AppError('Only buyers can cancel quote requests', 403, ERROR_CODES.FORBIDDEN);
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('inquiries')
-    .update({ status })
-    .eq('id', quoteId)
-    .select()
-    .single();
+  const { data, error } = await supabaseAdmin.rpc('transition_marketplace_quote', {
+    p_actor_user_id: user.id,
+    p_quote_id: quoteId,
+    p_expected_status: row.status,
+    p_target_status: status
+  });
   if (error) throw error;
   const [quote] = await hydrateQuotes([data]);
   return quote;

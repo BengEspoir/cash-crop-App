@@ -242,6 +242,15 @@ export const dictionaries = {
       phoneVerifyNote: "Phone verification resumes automatically if needed.",
       signingIn: "Signing In...",
       signInCta: "Sign In",
+      sellerPreferences: {
+        step: "Tell us what you sell",
+        eyebrow: "Seller preferences",
+        title: "Which cash crops would you like to sell on AgriculNet?",
+        subtitle: "Select the primary commodities you plan to sell or supply. We'll tailor your feed to these interests.",
+        save: "Save preferences",
+        skip: "Skip for now... proceed to dashboard",
+        verificationNote: "Your account verification steps still need to be completed before dashboard access.",
+      },
     },
     assistant: {
       title: "AgriculNet AI",
@@ -516,6 +525,15 @@ export const dictionaries = {
       phoneVerifyNote: "La vérification téléphonique reprend automatiquement si nécessaire.",
       signingIn: "Connexion...",
       signInCta: "Se connecter",
+      sellerPreferences: {
+        step: "Dites-nous ce que vous vendez",
+        eyebrow: "Préférences vendeur",
+        title: "Quelles cultures de rente souhaitez-vous vendre sur AgriculNet ?",
+        subtitle: "Sélectionnez les principales marchandises que vous prévoyez de vendre ou de fournir. Nous adapterons votre fil à ces intérêts.",
+        save: "Enregistrer les préférences",
+        skip: "Ignorer pour le moment... accéder au tableau de bord",
+        verificationNote: "Les étapes de vérification de votre compte doivent encore être terminées avant l'accès au tableau de bord.",
+      },
     },
     assistant: {
       title: "IA AgriculNet",
@@ -790,6 +808,15 @@ export const dictionaries = {
       phoneVerifyNote: "La verificación telefónica se reanuda automáticamente si es necesaria.",
       signingIn: "Iniciando sesión...",
       signInCta: "Iniciar sesión",
+      sellerPreferences: {
+        step: "Díganos qué vende",
+        eyebrow: "Preferencias del vendedor",
+        title: "¿Qué cultivos comerciales desea vender en AgriculNet?",
+        subtitle: "Seleccione los productos principales que planea vender o suministrar. Adaptaremos su contenido a estos intereses.",
+        save: "Guardar preferencias",
+        skip: "Omitir por ahora... ir al panel",
+        verificationNote: "Aún debe completar los pasos de verificación de su cuenta antes de acceder al panel.",
+      },
     },
     pages: {
       about: {

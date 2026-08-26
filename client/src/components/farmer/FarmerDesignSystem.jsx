@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import {
-  ArrowRight,
   BadgeCheck,
   Bell,
   Calendar,
   Check,
-  ChevronDown,
   Clock3,
   CreditCard,
   DollarSign,
@@ -16,106 +14,70 @@ import {
   MapPin,
   MessageSquare,
   Package,
-  Search,
   Send,
   ShieldCheck,
   TrendingUp,
   WalletCards,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  WorkspaceButton,
+  WorkspaceEmptyState,
+  WorkspaceFilters,
+  WorkspaceHeader,
+  WorkspaceMetricCard,
+  WorkspacePage,
+  WorkspacePanel,
+  WorkspaceStatusBadge,
+  compactWorkspaceCurrency,
+  formatWorkspaceDate,
+  workspaceDisplayName,
+  workspaceInitials,
+} from "@/components/workspace/WorkspacePrimitives";
 
 export function farmerInitials(user, fallback = "FR") {
-  return [user?.first_name, user?.last_name]
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || fallback;
+  return workspaceInitials(user, fallback);
 }
 
 export function farmerDisplayName(user, fallback = "Farmer") {
-  return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || fallback;
+  return workspaceDisplayName(user, fallback);
 }
 
 export function formatShortDate(value) {
-  if (!value) return "Pending";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Pending";
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return formatWorkspaceDate(value);
 }
 
 export function compactCurrency(value) {
-  if (typeof value === "string") return value;
-  const amount = Number(value || 0);
-  if (amount >= 1000000) return `XAF ${(amount / 1000000).toFixed(amount % 1000000 === 0 ? 0 : 1)}M`;
-  if (amount >= 1000) return `XAF ${(amount / 1000).toFixed(amount % 1000 === 0 ? 0 : 1)}K`;
-  return `XAF ${amount.toLocaleString("en-US")}`;
+  return compactWorkspaceCurrency(value);
 }
 
 export function FarmerPage({ children, className }) {
-  return <section className={cn("space-y-8", className)}>{children}</section>;
+  return <WorkspacePage className={className}>{children}</WorkspacePage>;
 }
 
 export function FarmerHeader({ title, description, action, backHref, backLabel = "Back" }) {
   return (
-    <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-      <div className="min-w-0">
-        {backHref ? (
-          <Link href={backHref} className="focus-ring mb-5 inline-flex items-center gap-2 rounded-md text-[15px] font-medium text-ink-500 transition-all duration-200 hover:text-green-800 motion-safe:hover:-translate-x-0.5">
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            {backLabel}
-          </Link>
-        ) : null}
-        <h1 className="font-display text-[34px] font-semibold leading-tight tracking-normal text-ink-950 md:text-[42px]">{title}</h1>
-        {description ? <p className="mt-2 max-w-3xl text-[18px] leading-7 text-ink-500">{description}</p> : null}
-      </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
-    </div>
+    <WorkspaceHeader
+      title={title}
+      description={description}
+      action={action}
+      backHref={backHref}
+      backLabel={backLabel}
+      titleWeightClassName="font-semibold"
+    />
   );
 }
 
 export function FarmerButton({ href, children, variant = "primary", icon: Icon, className, disabled, ...props }) {
-  const content = (
-    <>
-      {Icon ? <Icon className="h-5 w-5" /> : null}
-      <span>{children}</span>
-    </>
-  );
-  const classes = cn(
-    "focus-ring inline-flex h-14 items-center justify-center gap-3 rounded-lg px-6 text-[16px] font-bold transition-all duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md",
-    variant === "primary" && "bg-green-800 text-white hover:bg-green-900",
-    variant === "gold" && "bg-amber-600 text-white hover:bg-amber-700",
-    variant === "outline" && "border border-ink-200 bg-white text-ink-700 hover:border-green-700 hover:text-green-800",
-    variant === "ghost" && "bg-transparent text-green-800 hover:bg-green-50",
-    disabled && "pointer-events-none opacity-60",
-    className,
-  );
-  if (href && !disabled) {
-    return (
-      <Link href={href} className={classes}>
-        {content}
-      </Link>
-    );
-  }
   return (
-    <button type="button" className={classes} disabled={disabled} {...props}>
-      {content}
-    </button>
+    <WorkspaceButton href={href} variant={variant} icon={Icon} className={className} disabled={disabled} {...props}>
+      {children}
+    </WorkspaceButton>
   );
 }
 
 export function FarmerPanel({ title, action, children, className, bodyClassName }) {
-  return (
-    <section className={cn("motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 overflow-hidden rounded-2xl border border-ink-200 bg-white transition-shadow duration-200 hover:shadow-sm", className)}>
-      {(title || action) ? (
-        <div className="flex min-h-20 items-center justify-between gap-4 border-b border-ink-100 px-6 py-5">
-          {title ? <h2 className="font-display text-[22px] font-bold tracking-normal text-ink-950">{title}</h2> : <span />}
-          {action}
-        </div>
-      ) : null}
-      <div className={cn("p-6", bodyClassName)}>{children}</div>
-    </section>
-  );
+  return <WorkspacePanel title={title} action={action} className={className} bodyClassName={bodyClassName}>{children}</WorkspacePanel>;
 }
 
 const iconTone = {
@@ -127,17 +89,7 @@ const iconTone = {
 
 export function FarmerMetricCard({ icon: Icon = Leaf, value, label, detail, tag, tone = "green" }) {
   return (
-    <article className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 rounded-2xl border border-ink-200 bg-white p-7 transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
-      <div className="flex items-start justify-between gap-4">
-        <span className={cn("inline-flex h-14 w-14 items-center justify-center rounded-xl", iconTone[tone] || iconTone.green)}>
-          <Icon className="h-7 w-7" />
-        </span>
-        {tag ? <span className="rounded-full bg-green-50 px-4 py-1.5 text-[13px] font-bold text-green-800">{tag}</span> : null}
-      </div>
-      <p className="mt-7 font-display text-[42px] font-medium leading-none tracking-normal text-ink-950">{value}</p>
-      <p className="mt-3 text-[14px] font-bold uppercase tracking-[0.12em] text-ink-400">{label}</p>
-      {detail ? <p className="mt-2 text-[16px] text-ink-500">{detail}</p> : null}
-    </article>
+    <WorkspaceMetricCard icon={Icon} value={value} label={label} detail={detail} tag={tag} tone={tone} toneClasses={iconTone} valueClassName="font-medium" />
   );
 }
 
@@ -169,54 +121,35 @@ export function FarmerFilters({ searchPlaceholder = "Search...", filters = [], f
     : filters.map((label) => ({ key: String(label).split(":")[0].trim().toLowerCase(), label, options: [{ value: "all", label }] }));
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-      <div className="relative min-w-0 flex-1 lg:max-w-[420px]">
-        <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
-        <input
-          type="search"
-          placeholder={searchPlaceholder}
-          value={values.q || ""}
-          onChange={(event) => onChange?.("q", event.target.value)}
-          className="h-14 w-full rounded-lg border border-ink-200 bg-white pl-14 pr-4 text-[16px] text-ink-800 outline-none transition focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
-        />
-      </div>
-      {selectFilters.map((filter) => (
-        <label
-          key={filter.key}
-          className="focus-ring inline-flex h-14 items-center justify-between gap-3 rounded-lg border border-ink-200 bg-white px-5 text-[16px] font-medium text-ink-700 transition-all duration-200 hover:border-green-700 hover:text-green-800 motion-safe:hover:-translate-y-0.5"
-        >
-          <span className="sr-only">{filter.label}</span>
-          <select
-            value={values[filter.key] || "all"}
-            onChange={(event) => onChange?.(filter.key, event.target.value)}
-            className="h-full min-w-[130px] bg-transparent outline-none"
-          >
-            {(filter.options || []).map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="h-4 w-4 text-ink-400" />
-        </label>
-      ))}
-      {onReset ? <FarmerButton variant="outline" onClick={onReset}>Reset</FarmerButton> : null}
-      {onExport ? <FarmerButton variant="gold" onClick={onExport} disabled={isExporting}>{isExporting ? "Exporting..." : "Export CSV"}</FarmerButton> : null}
-    </div>
+    <WorkspaceFilters
+      searchPlaceholder={searchPlaceholder}
+      filterOptions={selectFilters}
+      values={values}
+      onChange={onChange}
+      actions={(
+        <>
+          {onReset ? <FarmerButton variant="outline" onClick={onReset}>Reset</FarmerButton> : null}
+          {onExport ? <FarmerButton variant="gold" onClick={onExport} disabled={isExporting}>{isExporting ? "Exporting..." : "Export CSV"}</FarmerButton> : null}
+        </>
+      )}
+    />
   );
 }
 
 export function FarmerStatusBadge({ status = "pending", children, className }) {
-  const normalized = String(status).toLowerCase();
-  const tone = normalized.includes("active") || normalized.includes("verified") || normalized.includes("released") || normalized.includes("delivered")
-    ? "bg-green-50 text-green-800"
-    : normalized.includes("transit") || normalized.includes("escrow")
-      ? "bg-sky-50 text-sky-800"
-      : normalized.includes("cancel") || normalized.includes("reject")
-        ? "bg-red-50 text-red-800"
-        : "bg-amber-50 text-amber-800";
   return (
-    <span className={cn("inline-flex rounded-full px-4 py-1.5 text-[13px] font-bold", tone, className)}>
-      {children || status}
-    </span>
+    <WorkspaceStatusBadge
+      status={status}
+      className={className}
+      terms={{
+        positive: ["active", "verified", "released", "delivered"],
+        informational: ["transit", "escrow"],
+        negative: ["cancel", "reject"],
+        classes: { informational: "bg-sky-50 text-sky-800" },
+      }}
+    >
+      {children}
+    </WorkspaceStatusBadge>
   );
 }
 
@@ -353,12 +286,14 @@ export function FarmerNotificationItem({ item }) {
 
 export function FarmerEmptyState({ title, description, action }) {
   return (
-    <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-10 text-center transition-colors duration-200 hover:border-green-200 hover:bg-green-50/30">
-      <Leaf className="h-12 w-12 text-ink-300" />
-      <h3 className="mt-4 text-[20px] font-bold text-ink-950">{title}</h3>
-      {description ? <p className="mt-2 max-w-lg text-[15px] leading-6 text-ink-500">{description}</p> : null}
-      {action ? <div className="mt-5">{action}</div> : null}
-    </div>
+    <WorkspaceEmptyState
+      icon={Leaf}
+      title={title}
+      description={description}
+      action={action}
+      className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 transition-colors duration-200 hover:border-green-200 hover:bg-green-50/30"
+      titleFontClassName="font-display"
+    />
   );
 }
 

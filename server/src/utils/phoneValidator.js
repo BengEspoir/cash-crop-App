@@ -3,12 +3,12 @@
  * Supports Cameroon (local) and international formats
  */
 
-const { validatePhoneForCountry, formatPhoneInternational, getCountryByCode } = require('./countries');
+const { validatePhoneForCountry, formatPhoneInternational } = require('./countries');
 
 // Validate phone based on user type and country
 const validatePhone = (phone, userType, countryCode = 'CM') => {
   // Clean the phone number
-  const cleanPhone = phone.replace(/[\s\-]/g, '');
+  const cleanPhone = phone.replace(/[\s-]/g, '');
   
   // Local buyers must use Cameroon
   if (userType === 'local') {
@@ -29,7 +29,7 @@ const validatePhone = (phone, userType, countryCode = 'CM') => {
 
 // Normalize phone to international format
 const normalizePhone = (phone, countryCode = 'CM') => {
-  const cleanPhone = phone.replace(/[\s\-]/g, '');
+  const cleanPhone = phone.replace(/[\s-]/g, '');
   return formatPhoneInternational(cleanPhone, countryCode);
 };
 

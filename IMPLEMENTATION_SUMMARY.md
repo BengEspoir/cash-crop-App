@@ -1,7 +1,9 @@
 # AgriculNet Onboarding Implementation Summary
 
 ## Overview
-This implementation adds complete phone/email verification, 5-minute automatic account review, and proper buyer portal segmentation (local vs international buyers with different country/phone handling).
+This historical implementation note describes an onboarding prototype: phone/email verification, account-review scaffolding, and buyer portal segmentation. The repository has evolved since this note was written; verify current code and migrations before treating any workflow as shipped.
+
+Authentication and verification paths are implemented and testable, while payment, logistics, inspection, certification, export, and broader marketplace operations remain prototype/planned or deployment-dependent. Seeded data and dashboard states do not demonstrate live operation or measured impact.
 
 ---
 

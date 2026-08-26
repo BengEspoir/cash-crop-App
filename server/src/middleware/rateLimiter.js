@@ -1,5 +1,4 @@
 const rateLimit = require('express-rate-limit');
-const { sendError } = require('../utils/response');
 const env = require('../config/env');
 
 const generalLimiter = rateLimit({

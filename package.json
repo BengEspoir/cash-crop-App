@@ -8,7 +8,10 @@
     "start:client": "npm --prefix client run start",
     "start:server": "npm --prefix server run start",
     "lint:client": "npm --prefix client run lint",
-    "smoke:api": "node scripts/smoke-health.mjs"
+    "smoke:api": "node scripts/smoke-health.mjs",
+    "verify:client": "npm --prefix client run lint && npm --prefix client test && npm --prefix client run build",
+    "verify:server": "npm --prefix server run lint && npm --prefix server run check:syntax && npm --prefix server test && npm --prefix server ls --depth=0",
+    "verify": "npm run verify:client && npm run verify:server"
   },
   "devDependencies": {
     "supabase": "^2.95.4"

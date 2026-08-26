@@ -24,9 +24,6 @@ values:
   - key: order_id
     value: ''
     enabled: true
-  - key: admin_key
-    value: ''
-    enabled: true
     type: secret
   - key: admin_identifier
     value: ''

@@ -25,6 +25,7 @@ const REQUIRED_COLUMNS = [
   ['users', 'reviewed_at', '023_auto_approval_setup.sql'],
   ['users', 'banned_at', '024_enhanced_verification.sql'],
   ['users', 'ban_reason', '024_enhanced_verification.sql'],
+  ['users', 'auth_user_id', '039_supabase_auth_and_rls_alignment.sql'],
   ['farmer_profiles', 'primary_crop', '022_profile_extensions.sql'],
   ['farmer_profiles', 'harvest_volume', '022_profile_extensions.sql'],
   ['farmer_profiles', 'export_ready', '022_profile_extensions.sql'],
@@ -64,7 +65,14 @@ const REQUIRED_MIGRATIONS = [
   '024_enhanced_verification.sql',
   '025_activity_events.sql',
   '026_marketplace_verification_gating.sql',
-  '027_reseller_marketplace_foundation.sql'
+  '027_reseller_marketplace_foundation.sql',
+  '031_atomic_fapshi_settlement.sql',
+  '033_atomic_payment_intents.sql',
+  '035_order_inventory_and_quote_guards.sql',
+  '036_atomic_logistics_transitions.sql',
+  '037_core_rls_lockdown.sql',
+  '038_uuid_generation_compatibility.sql',
+  '039_supabase_auth_and_rls_alignment.sql'
 ];
 
 const OPTIONAL_SEEDS = [

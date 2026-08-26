@@ -130,6 +130,7 @@ export default function AdminUserDetailPage({ params }) {
                         </div>
                         <div className="border-t border-ink-100 bg-ink-50/40 p-4">
                           <div className="rounded-[14px] border border-ink-200 bg-white p-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- verification files can be private signed URLs */}
                             <img
                               src={activeDoc?.url || value}
                               alt={activeDoc?.label || label}

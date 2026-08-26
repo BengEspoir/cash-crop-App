@@ -1,1 +1,0 @@
-// AgriculNet — switch.jsx — placeholder

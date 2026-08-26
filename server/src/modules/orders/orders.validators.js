@@ -11,7 +11,8 @@ const createOrderSchema = Joi.object({
   destinationCity: Joi.string().max(120).allow('', null).optional(),
   shippingAddress: Joi.string().max(1000).allow('', null).optional(),
   billingAddress: Joi.string().max(1000).allow('', null).optional(),
-  notes: Joi.string().max(2000).allow('', null).optional()
+  notes: Joi.string().max(2000).allow('', null).optional(),
+  idempotencyKey: Joi.string().uuid().optional()
 }).xor('listingId', 'quoteId');
 
 const updateOrderStatusSchema = Joi.object({

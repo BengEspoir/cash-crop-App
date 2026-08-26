@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { supabaseAdmin } = require('../../config/supabase');
 const AppError = require('../../utils/AppError');
 const { ERROR_CODES, USER_ROLES } = require('../../config/constants');
@@ -7,35 +8,88 @@ const {
   CLIENT_URL,
   FAPSHI_BASE_URL,
   FAPSHI_API_USER,
-  FAPSHI_API_KEY
+  FAPSHI_API_KEY,
+  FAPSHI_WEBHOOK_SECRET,
+  FAPSHI_REQUEST_TIMEOUT_MS
 } = require('../../config/env');
 const ordersService = require('../orders/orders.service');
-const logisticsService = require('../logistics/logistics.service');
 
-const isNotFound = (error) => error?.code === 'PGRST116';
 const FAPSHI_PROVIDER = 'fapshi';
-const TERMINAL_PAYMENT_STATUSES = new Set(['released', 'refunded', 'failed']);
-const PROVIDER_FINAL_STATUSES = new Set(['SUCCESSFUL', 'FAILED', 'EXPIRED']);
+const FINAL_PROVIDER_STATUSES = new Set(['SUCCESSFUL', 'FAILED', 'EXPIRED']);
+const isNotFound = (error) => error?.code === 'PGRST116';
 
-const getUserProfile = async (table, userId) => {
-  const { data, error } = await supabaseAdmin.from(table).select('*').eq('user_id', userId).single();
-  if (error && isNotFound(error)) throw new AppError('Profile not found', 404, ERROR_CODES.NOT_FOUND);
-  if (error) throw error;
-  return data;
+const requireFapshiConfiguration = () => {
+  if (!FAPSHI_API_USER || !FAPSHI_API_KEY || !FAPSHI_BASE_URL) {
+    throw new AppError('Fapshi is not configured', 503, 'EXTERNAL_SERVICE_ERROR');
+  }
 };
 
-const getPaymentsByOrder = async (orderId, payerId) => {
-  const query = supabaseAdmin
-    .from('payments')
-    .select('*')
-    .eq('order_id', orderId)
-    .order('created_at', { ascending: false })
-    .limit(1);
+const requireWebhookSecret = () => {
+  if (!FAPSHI_WEBHOOK_SECRET) {
+    throw new AppError('Fapshi webhook validation is not configured', 503, 'EXTERNAL_SERVICE_ERROR');
+  }
+};
 
-  const scoped = payerId ? query.eq('payer_id', payerId) : query;
-  const { data, error } = await scoped;
-  if (error) throw error;
-  return data || [];
+const signatureForPayment = (paymentId) => crypto
+  .createHmac('sha256', FAPSHI_WEBHOOK_SECRET)
+  .update(paymentId)
+  .digest('base64url');
+
+const createSignedExternalId = (paymentId) => {
+  requireWebhookSecret();
+  return `${paymentId}.${signatureForPayment(paymentId)}`;
+};
+
+const verifySignedExternalId = (externalId) => {
+  requireWebhookSecret();
+  const [paymentId, signature, extra] = String(externalId || '').split('.');
+  if (!paymentId || !signature || extra) {
+    throw new AppError('Invalid Fapshi webhook signature', 401, ERROR_CODES.UNAUTHORIZED);
+  }
+  const expected = Buffer.from(signatureForPayment(paymentId));
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+    throw new AppError('Invalid Fapshi webhook signature', 401, ERROR_CODES.UNAUTHORIZED);
+  }
+  return paymentId;
+};
+
+const parseJsonSafely = async (response) => {
+  const text = await response.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { message: text || 'Unknown provider response' };
+  }
+};
+
+const callFapshi = async (path, options = {}) => {
+  requireFapshiConfiguration();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FAPSHI_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${String(FAPSHI_BASE_URL).replace(/\/$/, '')}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        apiuser: FAPSHI_API_USER,
+        apikey: FAPSHI_API_KEY,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    const payload = await parseJsonSafely(response);
+    if (!response.ok) {
+      throw new AppError(payload?.message || 'Fapshi request failed', 502, 'EXTERNAL_SERVICE_ERROR');
+    }
+    return payload;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    const message = error.name === 'AbortError' ? 'Fapshi request timed out' : `Fapshi connection failed: ${error.message}`;
+    throw new AppError(message, 502, 'EXTERNAL_SERVICE_ERROR');
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 const getPaymentById = async (paymentId) => {
@@ -52,281 +106,75 @@ const getOrderById = async (orderId) => {
   return data;
 };
 
-const buildReturnUrl = (paymentId) => {
-  const base = CLIENT_URL || BASE_URL;
-  return `${base.replace(/\/$/, '')}/buyer/payments/return?intent=${paymentId}`;
+const getPayeeId = async (order) => {
+  const table = order.reseller_id ? 'reseller_profiles' : 'farmer_profiles';
+  const profileId = order.reseller_id || order.farmer_id;
+  const { data, error } = await supabaseAdmin.from(table).select('user_id').eq('id', profileId).single();
+  if (error) throw error;
+  return data.user_id;
 };
 
-const buildWebhookUrl = () => `${String(BASE_URL).replace(/\/$/, '')}/api/v1/payments/webhooks/fapshi`;
+const buildReturnUrl = (paymentId) => `${String(CLIENT_URL || BASE_URL).replace(/\/$/, '')}/buyer/payments/return?intent=${paymentId}`;
+const buildWebhookUrl = () => `${String(BASE_URL).replace(/\/$/, '')}/api/webhooks/fapshi`;
 
-const isFapshiConfigured = () => Boolean(FAPSHI_API_USER && FAPSHI_API_KEY && FAPSHI_BASE_URL);
-
-const parseJsonSafely = async (response) => {
-  const text = await response.text();
-  try {
-    return text ? JSON.parse(text) : {};
-  } catch {
-    return { message: text || 'Unknown provider response' };
-  }
-};
-
-const callFapshi = async (path, options = {}) => {
-  const baseUrl = String(FAPSHI_BASE_URL || '').replace(/\/$/, '');
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: {
-      apiuser: FAPSHI_API_USER,
-      apikey: FAPSHI_API_KEY,
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-
-  const payload = await parseJsonSafely(response);
-  if (!response.ok) {
-    throw new AppError(
-      payload?.message || 'Fapshi request failed',
-      502,
-      ERROR_CODES.EXTERNAL_SERVICE_ERROR || 'EXTERNAL_SERVICE_ERROR'
-    );
-  }
-  return payload;
-};
-
-const readProviderStatus = (providerPayload = {}) => String(providerPayload.status || '').toUpperCase();
-
-const mapProviderStatusToPaymentStatus = (providerStatus) => {
-  switch (providerStatus) {
-    case 'SUCCESSFUL':
-      return 'held_in_escrow';
-    case 'FAILED':
-    case 'EXPIRED':
-      return 'failed';
-    default:
-      return 'pending';
-  }
-};
-
-const mapProviderStatusToOrderStatus = (providerStatus) => {
-  switch (providerStatus) {
-    case 'SUCCESSFUL':
-      return 'confirmed';
-    case 'FAILED':
-    case 'EXPIRED':
-      return 'pending_payment';
-    default:
-      return 'pending_payment';
-  }
-};
-
-const createProviderMetadata = (payment, order, payload = {}) => ({
+const providerMetadata = (payment, order, providerPayload = {}) => ({
   ...(payment.metadata || {}),
   provider: FAPSHI_PROVIDER,
-  providerReference: payload.transId || payment.transaction_ref || null,
-  checkoutUrl: payload.link || payment.metadata?.checkoutUrl || null,
-  nextAction: payload.link ? 'redirect_to_checkout' : 'provider_not_configured',
+  mode: 'hosted_checkout',
+  providerInitiationState: providerPayload.transId ? 'initiated' : payment.metadata?.providerInitiationState,
+  providerReference: providerPayload.transId || payment.transaction_ref || null,
+  checkoutUrl: providerPayload.link || payment.metadata?.checkoutUrl || null,
+  nextAction: providerPayload.link ? 'redirect_to_checkout' : payment.metadata?.nextAction || 'await_payment',
   webhookUrl: buildWebhookUrl(),
   redirectUrl: buildReturnUrl(payment.id),
-  externalId: order.order_number || order.id,
-  providerStatus: payload.status || payment.metadata?.providerStatus || 'CREATED',
-  amount: Number(payment.amount || 0),
-  initiatedAt: payload.dateInitiated || payment.metadata?.initiatedAt || new Date().toISOString(),
-  latestWebhookAt: payload.latestWebhookAt || payment.metadata?.latestWebhookAt || null,
-  lastWebhookPayload: payload.lastWebhookPayload || payment.metadata?.lastWebhookPayload || null,
-  lastProviderPayload: payload.lastProviderPayload || payment.metadata?.lastProviderPayload || null,
-  verifiedAt: payload.verifiedAt || payment.metadata?.verifiedAt || null,
-  mode: 'hosted_checkout'
+  externalId: createSignedExternalId(payment.id),
+  providerStatus: providerPayload.status || payment.metadata?.providerStatus || 'CREATED',
+  providerAmount: providerPayload.amount ?? Number(payment.amount),
+  providerCurrency: providerPayload.currency || payment.currency,
+  lastProviderPayload: providerPayload,
+  orderNumber: order.order_number || null,
+  verifiedAt: providerPayload.verifiedAt || null
 });
 
-const updateOrderStatusIfNeeded = async (order, nextStatus) => {
-  if (!nextStatus || order.status === nextStatus) return order;
-  const timeline = Array.isArray(order.timeline) ? [...order.timeline] : [];
-  timeline.push({
-    event: `Payment provider updated order to ${nextStatus}`,
-    status: nextStatus,
-    date: new Date().toISOString()
-  });
-  const { data, error } = await supabaseAdmin
-    .from('orders')
-    .update({ status: nextStatus, timeline })
-    .eq('id', order.id)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-};
+const getFapshiStatus = (transId) => callFapshi(`/payment-status/${encodeURIComponent(transId)}`, { method: 'GET' });
 
-const ensureCommissionRecorded = async (order) => {
-  if (!Number(order.platform_commission || 0)) {
-    return null;
+const assertProviderProof = (payment, providerPayload) => {
+  if (String(providerPayload.transId || '') !== String(payment.transaction_ref || '')) {
+    throw new AppError('Fapshi transaction reference mismatch', 409, ERROR_CODES.VALIDATION_ERROR);
   }
-
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from('commissions')
-    .select('*')
-    .eq('order_id', order.id)
-    .limit(1)
-    .maybeSingle();
-  if (existingError) throw existingError;
-  if (existing) return existing;
-
-  const { data, error } = await supabaseAdmin
-    .from('commissions')
-    .insert({
-      order_id: order.id,
-      amount: Number(order.platform_commission || 0),
-      percentage: 0,
-      status: 'collected'
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  const signedPaymentId = verifySignedExternalId(providerPayload.externalId);
+  if (signedPaymentId !== payment.id) {
+    throw new AppError('Fapshi payment identity mismatch', 409, ERROR_CODES.VALIDATION_ERROR);
+  }
+  if (providerPayload.userId && String(providerPayload.userId) !== String(payment.payer_id)) {
+    throw new AppError('Fapshi payer identity mismatch', 409, ERROR_CODES.VALIDATION_ERROR);
+  }
+  if (!Number.isFinite(Number(providerPayload.amount)) || Math.round(Number(providerPayload.amount)) !== Math.round(Number(payment.amount))) {
+    throw new AppError('Fapshi amount mismatch', 409, ERROR_CODES.VALIDATION_ERROR);
+  }
 };
 
-const persistProviderResult = async (payment, order, providerPayload, source = 'provider') => {
-  const providerStatus = readProviderStatus(providerPayload);
-  const nextPaymentStatus = mapProviderStatusToPaymentStatus(providerStatus);
-  const nextOrderStatus = mapProviderStatusToOrderStatus(providerStatus);
-  const metadata = createProviderMetadata(payment, order, {
+const reconcileProviderPayment = async (payment, order, providerPayload) => {
+  assertProviderProof(payment, providerPayload);
+  const status = String(providerPayload.status || '').toUpperCase();
+  if (!FINAL_PROVIDER_STATUSES.has(status)) {
+    return { payment, order, settled: false };
+  }
+  const metadata = providerMetadata(payment, order, {
     ...providerPayload,
-    latestWebhookAt: source === 'webhook' ? new Date().toISOString() : payment.metadata?.latestWebhookAt || null,
-    lastWebhookPayload: source === 'webhook' ? providerPayload : payment.metadata?.lastWebhookPayload || null,
-    lastProviderPayload: providerPayload,
     verifiedAt: new Date().toISOString()
   });
-
-  const updates = {
-    status: nextPaymentStatus,
-    channel: payment.channel || 'mtn_momo',
-    transaction_ref: providerPayload.transId || payment.transaction_ref || null,
-    metadata
-  };
-
-  if (providerStatus === 'SUCCESSFUL') {
-    updates.paid_at = providerPayload.dateConfirmed || new Date().toISOString();
-    updates.escrow_held_at = new Date().toISOString();
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from('payments')
-    .update(updates)
-    .eq('id', payment.id)
-    .select()
-    .single();
-  if (error) throw error;
-
-  const updatedOrder = await updateOrderStatusIfNeeded(order, nextOrderStatus);
-  if (providerStatus === 'SUCCESSFUL') {
-    await ensureCommissionRecorded(updatedOrder);
-    await logisticsService.ensureShipmentForPaidOrder(updatedOrder);
-  }
-  return { payment: data, order: updatedOrder };
-};
-
-const getFapshiStatus = async (transId) => callFapshi(`/payment-status/${transId}`, { method: 'GET' });
-
-const initiateFapshiCheckout = async (payment, order, user) => {
-  const payload = {
-    amount: Math.round(Number(payment.amount || 0)),
-    userId: user.id,
-    externalId: order.order_number || order.id,
-    redirectUrl: buildReturnUrl(payment.id),
-    webhook: buildWebhookUrl()
-  };
-
-  const result = await callFapshi('/initiate-pay', {
-    method: 'POST',
-    body: JSON.stringify(payload)
+  const { data, error } = await supabaseAdmin.rpc('reconcile_fapshi_payment', {
+    p_payment_id: payment.id,
+    p_transaction_ref: payment.transaction_ref,
+    p_provider_status: status,
+    p_provider_amount: Math.round(Number(providerPayload.amount)),
+    p_provider_currency: providerPayload.currency || payment.currency,
+    p_confirmed_at: providerPayload.dateConfirmed || null,
+    p_provider_metadata: metadata
   });
-
-  const metadata = createProviderMetadata(payment, order, {
-    ...result,
-    lastProviderPayload: result
-  });
-
-  const { data, error } = await supabaseAdmin
-    .from('payments')
-    .update({
-      channel: payment.channel || 'mtn_momo',
-      transaction_ref: result.transId || payment.transaction_ref || null,
-      metadata
-    })
-    .eq('id', payment.id)
-    .select()
-    .single();
   if (error) throw error;
-
   return data;
-};
-
-const listPayments = async (user) => {
-  let query = supabaseAdmin.from('payments').select('*').order('created_at', { ascending: false });
-
-  if (isBuyerRole(user.role)) {
-    query = query.eq('payer_id', user.id);
-  } else if ([USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role)) {
-    query = query.eq('payee_id', user.id);
-  } else if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
-    throw new AppError('Insufficient permissions', 403, ERROR_CODES.FORBIDDEN);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return { items: (data || []).map(mapPayment), count: (data || []).length };
-};
-
-const createPayment = async (user, payload) => {
-  if (!isBuyerRole(user.role)) {
-    throw new AppError('Only buyers can create payment records', 403, ERROR_CODES.FORBIDDEN);
-  }
-
-  const order = await ordersService.getOrderRowForAccess(user, payload.orderId);
-  const sellerTable = order.reseller_id ? 'reseller_profiles' : 'farmer_profiles';
-  const sellerId = order.reseller_id || order.farmer_id;
-  const farmerProfile = await supabaseAdmin
-    .from(sellerTable)
-    .select('*')
-    .eq('id', sellerId)
-    .single();
-  if (farmerProfile.error) throw farmerProfile.error;
-  await ordersService.ensureFarmerCanReceiveCommerce(farmerProfile.data);
-
-  const farmerUser = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('id', farmerProfile.data.user_id)
-    .single();
-  if (farmerUser.error) throw farmerUser.error;
-
-  const { data, error } = await supabaseAdmin
-    .from('payments')
-    .insert({
-      order_id: order.id,
-      payer_id: user.id,
-      payee_id: farmerUser.data.id,
-      amount: order.total_amount,
-      currency: order.currency || 'XAF',
-      status: 'pending',
-      channel: payload.channel || null,
-      metadata: {
-        provider: payload.provider || 'internal_ledger',
-        mode: payload.provider === FAPSHI_PROVIDER ? 'hosted_checkout' : 'internal_ledger',
-        amountBreakdown: {
-          baseAmount: Number(order.base_amount || order.total_amount || 0),
-          logisticsFee: Number(order.logistics_fee || 0),
-          platformCommission: Number(order.platform_commission || 0),
-          sellerNetAmount: Number(order.seller_net_amount || 0)
-        },
-        note: payload.provider === FAPSHI_PROVIDER
-          ? 'Hosted Fapshi checkout initiated for this payment.'
-          : 'No live payment provider was charged for this record.'
-      }
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return mapPayment(data);
 };
 
 const mapCheckoutIntent = (payment, order = null) => ({
@@ -341,143 +189,143 @@ const mapCheckoutIntent = (payment, order = null) => ({
   platformCommission: Number(order?.platform_commission || payment.metadata?.amountBreakdown?.platformCommission || 0),
   sellerNetAmount: Number(order?.seller_net_amount || payment.metadata?.amountBreakdown?.sellerNetAmount || 0),
   currency: payment.currency || 'XAF',
-  provider: payment.metadata?.provider || 'internal_ledger',
-  providerReference: payment.transaction_ref || payment.metadata?.providerReference || null,
+  provider: payment.metadata?.provider || FAPSHI_PROVIDER,
+  providerReference: payment.transaction_ref || null,
   checkoutUrl: payment.metadata?.checkoutUrl || null,
-  nextAction: payment.metadata?.nextAction || 'provider_not_configured',
+  nextAction: payment.metadata?.nextAction || 'await_payment',
   providerStatus: payment.metadata?.providerStatus || null,
   returnUrl: payment.metadata?.redirectUrl || buildReturnUrl(payment.id),
   status: payment.status || 'pending',
-  message: payment.metadata?.provider === FAPSHI_PROVIDER
-    ? (payment.metadata?.checkoutUrl
-      ? 'Redirect the buyer to complete payment on Fapshi.'
-      : 'Fapshi credentials are not configured yet. Add your API User and API Key on the server.')
-    : 'Payment provider is not configured yet. An internal ledger payment record was prepared.'
+  message: payment.metadata?.checkoutUrl
+    ? 'Redirect the buyer to complete payment on Fapshi.'
+    : 'The payment is being prepared with Fapshi.'
 });
 
-const createCheckoutIntent = async (user, payload) => {
-  if (!isBuyerRole(user.role)) {
-    throw new AppError('Only buyers can create checkout intents', 403, ERROR_CODES.FORBIDDEN);
-  }
-
+const createAtomicPayment = async (user, payload) => {
   const order = await ordersService.getOrderRowForAccess(user, payload.orderId);
-  const [existing] = await getPaymentsByOrder(order.id, user.id);
-  if (existing && !TERMINAL_PAYMENT_STATUSES.has(existing.status)) {
-    let existingIntent = existing;
-    if ((payload.provider || FAPSHI_PROVIDER) === FAPSHI_PROVIDER && isFapshiConfigured() && !existing.metadata?.checkoutUrl) {
-      existingIntent = await initiateFapshiCheckout(existing, order, user);
+  const payeeId = await getPayeeId(order);
+  const metadata = {
+    provider: payload.provider || FAPSHI_PROVIDER,
+    mode: (payload.provider || FAPSHI_PROVIDER) === FAPSHI_PROVIDER ? 'hosted_checkout' : 'internal_ledger',
+    amountBreakdown: {
+      baseAmount: Number(order.base_amount || 0),
+      logisticsFee: Number(order.logistics_fee || 0),
+      platformCommission: Number(order.platform_commission || 0),
+      sellerNetAmount: Number(order.seller_net_amount || 0)
     }
-    return mapCheckoutIntent(existingIntent, order);
+  };
+  const { data, error } = await supabaseAdmin.rpc('get_or_create_payment_intent', {
+    p_order_id: order.id,
+    p_payer_id: user.id,
+    p_payee_id: payeeId,
+    p_amount: order.total_amount,
+    p_currency: order.currency || 'XAF',
+    p_channel: payload.channel || 'mtn_momo',
+    p_metadata: metadata
+  });
+  if (error) throw error;
+  return data;
+};
+
+const listPayments = async (user) => {
+  let query = supabaseAdmin.from('payments').select('*').order('created_at', { ascending: false });
+  if (isBuyerRole(user.role)) query = query.eq('payer_id', user.id);
+  else if ([USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role)) query = query.eq('payee_id', user.id);
+  else if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
+    throw new AppError('Insufficient permissions', 403, ERROR_CODES.FORBIDDEN);
   }
+  const { data, error } = await query;
+  if (error) throw error;
+  return { items: (data || []).map(mapPayment), count: (data || []).length };
+};
 
-  const payment = existing
-    ? mapPayment(existing)
-    : await createPayment(user, {
-      orderId: order.id,
-      channel: payload.channel || 'mtn_momo',
-      provider: payload.provider || FAPSHI_PROVIDER
-    });
+const createPayment = async (user, payload) => {
+  if (!isBuyerRole(user.role)) throw new AppError('Only buyers can create payment records', 403, ERROR_CODES.FORBIDDEN);
+  const result = await createAtomicPayment(user, payload);
+  return mapPayment(result.payment);
+};
 
-  let paymentRow = existing || await getPaymentById(payment.id);
+const initiateFapshiCheckout = async (payment, order, user) => {
+  const { data: claim, error: claimError } = await supabaseAdmin.rpc('claim_payment_provider_initiation', {
+    p_payment_id: payment.id,
+    p_provider: FAPSHI_PROVIDER,
+    p_claimed_at: new Date().toISOString()
+  });
+  if (claimError) throw claimError;
+  if (!claim.claimed) return claim.payment;
 
-  if ((payload.provider || FAPSHI_PROVIDER) === FAPSHI_PROVIDER && isFapshiConfigured()) {
-    paymentRow = await initiateFapshiCheckout(paymentRow, order, user);
-  } else {
-    const fallbackMetadata = createProviderMetadata(paymentRow, order, {
-      providerStatus: 'CREATED'
-    });
-    const { data, error } = await supabaseAdmin
-      .from('payments')
-      .update({
-        channel: payload.channel || paymentRow.channel || 'mtn_momo',
-        metadata: {
-          ...fallbackMetadata,
-          provider: payload.provider || FAPSHI_PROVIDER,
-          checkoutUrl: null,
-          nextAction: 'provider_not_configured',
-          note: 'Fapshi credentials are missing. Add FAPSHI_API_USER and FAPSHI_API_KEY on the backend.'
-        }
-      })
-      .eq('id', paymentRow.id)
-      .select()
-      .single();
-    if (error) throw error;
-    paymentRow = data;
+  const externalId = createSignedExternalId(payment.id);
+  const providerResult = await callFapshi('/initiate-pay', {
+    method: 'POST',
+    body: JSON.stringify({
+      amount: Math.round(Number(payment.amount)),
+      userId: user.id,
+      externalId,
+      redirectUrl: buildReturnUrl(payment.id),
+      webhook: buildWebhookUrl(),
+      message: `AgriculNet order ${order.order_number || order.id}`
+    })
+  });
+  if (!providerResult.transId || !providerResult.link) {
+    throw new AppError('Fapshi returned an incomplete checkout response', 502, 'EXTERNAL_SERVICE_ERROR');
   }
+  const metadata = providerMetadata(claim.payment, claim.order, providerResult);
+  const { data, error } = await supabaseAdmin.rpc('save_payment_provider_checkout', {
+    p_payment_id: payment.id,
+    p_transaction_ref: providerResult.transId,
+    p_checkout_url: providerResult.link,
+    p_channel: payment.channel || 'mtn_momo',
+    p_provider_metadata: metadata
+  });
+  if (error) throw error;
+  return data.payment;
+};
 
-  return mapCheckoutIntent(paymentRow, order);
+const createCheckoutIntent = async (user, payload) => {
+  if (!isBuyerRole(user.role)) throw new AppError('Only buyers can create checkout intents', 403, ERROR_CODES.FORBIDDEN);
+  if ((payload.provider || FAPSHI_PROVIDER) !== FAPSHI_PROVIDER) {
+    throw new AppError('Only Fapshi checkout is supported', 400, ERROR_CODES.VALIDATION_ERROR);
+  }
+  requireFapshiConfiguration();
+  requireWebhookSecret();
+  const result = await createAtomicPayment(user, { ...payload, provider: FAPSHI_PROVIDER });
+  let payment = result.payment;
+  if (!payment.metadata?.checkoutUrl) payment = await initiateFapshiCheckout(payment, result.order, user);
+  return mapCheckoutIntent(payment, result.order);
 };
 
 const getCheckoutIntent = async (user, intentId) => {
   const payment = await getPaymentById(intentId);
-  await ordersService.getOrderRowForAccess(user, payment.order_id);
-  const order = await getOrderById(payment.order_id);
+  const order = await ordersService.getOrderRowForAccess(user, payment.order_id);
   return mapCheckoutIntent(payment, order);
 };
 
 const confirmCheckoutIntent = async (user, intentId) => {
   const payment = await getPaymentById(intentId);
   const order = await ordersService.getOrderRowForAccess(user, payment.order_id);
-  if (!isBuyerRole(user.role)) {
-    throw new AppError('Only buyers can confirm checkout intents', 403, ERROR_CODES.FORBIDDEN);
-  }
-
-  if (payment.transaction_ref && isFapshiConfigured()) {
-    const providerStatus = await getFapshiStatus(payment.transaction_ref);
-    const result = await persistProviderResult(payment, order, providerStatus, 'manual_confirm');
-    return mapCheckoutIntent(result.payment, result.order);
-  }
-
-  const { data, error } = await supabaseAdmin
-    .from('payments')
-    .update({
-      metadata: {
-        ...(payment.metadata || {}),
-        nextAction: payment.metadata?.checkoutUrl ? 'redirect_to_checkout' : 'provider_not_configured',
-        confirmedAt: new Date().toISOString()
-      }
-    })
-    .eq('id', intentId)
-    .select()
-    .single();
-  if (error) throw error;
-  return mapCheckoutIntent(data, order);
+  if (!isBuyerRole(user.role)) throw new AppError('Only buyers can confirm checkout intents', 403, ERROR_CODES.FORBIDDEN);
+  if (!payment.transaction_ref) return mapCheckoutIntent(payment, order);
+  const provider = await getFapshiStatus(payment.transaction_ref);
+  const result = await reconcileProviderPayment(payment, order, provider);
+  return mapCheckoutIntent(result.payment, result.order);
 };
 
 const handleFapshiWebhook = async (payload = {}) => {
-  const transId = payload.transId;
-  if (!transId) {
-    throw new AppError('Webhook transaction id is required', 400, ERROR_CODES.VALIDATION_ERROR);
+  const transId = String(payload.transId || '');
+  if (!transId) throw new AppError('Webhook transaction id is required', 400, ERROR_CODES.VALIDATION_ERROR);
+  const paymentId = verifySignedExternalId(payload.externalId);
+  const payment = await getPaymentById(paymentId);
+  if (payment.transaction_ref !== transId) {
+    throw new AppError('Fapshi webhook transaction mismatch', 401, ERROR_CODES.UNAUTHORIZED);
   }
-
-  const { data: payment, error } = await supabaseAdmin
-    .from('payments')
-    .select('*')
-    .eq('transaction_ref', transId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!payment) {
-    return { accepted: true, ignored: true, transId };
-  }
-
   const order = await getOrderById(payment.order_id);
-  const providerStatus = isFapshiConfigured() ? await getFapshiStatus(transId) : payload;
-  const normalizedStatus = readProviderStatus(providerStatus);
-
-  if (!PROVIDER_FINAL_STATUSES.has(normalizedStatus)) {
-    return {
-      accepted: true,
-      ignored: true,
-      transId,
-      status: normalizedStatus || 'PENDING'
-    };
-  }
-
-  const result = await persistProviderResult(payment, order, providerStatus, 'webhook');
+  const provider = await getFapshiStatus(transId);
+  const result = await reconcileProviderPayment(payment, order, provider);
   return {
     accepted: true,
+    ignored: !FINAL_PROVIDER_STATUSES.has(String(provider.status || '').toUpperCase()),
     transId,
-    status: readProviderStatus(providerStatus),
+    status: String(provider.status || '').toUpperCase(),
     paymentId: result.payment.id,
     orderId: result.order.id
   };
@@ -485,53 +333,22 @@ const handleFapshiWebhook = async (payload = {}) => {
 
 const releasePayment = async (user, paymentId) => {
   if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
-    throw new AppError('Only admins can release internal ledger payments', 403, ERROR_CODES.FORBIDDEN);
+    throw new AppError('Only admins can release escrow payments', 403, ERROR_CODES.FORBIDDEN);
   }
-
-  const payment = await getPaymentById(paymentId);
-  const order = await getOrderById(payment.order_id);
-
-  const releaseSellerTable = order.reseller_id ? 'reseller_profiles' : 'farmer_profiles';
-  const releaseSellerId = order.reseller_id || order.farmer_id;
-  const { data: farmerProfile, error: farmerError } = await supabaseAdmin
-    .from(releaseSellerTable)
-    .select('*')
-    .eq('id', releaseSellerId)
-    .single();
-  if (farmerError) throw farmerError;
-  await ordersService.ensureFarmerCanReceiveCommerce(farmerProfile);
-
-  const { data, error: updateError } = await supabaseAdmin
-    .from('payments')
-    .update({
-      status: 'released',
-      released_at: new Date().toISOString(),
-      metadata: {
-        ...(payment.metadata || {}),
-        payoutReleasedAmount: Number(order.seller_net_amount || 0)
-      }
-    })
-    .eq('id', paymentId)
-    .select()
-    .single();
-  if (updateError) throw updateError;
-  return mapPayment(data);
+  const { data, error } = await supabaseAdmin.rpc('release_marketplace_escrow', {
+    p_payment_id: paymentId,
+    p_actor_user_id: user.id,
+    p_released_at: new Date().toISOString()
+  });
+  if (error) throw error;
+  return mapPayment(data.payment);
 };
 
 const requestWithdrawal = async (user) => {
   if (![USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role)) {
     throw new AppError('Only sellers can request withdrawals', 403, ERROR_CODES.FORBIDDEN);
   }
-
-  const farmerProfile = await getUserProfile(
-    user.role === USER_ROLES.RESELLER ? 'reseller_profiles' : 'farmer_profiles',
-    user.id
-  );
-  await ordersService.ensureFarmerCanReceiveCommerce(farmerProfile);
-
-  return {
-    message: 'Withdrawal provider is not integrated yet. Your verified account is eligible once payout processing is configured.'
-  };
+  return { message: 'Withdrawal provider is not integrated yet. Escrow remains protected until payout processing is configured.' };
 };
 
 module.exports = {
@@ -542,5 +359,7 @@ module.exports = {
   confirmCheckoutIntent,
   handleFapshiWebhook,
   releasePayment,
-  requestWithdrawal
+  requestWithdrawal,
+  createSignedExternalId,
+  verifySignedExternalId
 };

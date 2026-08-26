@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { supabase } from './supabaseClient';
+import { getPhoneVerificationRoute } from './authRoutes';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
@@ -7,11 +9,10 @@ const api = axios.create({
 });
 
 // Request interceptor — attach access token
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('agriculnet_access_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-  }
+api.interceptors.request.use(async (config) => {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
@@ -20,24 +21,30 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 &&
-        error.response?.data?.error?.code === 'TOKEN_EXPIRED' &&
-        !original._retry) {
+    const errorCode = error.response?.data?.error?.code;
+
+    if (
+      error.response?.status === 403 &&
+      errorCode === 'PHONE_NOT_VERIFIED' &&
+      !original?.skipPhoneVerificationRedirect &&
+      typeof window !== 'undefined' &&
+      window.location.pathname !== '/verify-phone'
+    ) {
+      const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.assign(getPhoneVerificationRoute(returnTo));
+    }
+
+    if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true;
       try {
-        const refreshToken = localStorage.getItem('agriculnet_refresh_token');
-        const { data } = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/auth/refresh-token`,
-          { refreshToken }
-        );
-        localStorage.setItem('agriculnet_access_token', data.data.accessToken);
-        original.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !data.session?.access_token) throw refreshError || new Error('Session expired');
+        original.headers.Authorization = `Bearer ${data.session.access_token}`;
         return api(original);
       } catch {
-        localStorage.removeItem('agriculnet_access_token');
-        localStorage.removeItem('agriculnet_refresh_token');
+        await supabase.auth.signOut({ scope: 'local' });
         if (typeof window !== 'undefined') {
-          window.location.href = '/sign-in';
+          window.location.href = '/auth/login';
         }
       }
     }

@@ -1,38 +1,44 @@
 # Admin Dashboard Access Guide
 
-## URL
-- Admin portal: `http://localhost:3000/admin-portal`
+AgriculNet administrators use the same native Supabase Auth session pipeline as every other role. There is no hidden admin route, public admin key, or special client-side credential.
 
-## Required roles
-The account must have one of these roles in the `users` table:
-- `admin`
-- `super_admin`
+## Sign-in endpoint
 
-## Required environment variables
-In `client/.env.local`:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
-NEXT_PUBLIC_ADMIN_KEY=agriculnet-admin-secret-2025
-```
+- Frontend route: `http://localhost:3000/auth/login`
+- Session issuer: Supabase Auth
+- API authorization: `Authorization: Bearer <supabase-access-token>`
 
-In `server/.env`:
-```env
-ADMIN_ROUTE_SECRET=agriculnet-admin-secret-2025
-```
+Do not add an admin secret to a `NEXT_PUBLIC_` variable or custom request header. Express verifies the Supabase token and resolves the linked `admin` or `super_admin` role from `public.users` under RLS.
 
-## Seeded admin account
-If you run `server/database/seeds/001_seed_admin.sql`, the seeded admin is:
-- Email: `
-- Password: `
-- Role: `super_admin`
+## Account requirements
 
-## Auth status rules
-- Buyers become `active` immediately after phone and email verification.
-- Farmers move to `pending_review` and need manual admin approval.
-- Admin accounts must already be `active` to sign in.
+The database account must:
+
+- have role `admin` or `super_admin`;
+- have status `active`;
+- be linked through `public.users.auth_user_id` to an `auth.users` identity;
+- use a private Supabase Auth credential with verified email ownership.
+
+## Creating a local administrator
+
+The tracked seed at `server/database/seeds/001_seed_admin.sql` contains no email, password, phone number, or reusable password hash. Before running it, provide the email and bcrypt hash as private PostgreSQL session settings in a one-off SQL Editor query. Keep those values out of the repository, screenshots, logs, and shared documentation.
+
+The seed is optional. A production administrator should be provisioned through an audited database operation or a dedicated administrative workflow, then required to use a unique password.
+
+## Safe diagnostics
+
+The tracked scripts accept private inputs only through local environment variables:
+
+- `server/test-admin-login.js`: `BASE_URL`, `ADMIN_DIAGNOSTIC_EMAIL`, and `ADMIN_DIAGNOSTIC_PASSWORD`;
+- `server/verify-hash.js`: Supabase service credentials plus `ADMIN_DIAGNOSTIC_EMAIL` and `ADMIN_DIAGNOSTIC_PASSWORD`;
+- `server/debug-admin.js`: Supabase service credentials plus `ADMIN_DIAGNOSTIC_EMAIL`.
+
+They report only generic success/failure state. Do not modify them to print credentials, hashes, tokens, database rows, or provider response bodies.
 
 ## Troubleshooting
-- If admin login returns `Authentication failed`, confirm `NEXT_PUBLIC_ADMIN_KEY` matches `ADMIN_ROUTE_SECRET`.
-- If admin login returns `Invalid credentials`, confirm the seeded email or phone matches the database row and the password hash is current.
-- If admin login succeeds but `/admin/dashboard` redirects away, confirm the stored user role is `admin` or `super_admin`.
-- If the backend cannot find the admin route, confirm the API is running on `http://localhost:5000` and the client uses `NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1`.
+
+- A `401` response means the identifier/password pair was not accepted.
+- A `403` response can indicate an inactive, suspended, or locked account.
+- A successful login followed by a dashboard redirect usually means the authenticated user does not have an administrator role.
+- A `404` from an API password-login or older hidden admin path is expected; update the caller to `/auth/login`.
+- If a previously tracked credential was ever used, rotate it. Removing it from the current tree does not remove it from Git history.

@@ -3,9 +3,10 @@
  * Maintains backward compatibility with existing imports
  */
 
-const { sendOtpSms, sendSms } = require('./sms/index');
+const { getTestOtp, sendOtpSms, sendSms } = require('./sms/index');
 
 module.exports = {
   sendOtpSms,
-  sendSms
+  sendSms,
+  getTestOtp
 };

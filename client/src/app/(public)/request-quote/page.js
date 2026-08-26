@@ -160,7 +160,7 @@ export default function RequestQuotePage() {
           <div className="flex flex-wrap justify-end gap-3 md:col-span-2">
             {!user ? (
               <Button asChild variant="outline">
-                <Link href="/sign-in">Sign in</Link>
+                <Link href="/auth/login">Sign in</Link>
               </Button>
             ) : null}
             <Button type="submit" disabled={createQuote.isPending || !user || !isBuyer}>

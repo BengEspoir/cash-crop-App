@@ -1,6 +1,6 @@
 -- AgriculNet removable marketplace population seed
 -- Purpose: investor/demo rendering only. All seeded sellers are unverified.
--- Password hash is a temporary non-production hash; replace or remove these users before production testing.
+-- Seeded demo sellers are intentionally non-loginable; no password credential is stored.
 
 DELETE FROM listing_images
 WHERE listing_id IN (
@@ -52,7 +52,7 @@ inserted_users AS (
     last_name,
     phone,
     email,
-    '$2a$12$zJZVvD8XUHyRtK2N0R8yO.vbS4b9fL3eEwX8PyO8uBV.kE21oVN8O',
+    NULL,
     TRUE,
     TRUE,
     region,

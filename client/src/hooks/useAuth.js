@@ -17,7 +17,6 @@ const useAuth = () => {
     if (!store.user) return '/';
 
     if (!store.user.email_verified) return getAuthNextRoute('verify_email', store.user);
-
     return getRoleDashboard(store.user);
   }, [store.user]);
 

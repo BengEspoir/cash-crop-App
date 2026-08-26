@@ -1,18 +1,20 @@
-import { DM_Sans, DM_Serif_Display } from "next/font/google";
+import { Fraunces, Public_Sans } from "next/font/google";
 import "./globals.css";
 import { buildMetadata } from "../lib/seo";
 import { Providers } from "./providers";
 import { BRAND_FAVICON_SRC } from "../lib/brandAssets";
 
-const dmSans = DM_Sans({
+const publicSans = Public_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 
-const dmSerif = DM_Serif_Display({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: "400",
+  axes: ["SOFT", "WONK", "opsz"],
   variable: "--font-display",
+  display: "swap",
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://agriculnet.example.com";
@@ -35,7 +37,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${dmSans.variable} ${dmSerif.variable} min-h-screen bg-[#F9FAFB] font-sans text-[#111827] antialiased`}>
+      <body className={`${publicSans.variable} ${fraunces.variable} min-h-screen bg-[#F9FAFB] font-sans text-[#111827] antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

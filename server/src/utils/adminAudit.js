@@ -14,7 +14,7 @@ const insertWithMissingColumnFallback = async (table, payload) => {
   let candidate = { ...payload };
   const skippedColumns = new Set();
 
-  while (true) {
+  for (;;) {
     const { error } = await supabaseAdmin.from(table).insert(candidate);
     if (!error) return;
 

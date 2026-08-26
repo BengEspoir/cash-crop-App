@@ -15,7 +15,7 @@ import api from "../../../lib/axios";
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const token = searchParams.get("code") || searchParams.get("token_hash") || searchParams.get("token");
   const mode = searchParams.get("mode");
   const contactType = searchParams.get("type") || "email";
   const value = searchParams.get("value");
@@ -56,7 +56,7 @@ export default function VerifyEmailPage() {
           await api.post("/auth/recovery-contacts/confirm-public", { type: contactType, value, token });
           if (!cancelled) {
             setState({ status: "success", error: "", success: "Recovery email verified. Sign in again with that recovery contact to continue." });
-            router.push("/sign-in");
+            router.push("/auth/login");
           }
         } catch (error) {
           if (!cancelled) setState({ status: "error", error: error.response?.data?.message || "Recovery email verification failed.", success: "" });

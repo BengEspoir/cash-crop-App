@@ -1,1 +1,0 @@
-// AgriculNet — tabs.jsx — placeholder

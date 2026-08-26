@@ -2,67 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, RotateCcw, Send, ShieldCheck, Sparkles, X } from "lucide-react";
-import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAgriculNetAIChat } from "@/hooks/useAgriculNetAIChat";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-
-const MAX_HISTORY_MESSAGES = 12;
-const MAX_MESSAGE_LENGTH = 2000;
-const MAX_TOTAL_HISTORY_LENGTH = 12000;
-const WELCOME_MESSAGE = {
-  id: "agriculnet-ai-welcome",
-  role: "assistant",
-  content: "",
-  kind: "welcome",
-};
-
-let messageSequence = 0;
-
-function createMessage(role, content) {
-  messageSequence += 1;
-  return {
-    id: `${Date.now()}-${messageSequence}`,
-    role,
-    content,
-  };
-}
-
-function limitHistory(messages) {
-  return messages.slice(-MAX_HISTORY_MESSAGES);
-}
-
-function toRequestMessages(messages) {
-  const requestMessages = [];
-  let remainingCharacters = MAX_TOTAL_HISTORY_LENGTH;
-
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message.kind === "welcome") continue;
-
-    const content = message.content.slice(0, MAX_MESSAGE_LENGTH);
-    if (content.length > remainingCharacters) break;
-    requestMessages.unshift({ role: message.role, content });
-    remainingCharacters -= content.length;
-  }
-
-  return requestMessages;
-}
 
 export function AgriculNetAIAssistant() {
   const { t } = useI18n();
   const prefersReducedMotion = usePrefersReducedMotion();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
-  const [draft, setDraft] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorKey, setErrorKey] = useState(null);
+  const {
+    draft,
+    errorKey,
+    isLoading,
+    maxMessageLength,
+    messages,
+    resetConversation: resetChat,
+    setDraft,
+    submitMessage,
+  } = useAgriculNetAIChat();
   const launcherRef = useRef(null);
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const activeRequestRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -91,96 +54,19 @@ export function AgriculNetAIAssistant() {
     });
   }, [isLoading, isOpen, messages, prefersReducedMotion]);
 
-  useEffect(
-    () => () => {
-      activeRequestRef.current?.abort();
-    },
-    [],
-  );
-
   function closeAssistant() {
     setIsOpen(false);
     window.requestAnimationFrame(() => launcherRef.current?.focus());
   }
 
   function resetConversation() {
-    activeRequestRef.current?.abort();
-    activeRequestRef.current = null;
-    setMessages([WELCOME_MESSAGE]);
-    setDraft("");
-    setErrorKey(null);
-    setIsLoading(false);
+    resetChat();
     window.requestAnimationFrame(() => inputRef.current?.focus());
-  }
-
-  function friendlyErrorKey(error) {
-    const errorCode = error?.response?.data?.error?.code;
-
-    if (
-      error?.code === "ECONNABORTED" ||
-      errorCode === "AI_REQUEST_TIMEOUT" ||
-      error?.response?.status === 504
-    ) {
-      return "assistant.errorTimeout";
-    }
-    if (error?.code === "AI_EMPTY_REPLY") {
-      return "assistant.errorGeneric";
-    }
-    if (errorCode === "AI_NOT_CONFIGURED") {
-      return "assistant.errorNotConfigured";
-    }
-    if (errorCode === "AI_RATE_LIMITED" || error?.response?.status === 429) {
-      return "assistant.errorRateLimit";
-    }
-    if (!error?.response) {
-      return "assistant.errorOffline";
-    }
-    if ([502, 503].includes(error?.response?.status)) {
-      return "assistant.errorUnavailable";
-    }
-    return "assistant.errorGeneric";
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const content = draft.trim();
-    if (!content || isLoading) return;
-
-    const userMessage = createMessage("user", content);
-    const nextMessages = limitHistory([...messages, userMessage]);
-    const requestMessages = toRequestMessages(nextMessages);
-    const controller = new AbortController();
-
-    activeRequestRef.current = controller;
-    setMessages(nextMessages);
-    setDraft("");
-    setErrorKey(null);
-    setIsLoading(true);
-
-    try {
-      const response = await api.post(
-        "/chat",
-        { messages: requestMessages },
-        { timeout: 50000, signal: controller.signal },
-      );
-      const reply = response?.data?.data?.reply;
-      if (typeof reply !== "string" || !reply.trim()) {
-        const emptyReplyError = new Error("The AI provider returned an empty reply.");
-        emptyReplyError.code = "AI_EMPTY_REPLY";
-        throw emptyReplyError;
-      }
-      const safeReply = reply.trim().slice(0, MAX_MESSAGE_LENGTH);
-      setMessages((current) => limitHistory([...current, createMessage("assistant", safeReply)]));
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        setErrorKey(friendlyErrorKey(error));
-      }
-    } finally {
-      if (activeRequestRef.current === controller) {
-        activeRequestRef.current = null;
-        setIsLoading(false);
-      }
-    }
+    await submitMessage(draft);
   }
 
   function handleInputKeyDown(event) {
@@ -303,7 +189,7 @@ export function AgriculNetAIAssistant() {
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleInputKeyDown}
-                maxLength={MAX_MESSAGE_LENGTH}
+                maxLength={maxMessageLength}
                 rows={2}
                 disabled={isLoading}
                 aria-label={t("assistant.inputLabel")}

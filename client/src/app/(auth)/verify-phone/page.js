@@ -10,7 +10,7 @@ import { OtpInput } from "../../../components/auth/OtpInput";
 import { verifyPhoneSchema } from "../../../lib/validators";
 import { TierBadge } from "../../../components/ui/badge";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
-import { getAuthNextRoute } from "../../../lib/authRoutes";
+import { getAuthNextRoute, getSafeReturnPath } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
 import api from "../../../lib/axios";
 
@@ -20,7 +20,7 @@ const autoSendRequests = new Map();
 const getAutoSendStorageKey = (userId) => `agriculnet_phone_otp_auto_sent_${userId}`;
 
 const getDeliveryTarget = (result, onboarding, user) => (
-  result?.data?.target || onboarding?.phone || user?.phone || "your phone"
+  result?.data?.target || result?.data?.phone || onboarding?.phone || user?.phone || "your phone"
 );
 
 const applySuccessfulSendState = ({ result, onboarding, user, setFeedback, setLastTarget, setSendState }) => {
@@ -35,6 +35,12 @@ const applySuccessfulSendState = ({ result, onboarding, user, setFeedback, setLa
     return;
   }
 
+  if (deliveryStatus === "test-phone") {
+    setSendState("ready");
+    setFeedback({ success: `Test verification code prepared for ${target}. No SMS was sent.`, error: "" });
+    return;
+  }
+
   setSendState("delivered");
   setFeedback({ success: `A new code was sent to ${target}.`, error: "" });
 };
@@ -45,7 +51,7 @@ const getOrCreateAutoSendRequest = (userId, resendVerification) => {
     return existingRequest;
   }
 
-  const request = resendVerification("phone").finally(() => {
+  const request = resendVerification("phone", userId).finally(() => {
     autoSendRequests.delete(userId);
   });
   autoSendRequests.set(userId, request);
@@ -56,6 +62,8 @@ export default function VerifyPhonePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode");
+  const reason = searchParams.get("reason");
+  const returnTo = getSafeReturnPath(searchParams.get("next"));
   const contactType = searchParams.get("type") || "phone";
   const contactValue = searchParams.get("value");
   const {
@@ -172,7 +180,7 @@ export default function VerifyPhonePage() {
           otp: values.code,
         });
         setFeedback({ success: "Recovery phone verified. Sign in again with that recovery contact to continue.", error: "" });
-        router.push("/sign-in");
+        router.push("/auth/login");
       } catch (error) {
         setFeedback({ success: "", error: error.response?.data?.message || "Recovery phone verification failed." });
       }
@@ -187,7 +195,7 @@ export default function VerifyPhonePage() {
     }
 
     setFeedback({ success: result.data.message, error: "" });
-    router.push(getAuthNextRoute(result.data.nextStep, result.data.user));
+    router.push(returnTo || getAuthNextRoute(result.data.nextStep, result.data.user));
   };
 
   const handleResend = async () => {
@@ -214,7 +222,8 @@ export default function VerifyPhonePage() {
       setFeedback({ success: "", error: "Start sign-in again to send a fresh recovery verification code." });
       return;
     }
-    const result = await resendVerification("phone");
+    const userId = onboarding?.userId || user?.id;
+    const result = await resendVerification("phone", userId);
     setResending(false);
 
     if (!result.success) {
@@ -223,7 +232,6 @@ export default function VerifyPhonePage() {
       return;
     }
 
-    const userId = onboarding?.userId || user?.id;
     if (typeof window !== "undefined" && userId) {
       window.sessionStorage.setItem(getAutoSendStorageKey(userId), String(Date.now()));
     }
@@ -231,6 +239,9 @@ export default function VerifyPhonePage() {
   };
 
   const deliveryTarget = lastTarget || (mode === "contact-change" || mode === "recovery-contact" ? contactValue : null) || onboarding?.phone || user?.phone || "your phone number";
+  const testOtpCode = onboarding?.smsDelivery?.status === "test-phone"
+    ? onboarding?.devHints?.otpCode || "123456"
+    : null;
   const deliveryMessage = sendState === "sending"
     ? "Sending verification code..."
     : sendState === "delivered"
@@ -244,7 +255,9 @@ export default function VerifyPhonePage() {
       <TierBadge status="pending_verification" label="Phone verification" size="md" />
       <h1 className="mt-4 font-display text-[22px] leading-[1.15] text-ink-900">Enter verification code</h1>
       <p className="mt-3 text-[14px] leading-6 text-ink-600">
-        {deliveryMessage}
+        {reason === "marketplace-action"
+          ? "Phone verification is required to continue the marketplace action you selected. Your dashboard remains available without it."
+          : deliveryMessage}
       </p>
 
       {onboarding?.smsDelivery?.status === "failed" ? (
@@ -256,6 +269,13 @@ export default function VerifyPhonePage() {
         <p className="mt-5 rounded-[12px] bg-gold-50 px-4 py-3 text-[12px] leading-5 text-gold-700">
           SMS was not delivered by a live provider. Use the development OTP hint below, or configure SMS credentials and resend.
         </p>
+      ) : null}
+      {onboarding?.smsDelivery?.status === "test-phone" ? (
+        <div className="mt-5 rounded-[12px] border border-[#B9D8BE] bg-[#EEF7F0] px-4 py-3 text-[#1E5E27]">
+          <p className="text-[12px] leading-5">Testing mode is active. No live SMS was sent.</p>
+          <p className="mt-2 text-[13px] font-semibold">Your test OTP is:</p>
+          <p className="mt-1 font-mono text-[24px] font-bold tracking-[0.22em]">{testOtpCode}</p>
+        </div>
       ) : null}
 
       <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>

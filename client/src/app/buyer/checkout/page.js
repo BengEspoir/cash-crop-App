@@ -139,7 +139,7 @@ export default function BuyerCheckoutPage() {
   const handleCheckout = async () => {
     if (!isAuthenticated || !isBuyer) {
       toast.error("Please sign in with a buyer account to continue.");
-      router.push("/sign-in");
+      router.push("/auth/login");
       return;
     }
 
@@ -202,7 +202,7 @@ export default function BuyerCheckoutPage() {
         <BuyerEmptyState
           title="Buyer checkout requires sign-in"
           description="Sign in with a buyer account first, then return to complete payment."
-          action={<BuyerButton href="/sign-in" variant="gold">Sign in</BuyerButton>}
+          action={<BuyerButton href="/auth/login" variant="gold">Sign in</BuyerButton>}
         />
       </BuyerPage>
     );

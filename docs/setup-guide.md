@@ -1,115 +1,108 @@
 # AgriculNet Setup Guide
 
 ## Prerequisites
-- Node.js 20+
+
+- Node.js 20 or later
 - npm
-- Access to the target Supabase project
+- a target Supabase project
+- provider accounts only for the integrations you intend to test
 
 ## 1. Install dependencies
-```bash
-cd client
-cmd /c npm install
 
-cd ../server
-cmd /c npm install
+```powershell
+npm --prefix client install
+npm --prefix server install
 ```
 
-## 2. Configure environment files
-```bash
-copy server\.env.example server\.env
-copy client\.env.local.example client\.env.local
+## 2. Create local environment files
+
+```powershell
+Copy-Item server/.env.example server/.env
+Copy-Item client/.env.local.example client/.env.local
 ```
 
-Backend notes:
-- `SUPABASE_URL` and `SUPABASE_ANON_KEY` must be valid.
-- `SUPABASE_SERVICE_ROLE_KEY` is strongly recommended for all backend writes.
-- `ADMIN_ROUTE_SECRET` must match `NEXT_PUBLIC_ADMIN_KEY`.
-- The AI assistant reads provider credentials only from `server/.env`. Add one or more keys; providers without keys are skipped:
-  ```env
-  AI_PROVIDER_ORDER=openrouter,groq,gemini,cerebras
-  OPENROUTER_API_KEY=your-openrouter-api-key
-  OPENROUTER_MODEL=openrouter/free
-  GROQ_API_KEY=
-  GROQ_MODEL=openai/gpt-oss-20b
-  GEMINI_API_KEY=
-  GEMINI_MODEL=gemini-3.1-flash-lite
-  CEREBRAS_API_KEY=
-  CEREBRAS_MODEL=gpt-oss-120b
-  # Total deadline for the complete provider chain.
-  AI_REQUEST_TIMEOUT_MS=45000
-  # Per-provider limit when multiple providers are configured.
-  AI_PROVIDER_TIMEOUT_MS=10000
-  AI_RATE_LIMIT_WINDOW_MS=900000
-  AI_RATE_LIMIT_MAX_REQUESTS=12
-  ```
-- Never copy an AI provider key into a client environment file or expose it through a `NEXT_PUBLIC_` variable. Restart the backend after editing `server/.env`.
-- OpenRouter, Groq, Gemini, and Cerebras free plans are intended for testing; their availability and quotas can change. If every key is omitted, the rest of the application still starts, but AI chat is unavailable.
-- Development fallback is controlled by:
-  - `ALLOW_DEV_DELIVERY_FALLBACK=true`
-  - `EXPOSE_DEV_AUTH_HINTS=true`
+Use private values only in those ignored files or a hosting-provider dashboard. Do not add administrator secrets or provider credentials to any `NEXT_PUBLIC_` variable.
 
-## 3. Run auth-critical Supabase migrations
-Run these files in order from the Supabase SQL editor:
-- `001_enums_and_extensions.sql`
-- `002_users_table.sql`
-- `003_farmer_profiles.sql`
-- `004_buyer_profiles.sql`
-- `005_tokens_and_otps.sql`
-- `021_audit_logs.sql`
-- `022_profile_extensions.sql`
-- `023_auto_approval_setup.sql`
-- `024_enhanced_verification.sql`
-- `025_activity_events.sql`
+Backend configuration groups include Supabase, email, SMS, storage, AI providers, and Fapshi. For Fapshi sandbox checkout, configure the provider credentials plus:
 
-Then run:
-- `server/database/seeds/001_seed_admin.sql`
+```env
+FAPSHI_WEBHOOK_SECRET=<private-random-hmac-secret>
+FAPSHI_REQUEST_TIMEOUT_MS=10000
+```
 
-Optional marketplace seeds:
-- `server/database/seeds/002_seed_regions.sql`
-- `server/database/seeds/003_seed_crops.sql`
+Development delivery fallback is controlled by `ALLOW_DEV_DELIVERY_FALLBACK` and `EXPOSE_DEV_AUTH_HINTS`. Both must be disabled in production.
+
+## 3. Apply database migrations
+
+Run all SQL files in `server/database/migrations/` in numeric order:
+
+```text
+001_enums_and_extensions.sql
+...
+030_logistics_tracking_and_monetization.sql
+031_atomic_fapshi_settlement.sql
+032_atomic_order_creation.sql
+033_atomic_payment_intents.sql
+034_auth_proof_hardening.sql
+035_order_inventory_and_quote_guards.sql
+036_atomic_logistics_transitions.sql
+037_core_rls_lockdown.sql
+038_uuid_generation_compatibility.sql
+```
+
+Do not skip intermediate files. Before 031, reconcile duplicate non-null payment references, duplicate commissions per order, and duplicate logistics rows per order; failures use `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, and `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Before later migrations, reconcile duplicate order payments for 033, reissue proofs invalidated by 034, audit inventory for 035, and normalize unknown shipment statuses for 036. Migration 037 makes application tables service-role-only, so `SUPABASE_SERVICE_ROLE_KEY` is required in every API environment. Migration 038 repairs UUID resolution in restricted RPCs.
+
+Optional seeds live in `server/database/seeds/`. The administrator seed must be supplied private session settings in the same explicit SQL transaction; the tracked file contains no account or password hash.
 
 ## 4. Verify the schema
-```bash
-cd server
+
+```powershell
+Set-Location server
 node verify-db-init.js
 ```
 
-The verifier checks the real auth tables (`users`, `farmer_profiles`, `buyer_profiles`, `tokens`, `otps`, `audit_logs`, `activity_events`) plus the identity-review fields added by migrations `022` through `025`.
+The verifier uses read-only table/column queries and the Supabase schema description to check representative tables, enums, and RPCs through migration 038. Run the SQL checks in `server/database/MIGRATION_GUIDE.md` separately to confirm RLS and grants. Verification does not validate live providers or prove end-to-end marketplace operation.
 
-## 5. Start local servers
-Run these from the repository root in two separate terminals:
+## 5. Start local services
+
+From two terminals at the repository root:
 
 ```powershell
 npm run dev:server
 npm run dev:client
 ```
 
-## 6. Local URLs
-- Frontend: `http://localhost:3000`
-- API health: `http://localhost:5000/api/health`
-- Admin portal: `http://localhost:3000/admin-portal`
+Useful URLs:
 
-## 7. Local auth behavior
-- Buyers become `active` after phone and email verification.
-- Farmers become `pending_identity_verification` after phone and email verification.
-- Farmers submit identity evidence before moving to `pending_review` for manual admin approval.
-- Local fallback `devHints` can supply OTP codes and verification links when SMS or email providers are not configured.
+- API health: `http://localhost:5000/api/health`
+- Farmer registration: `http://localhost:3000/register/farmer`
+- Buyer registration: `http://localhost:3000/register/buyer`
+- Sign-in: `http://localhost:3000/auth/login`
+
+## 6. Authentication checks
 
 Typical local flow:
-1. Register a buyer or farmer.
-2. Use the OTP shown in `devHints` on `/verify-phone`.
-3. Use the verification link shown in `devHints` on `/verify-email`.
-4. Farmers complete `/farmer/verify-identity`; buyers go straight to the dashboard once active.
-5. Admins review pending farmers from the live admin queue.
 
-## 8. Seeded admin
-`server/database/seeds/001_seed_admin.sql` seeds:
-- Email: `mbengespoir@gmail.com`
-- Password: set your own private admin password before seeding production data.
+1. Register a disposable buyer or seller account.
+2. Complete phone and email verification.
+3. Sellers submit identity evidence and await manual administrator review.
+4. Sign in at `/auth/login` through Supabase Auth.
+5. Use the Supabase access token as the bearer token for authenticated API requests.
 
-## 9. Troubleshooting
-- If buyer registration fails on `countryCode`, the backend and frontend builds are out of sync.
-- If auth writes fail, verify `SUPABASE_SERVICE_ROLE_KEY`.
-- If AI chat is unavailable, confirm the backend is running, at least one key is present in `server/.env`, and `AI_PROVIDER_ORDER` includes that provider. Restart the backend, inspect the sanitized provider-attempt entries in `server/logs/combined.log`, check provider quotas, and verify outbound HTTPS/DNS access.
-- If `verify-db-init.js` reports missing columns, apply `022_profile_extensions.sql`, `023_auto_approval_setup.sql`, `024_enhanced_verification.sql`, and `025_activity_events.sql`.
-- Check `server/logs/error.log` for backend runtime failures.
+Administrators use the same Supabase login pipeline. Do not send a custom administrator header.
+
+## 7. Prototype checks
+
+Seed data and sandbox responses are useful for demonstrations, but keep these boundaries explicit:
+
+- order/payment/logistics records can exercise prototype workflows;
+- provider callbacks require the webhook secret and migrations 031 and 033;
+- live settlement, payouts, carrier operations, certification, and impact results remain deployment-dependent or planned.
+
+## Troubleshooting
+
+- A missing table or column usually means one or more migrations were skipped.
+- A missing RPC means its migration was not applied or the Supabase schema cache has not refreshed. Refresh the cache after applying the missing file; migrations 035 and 036 also request a reload.
+- A rejected administrator login should be tested through `/auth/login`, not an API password endpoint or older hidden path.
+- Provider timeouts should be adjusted with `FAPSHI_REQUEST_TIMEOUT_MS` on the backend, within the documented bounds.
+- Review `server/logs/error.log` without copying credentials or provider response bodies into tickets.
