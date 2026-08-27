@@ -146,6 +146,22 @@ module.exports = {
   SMS_TEST_OTP: !isProduction ? parseSmsTestOtp(process.env.SMS_TEST_OTP) : {},
   SMS_DEV_FIXED_OTP: !isProduction ? parseFixedOtp(process.env.SMS_DEV_FIXED_OTP) : '',
 
+  // Meta WhatsApp Cloud API relay (optional until explicitly enabled)
+  WHATSAPP_RELAY_ENABLED: parseBooleanEnv(process.env.WHATSAPP_RELAY_ENABLED, false),
+  WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN || '',
+  WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+  WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN || '',
+  WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET || '',
+  WHATSAPP_API_VERSION: process.env.WHATSAPP_API_VERSION || 'v23.0',
+  WHATSAPP_INQUIRY_TEMPLATE_NAME: process.env.WHATSAPP_INQUIRY_TEMPLATE_NAME || '',
+  WHATSAPP_TEMPLATE_LANGUAGE_CODE: process.env.WHATSAPP_TEMPLATE_LANGUAGE_CODE || 'en_US',
+  WHATSAPP_REQUEST_TIMEOUT_MS: parseBoundedIntegerEnv(
+    process.env.WHATSAPP_REQUEST_TIMEOUT_MS,
+    10 * 1000,
+    1000,
+    30 * 1000
+  ),
+
   // Cloudinary
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,

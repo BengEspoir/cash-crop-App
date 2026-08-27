@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Mail } from "lucide-react";
 import { BrandLogo } from "../common/BrandLogo";
+import { AdminSupportLink } from "../common/AdminSupportLink";
 import { useI18n } from "../../i18n/I18nProvider";
 
 export function Footer() {
@@ -63,6 +64,9 @@ export function Footer() {
             <BrandLogo className="h-11 w-[168px]" />
           </Link>
           <p className="max-w-sm text-[14px] leading-6 text-white/80">{t("footer.tagline")}</p>
+          <AdminSupportLink className="border-white/20 bg-white/10 text-white hover:border-white/35 hover:bg-white/15" compact>
+            Contact Support / Admin
+          </AdminSupportLink>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-white/60">{t("footer.newsletter")}</p>
             <p className="mt-2 text-[13px] leading-6 text-white/80">{t("footer.newsletterBody")}</p>

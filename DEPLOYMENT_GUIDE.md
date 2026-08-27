@@ -5,11 +5,11 @@ This guide describes a prototype deployment with a Next.js frontend, Express bac
 ## Recommended topology
 
 - Frontend: Vercel, rooted at `client/`
-- Backend: one Render Web Service, with Root Directory `server/`
+- Backend: one Railway service, with Root Directory `/server`
 - Database and storage: Supabase
 - Optional media/provider services: configure only when the related flow is being tested
 
-Follow `RENDER_BACKEND_DEPLOYMENT_GUIDE.md` for the complete control-panel procedure, environment-variable inventory, Vercel cutover, custom domain, troubleshooting, and rollback steps.
+Follow the backend section below for the Railway preset. For WhatsApp relay variables, webhook construction, and end-to-end validation, follow `WHATSAPP_RELAY_API_SETUP.md`.
 
 ## Frontend deployment
 
@@ -23,18 +23,19 @@ Never expose administrator credentials, service-role credentials, JWT secrets, A
 
 ## Backend deployment
 
-1. In Render, create a Git-backed Web Service with Root Directory `server`.
-2. Set Build Command to `npm ci --omit=dev` and Start Command to `npm start`.
-3. Select the Free instance for testing and do not add a persistent disk.
-4. Let Render supply `PORT`; do not create it manually.
-5. Leave Health Check Path blank so Render uses its default TCP probe; test `GET /api/health` manually.
-6. Set `NODE_ENV=production`, `CLIENT_URL=https://agriculnet.farm`, and the correct `BASE_URL`.
-7. Add required private values from `server/.env.example` through Render's Environment settings.
-8. Confirm `GET /api/health` on the generated `onrender.com` domain before updating Vercel.
+1. In Railway, create a service from the GitHub repository and set Root Directory to `/server`.
+2. Keep the default Railpack builder. Set Start Command to `npm start` only if it is not detected from `server/package.json`.
+3. Do not add a persistent volume; this API stores durable data in Supabase.
+4. Let Railway inject `PORT`; do not create it manually. The API already listens on `process.env.PORT`.
+5. Set Healthcheck Path to `/api/health`. Railway uses it while activating a new deployment.
+6. Under **Settings > Networking**, generate a public Railway domain.
+7. Set `NODE_ENV=production`, `CLIENT_URL=https://agriculnet.farm`, and `BASE_URL=https://<service>.up.railway.app`.
+8. Add required private values from `server/.env.example` through the Railway service's **Variables** tab, review the staged changes, and deploy.
+9. Confirm `GET /api/health` on the generated `up.railway.app` domain before setting Vercel's `NEXT_PUBLIC_API_URL=https://<service>.up.railway.app/api/v1`.
 
 Every environment requires `SUPABASE_SERVICE_ROLE_KEY`; the API does not fall back to an anonymous key. Production configuration also includes private Supabase, delivery-provider, storage, and enabled integration credentials. There is no administrator route secret or public administrator key. Administrators use `/auth/login` and native Supabase sessions.
 
-The Free instance sleeps after 15 minutes without inbound traffic and can take about one minute to wake. The in-process account-review scheduler does not run while the service is sleeping, so use an always-on instance when reliable scheduled execution is required.
+The in-process account-review scheduler runs only while the Railway service is active. Use a Railway plan and restart policy appropriate for continuously scheduled execution, or move critical scheduled work to a durable job mechanism before production reliance.
 
 ## Fapshi deployment settings
 
@@ -53,7 +54,7 @@ Configure the provider callback for `POST /api/webhooks/fapshi`. Use the sandbox
 
 ## Supabase migration order
 
-For a new database, apply `server/database/migrations/001_enums_and_extensions.sql` through `039_supabase_auth_and_rls_alignment.sql` in numeric order. For the existing Supabase project, record what is already applied and run only missing migrations; do not recreate or rerun the schema blindly. The final safeguards are:
+For a new database, apply `server/database/migrations/001_enums_and_extensions.sql` through `040_whatsapp_relay_and_message_realtime.sql` in numeric order. For the existing Supabase project, record what is already applied and run only missing migrations; do not recreate or rerun the schema blindly. The final safeguards are:
 
 - 032: atomic, server-authoritative order creation;
 - 033: one durable payment intent, serialized provider checkout persistence, and guarded escrow release per order;
@@ -62,6 +63,8 @@ For a new database, apply `server/database/migrations/001_enums_and_extensions.s
 - 036: atomic shipment, GPS/history, and order transitions;
 - 037: forced RLS and service-role-only table access.
 - 038: UUID resolution for restricted payment, order, and logistics RPCs.
+- 039: Supabase Auth identity alignment and least-privilege browser RLS.
+- 040: server-only WhatsApp thread routing and message Realtime publication.
 
 For an existing database, migration 031 first requires unique non-null payment references and one commission and logistics row per order. Resolve `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, or `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED` before retrying. Then reconcile duplicate order payments before 033, reissue existing verification/reset proofs after 034, audit legacy order/listing inventory before relying on 035, and normalize unknown shipment statuses before 036. Migration 037 requires `SUPABASE_SERVICE_ROLE_KEY` in every environment; migration 038 repairs UUID resolution in the restricted RPCs.
 
@@ -91,12 +94,13 @@ The repository contains implemented authentication and several persisted marketp
 
 - No real environment files or credentials are committed.
 - Previously exposed credentials have been rotated.
-- Migrations 001-038 are recorded as applied in exact order.
+- Migrations 001-040 are recorded as applied in exact order.
 - Legacy payment-reference, commission, shipment, payment-intent, proof, inventory, and shipment-status prerequisites were reconciled before 031 and 033-036.
 - `SUPABASE_SERVICE_ROLE_KEY` is configured only on the backend in every environment.
 - Production delivery hints are disabled.
 - CORS and frontend API URLs match the deployed domains.
 - The Fapshi webhook secret is configured server-side.
+- WhatsApp relay remains disabled until migration 040, the signed Meta webhook, WABA subscription, and approved inquiry template are validated.
 - Provider timeouts, retry behavior, and monitoring are documented.
 - Frontend and backend test/build checks pass.
 - A rollback path is documented before provider cutover.

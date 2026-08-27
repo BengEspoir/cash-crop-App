@@ -62,9 +62,7 @@ const formatCurrency = (value, currency = 'XAF') => {
 
 const mapUserName = (user = {}) => (
   [user.first_name, user.last_name].filter(Boolean).join(' ') ||
-  user.email ||
-  user.phone ||
-  'Unknown user'
+  'AgriculNet user'
 );
 
 const mapFarmerProfile = (profile = {}, user = {}, extra = {}) => {
@@ -83,8 +81,6 @@ const mapFarmerProfile = (profile = {}, user = {}, extra = {}) => {
       .map((part) => part[0])
       .join('')
       .toUpperCase(),
-    email: user.email || null,
-    phone: user.phone || null,
     avatarSrc: user.profile_image_url || null,
     location: [user.city, user.region || user.country].filter(Boolean).join(', ') || 'Location pending',
     city: user.city || null,
@@ -124,8 +120,6 @@ const mapResellerProfile = (profile = {}, user = {}, extra = {}) => {
       .map((part) => part[0])
       .join('')
       .toUpperCase(),
-    email: user.email || null,
-    phone: user.phone || null,
     avatarSrc: user.profile_image_url || null,
     location: [user.city, user.region || user.country].filter(Boolean).join(', ') || 'Location pending',
     city: user.city || null,
@@ -236,6 +230,7 @@ const mapMessage = (row = {}, sender = null, currentUserId = null) => ({
   senderRole: sender?.role || 'user',
   mine: row.sender_id === currentUserId,
   content: row.content,
+  deliveryChannel: row.delivery_channel || 'web',
   isRead: Boolean(row.is_read),
   sentAt: row.created_at,
   createdAt: row.created_at

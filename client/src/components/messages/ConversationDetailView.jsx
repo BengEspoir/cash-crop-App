@@ -21,7 +21,6 @@ const conversationVariants = {
     fallbackInitials: "FR",
     participantRole: "Farmer",
     emptyIcon: ShoppingBasket,
-    callLabel: "Call contact",
     notFoundDescription: "This conversation is not connected to your account.",
     emptyDescription: "Send the first message in this conversation.",
   },
@@ -33,7 +32,6 @@ const conversationVariants = {
     emptyIcon: Leaf,
     emptyClassName: "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 transition-colors duration-200 hover:border-green-200 hover:bg-green-50/30",
     emptyTitleFontClassName: "font-display",
-    callLabel: "Call buyer",
     notFoundDescription: "This conversation is not connected to your account.",
     emptyDescription:
       "The conversation exists, but no message rows are exposed in the current dashboard contract.",

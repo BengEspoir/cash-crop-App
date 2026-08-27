@@ -10,6 +10,11 @@ export function ChatBubble({ message, currentUser }) {
         mine ? "bg-[#1A6B3C] text-white" : "bg-white text-[#111827]",
       )}>
         <p className="font-semibold">{message.sender}</p>
+        {message.deliveryChannel === "whatsapp" ? (
+          <p className={cn("mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]", mine ? "text-white/75" : "text-green-700")}>
+            Relayed from WhatsApp
+          </p>
+        ) : null}
         <p className="mt-1">{message.content}</p>
         <p className={cn("mt-2 text-[11px]", mine ? "text-white/70" : "text-[#6B7280]")}>{message.sentAt}</p>
       </div>

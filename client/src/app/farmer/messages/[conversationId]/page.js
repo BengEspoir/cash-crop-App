@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { ArrowLeft, Phone } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { ChatBubble } from "@/components/messages/ChatBubble";
 import { ChatInput } from "@/components/messages/ChatInput";
 import { FarmerEmptyState, FarmerPage, FarmerPanel, FarmerStatusBadge } from "@/components/farmer/FarmerDesignSystem";
@@ -72,9 +72,6 @@ export default function FarmerConversationPage({ params }) {
                 <p className="text-[15px] text-ink-500">{conversation.role || "Buyer"} conversation</p>
               </div>
             </div>
-            <button type="button" className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-ink-200 text-ink-600" aria-label="Call buyer">
-              <Phone className="h-5 w-5" />
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto bg-white p-7">

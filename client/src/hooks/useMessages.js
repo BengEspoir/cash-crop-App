@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
+import { supabase } from "@/lib/supabaseClient";
 
 const unwrapItems = (response) => response.data?.data?.items || response.data?.data || [];
 const unwrapData = (response) => response.data?.data;
@@ -11,11 +13,34 @@ export const useConversations = () => useQuery({
   queryFn: async () => unwrapItems(await api.get("/conversations")),
 });
 
-export const useConversation = (id) => useQuery({
-  queryKey: ["conversation", id],
-  enabled: Boolean(id),
-  queryFn: async () => unwrapData(await api.get(`/conversations/${id}`)),
-});
+export const useConversation = (id) => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!id) return undefined;
+    const channel = supabase
+      .channel(`messages:${id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["conversation", id] });
+          queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
+
+  return useQuery({
+    queryKey: ["conversation", id],
+    enabled: Boolean(id),
+    queryFn: async () => unwrapData(await api.get(`/conversations/${id}`)),
+  });
+};
 
 export const useStartConversation = () => {
   const queryClient = useQueryClient();

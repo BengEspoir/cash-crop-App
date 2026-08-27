@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { AlertTriangle, MapPin, MessageCircle, Package, ShoppingCart, Truck } from "lucide-react";
+import { AlertTriangle, MapPin, Package, ShoppingCart, Truck } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { CropDetailGallery } from "../../../../components/crops/CropDetailGallery";
 import { CropSpecsTable } from "../../../../components/crops/CropSpecsTable";
 import { CropCard } from "../../../../components/crops/CropCard";
+import { SupplierMessageDialog } from "../../../../components/crops/SupplierMessageDialog";
+import { AdminSupportLink } from "../../../../components/common/AdminSupportLink";
 import { FarmerAvatar } from "../../../../components/farmers/FarmerAvatar";
 import { VerificationBadge } from "../../../../components/farmers/VerificationBadge";
 import { useListing, useListings } from "../../../../hooks/useListings";
-import { useStartConversation } from "../../../../hooks/useMessages";
 import useAuth from "../../../../hooks/useAuth";
 import { getLoginRoute } from "../../../../lib/authRoutes";
 import { useCartStore } from "../../../../store/cartStore";
@@ -24,28 +25,7 @@ export default function CropDetailPage({ params }) {
   const { user, isBuyer } = useAuth();
   const { data: listing, isLoading, error } = useListing(params.id);
   const { listings: candidateListings } = useListings({ query: listing?.crop || "", limit: 6 });
-  const startConversation = useStartConversation();
   const setListing = useCartStore((state) => state.setListing);
-
-  const handleChat = async () => {
-    if (!user) {
-      toast.error("Please sign in as a buyer to start a chat.");
-      router.push(getLoginRoute(`/crops/${params.id}`));
-      return;
-    }
-    if (!isBuyer) {
-      toast.error("Buyer accounts can start chats from public crop pages.");
-      return;
-    }
-    if (listing?.farmerVerificationStatus !== "verified") toast(UNVERIFIED_WARNING);
-    try {
-      const result = await startConversation.mutateAsync({ farmerId: listing.farmerId, listingId: listing.id });
-      if (result?.farmerWarning) toast(result.farmerWarning);
-      router.push(`/buyer/messages/${result.conversation.id}`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Could not start chat.");
-    }
-  };
 
   const handleAddToCart = () => {
     if (!user) {
@@ -107,10 +87,11 @@ export default function CropDetailPage({ params }) {
             </div>
 
             <div className="mt-6 space-y-2.5">
-              <Button asChild className="h-11 w-full bg-[#1E5E27] hover:bg-[#174B20]"><Link href={`/request-quote?listingId=${listing.id}`}>Request a quote</Link></Button>
+              <SupplierMessageDialog listing={listing} />
+              <Button asChild variant="outline" className="h-11 w-full"><Link href={`/request-quote?listingId=${listing.id}`}>Request a quote</Link></Button>
               <div className="grid grid-cols-2 gap-2.5">
-                <Button type="button" variant="outline" onClick={handleChat} disabled={startConversation.isPending}><MessageCircle className="h-4 w-4" /> Chat</Button>
                 <Button type="button" variant="outline" onClick={handleAddToCart}><ShoppingCart className="h-4 w-4" /> Checkout</Button>
+                <AdminSupportLink listingId={listing.id} compact />
               </div>
             </div>
           </Card>

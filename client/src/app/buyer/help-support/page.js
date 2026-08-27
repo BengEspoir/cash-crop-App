@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BookOpen, Clock3, Globe, LifeBuoy, MessageCircleMore, Search, ShieldCheck, WalletCards } from "lucide-react";
 import {
   BuyerButton,
@@ -81,6 +82,8 @@ const GUIDES = [
 ];
 
 export default function BuyerHelpSupportPage() {
+  const searchParams = useSearchParams();
+  const linkedListingId = searchParams.get("listingId") || "";
   const { user } = useAuth();
   const { data } = useDashboardData("buyer");
   const { data: ticketData, isLoading } = useSupportTickets();
@@ -91,6 +94,16 @@ export default function BuyerHelpSupportPage() {
   const tickets = ticketData?.items || [];
   const orders = data?.orders || [];
   const payments = data?.payments || [];
+
+  useEffect(() => {
+    if (!linkedListingId) return;
+    setForm((current) => ({
+      ...current,
+      subject: current.subject || "Urgent help with a crop listing",
+      description: current.description || `I need AgriculNet Admin support with listing ${linkedListingId}.`,
+      relatedEntityId: linkedListingId,
+    }));
+  }, [linkedListingId]);
 
   const filteredFaqs = useMemo(() => {
     return FAQS.filter((item) => {
@@ -113,7 +126,7 @@ export default function BuyerHelpSupportPage() {
         description: form.description.trim(),
         category: form.category,
         priority: form.category === "payments" ? "high" : "normal",
-        relatedEntityType: form.relatedEntityId ? "order" : null,
+        relatedEntityType: form.relatedEntityId ? (linkedListingId ? "listing" : "order") : null,
         relatedEntityId: form.relatedEntityId || null,
         metadata: {
           dashboardOrderCount: orders.length,
@@ -264,6 +277,7 @@ export default function BuyerHelpSupportPage() {
                   <span className="text-[13px] font-semibold uppercase tracking-[0.12em] text-ink-400">Related order (optional)</span>
                   <select value={form.relatedEntityId} onChange={(event) => setForm((current) => ({ ...current, relatedEntityId: event.target.value }))} className="h-12 rounded-xl border border-ink-200 px-3 text-[15px]">
                     <option value="">Select order</option>
+                    {linkedListingId ? <option value={linkedListingId}>Crop listing {linkedListingId.slice(0, 8)}</option> : null}
                     {orders.map((order) => (
                       <option key={order.rawId || order.id} value={order.rawId || order.id}>
                         {order.id} · {order.crop}

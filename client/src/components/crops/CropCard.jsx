@@ -5,6 +5,7 @@ import { SmartImage } from "../media/SmartImage";
 import { resolveListingImage } from "../../lib/imagery";
 import { ListingBodyTrustRibbon } from "./ListingTrustRibbon";
 import { ListingCommerceDetails } from "./ListingCommerceDetails";
+import { AdminSupportLink } from "../common/AdminSupportLink";
 
 export function CropCard({ listing, href }) {
   const image = resolveListingImage(listing);
@@ -76,6 +77,7 @@ export function CropCard({ listing, href }) {
         >
           Send inquiry
         </Link>
+        <AdminSupportLink listingId={listing.id} compact className="mt-2 w-full" />
       </div>
     </article>
   );

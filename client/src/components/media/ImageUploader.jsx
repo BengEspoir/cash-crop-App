@@ -6,6 +6,7 @@ import { ImagePlus, Loader2, Star, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "../ui/button";
 import { uploadAsset } from "../../lib/uploads";
 import { cn } from "../../lib/utils";
+import imageCompression from "browser-image-compression";
 
 /**
  * Reusable gallery uploader.
@@ -55,7 +56,13 @@ export function ImageUploader({
       try {
         for (let i = 0; i < files.length; i += 1) {
           const file = files[i];
-          const result = await uploadAsset(file, {
+          const compressedFile = await imageCompression(file, {
+            maxSizeMB: 0.9,
+            maxWidthOrHeight: 1600,
+            useWebWorker: true,
+            preserveExif: false,
+          });
+          const result = await uploadAsset(compressedFile, {
             folder,
             onProgress: (ratio) => setProgress(((i + ratio) / files.length) * 100),
           });
@@ -64,6 +71,8 @@ export function ImageUploader({
             publicId: result.path,
             bucket: result.bucket,
             alt: file.name,
+            originalBytes: file.size,
+            uploadedBytes: compressedFile.size,
           });
         }
         onChange?.(next);
@@ -150,7 +159,7 @@ export function ImageUploader({
           </p>
           <p className="text-[12px] text-ink-500">
             {hint ??
-              "High-quality JPG, PNG, or WebP up to 8MB. First image becomes the cover."}
+              "Photos are compressed for low-data uploads. JPG, PNG, or WebP up to 8MB; first image becomes the cover."}
           </p>
           {error ? <p className="text-[12px] font-medium text-red-600">{error}</p> : null}
         </div>

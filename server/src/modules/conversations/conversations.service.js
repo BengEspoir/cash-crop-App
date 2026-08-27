@@ -1,4 +1,6 @@
 const { supabaseAdmin } = require('../../config/supabase');
+const logger = require('../../utils/logger');
+const { forwardBuyerMessageToWhatsApp } = require('../../../services/whatsappRelay');
 const AppError = require('../../utils/AppError');
 const { ERROR_CODES, USER_ROLES } = require('../../config/constants');
 const {
@@ -208,6 +210,39 @@ const assertConversationAccess = (row, userId) => {
   }
 };
 
+const relayBuyerMessage = async ({ user, conversation, content }) => {
+  if (!isBuyerRole(user.role)) return { delivered: false, reason: 'sender_not_buyer' };
+
+  const supplierUserId = conversation.participant_1 === user.id
+    ? conversation.participant_2
+    : conversation.participant_1;
+  const users = await getUsersByIds([user.id, supplierUserId]);
+  const supplier = users[supplierUserId];
+  if (!supplier || ![USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(supplier.role)) {
+    return { delivered: false, reason: 'recipient_not_supplier' };
+  }
+  if (!supplier.phone) return { delivered: false, reason: 'supplier_phone_missing' };
+
+  let cropName = 'Crop listing';
+  if (conversation.listing_id) {
+    const { data: listing } = await supabaseAdmin
+      .from('listings')
+      .select('crop_name_fallback, crop:crops(name)')
+      .eq('id', conversation.listing_id)
+      .maybeSingle();
+    cropName = listing?.crop_name_fallback || listing?.crop?.name || cropName;
+  }
+
+  return forwardBuyerMessageToWhatsApp({
+    farmerPhone: supplier.phone,
+    farmerUserId: supplierUserId,
+    buyerName: mapUserName(users[user.id] || user),
+    cropName,
+    messageText: content,
+    threadId: conversation.id,
+  });
+};
+
 const getConversation = async (user, conversationId) => {
   const { data: row, error } = await supabaseAdmin
     .from('conversations')
@@ -289,6 +324,16 @@ const sendMessage = async (user, conversationId, content) => {
     .from('conversations')
     .update({ last_message_at: new Date().toISOString() })
     .eq('id', conversationId);
+
+  try {
+    await relayBuyerMessage({ user, conversation, content });
+  } catch (relayError) {
+    logger.error({
+      message: 'Buyer message saved but WhatsApp relay failed',
+      conversationId,
+      error: relayError.message
+    });
+  }
 
   const users = await getUsersByIds([user.id]);
   return mapMessage(data, users[user.id], user.id);

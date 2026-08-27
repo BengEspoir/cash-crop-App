@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { Phone, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   FarmerEmptyState,
   FarmerPage,
@@ -93,7 +93,6 @@ export default function FarmerMessagesPage() {
                 </div>
                 <div className="flex gap-3">
                   <Link href={`/farmer/messages/${selected.id}`} className="inline-flex h-12 items-center rounded-lg border border-ink-200 px-5 text-[15px] font-bold text-ink-700">Open Thread</Link>
-                  <button type="button" className="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-ink-200 text-ink-600" aria-label="Call buyer"><Phone className="h-5 w-5" /></button>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto bg-white p-7">

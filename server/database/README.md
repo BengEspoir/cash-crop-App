@@ -4,7 +4,7 @@ The database directory contains ordered migrations, optional bootstrap/demo seed
 
 ## Required order
 
-Apply every file in `migrations/` in numeric order from 001 through 038. Later migrations extend tables and functions created earlier; do not treat the shorter authentication subset as a complete marketplace schema.
+Apply every file in `migrations/` in numeric order from 001 through 040. Later migrations extend tables and functions created earlier; do not treat the shorter authentication subset as a complete marketplace schema. Migration 040 adds server-only WhatsApp relay bindings and publishes authorized message inserts through Supabase Realtime.
 
 Before 031, reconcile duplicate non-null payment references, duplicate commissions per order, and duplicate logistics rows per order; its exact `MIGRATION_031_*_RECONCILIATION_REQUIRED` codes are documented in `MIGRATION_GUIDE.md`. Migrations 032-036 make order, payment, authentication-proof, inventory/quote, and logistics changes atomic. Payment migrations 031/033 use order-before-payment locking; cancelled-order funds are marked for refund/reconciliation and related commission is cancelled. Migration 037 forces RLS and revokes application-table access from browser roles. Migration 038 repairs UUID resolution in the restricted payment, order, and logistics RPCs.
 

@@ -1,5 +1,7 @@
 # AgriculNet Backend Deployment on Render
 
+> Legacy alternative: the repository's current deployment preset is Railway. Use [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) for the active backend preset and [`WHATSAPP_RELAY_API_SETUP.md`](WHATSAPP_RELAY_API_SETUP.md) for the WhatsApp webhook configuration. Keep this document only if you intentionally choose Render instead.
+
 This guide moves only the AgriculNet Express API from Railway to one Render Web Service. The Next.js frontend remains on Vercel at `https://agriculnet.farm`, while the existing Supabase project remains the database and file-storage provider.
 
 > Use Render as the single backend host. First make the API work on its generated `onrender.com` address, connect Vercel to it, and test the platform. Add `api.agriculnet.farm` only after the generated address works.
@@ -74,9 +76,10 @@ This is a hosting migration, not a database migration. Do **not** rerun every SQ
 1. Confirm the original Supabase project is active.
 2. Confirm the private `farmer-verifications` bucket and the `agriculnet-assets` bucket exist. Create the private verification bucket manually if it is absent.
 3. Compare the applied schema with `server/database/MIGRATION_GUIDE.md`.
-4. Apply only missing migrations, in numeric order from 001 through 038.
+4. Apply only missing migrations, in numeric order from 001 through 040.
 5. Follow the reconciliation prerequisites for migrations 031 and 033–038 before applying them.
-6. With the real Supabase values in the ignored `server/.env`, run the read-only checker:
+6. Follow `WHATSAPP_RELAY_API_SETUP.md` before applying migration 040 or enabling the relay.
+7. With the real Supabase values in the ignored `server/.env`, run the read-only checker:
 
 ```powershell
 Set-Location server
@@ -189,6 +192,7 @@ Configure only features that will be tested:
 - AI assistant: add at least one real `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`, or `CEREBRAS_API_KEY`. Missing providers are skipped.
 - Cloudinary: add `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` only if that integration is used.
 - Fapshi: keep sandbox values until payment operations are validated. Set `FAPSHI_BASE_URL`, `FAPSHI_API_USER`, `FAPSHI_API_KEY`, and `FAPSHI_WEBHOOK_SECRET` together.
+- WhatsApp supplier relay: follow `WHATSAPP_RELAY_API_SETUP.md`. Apply migration 040, configure the Meta system-user token, Phone Number ID, App Secret, verify token, approved Utility template, and webhook before setting `WHATSAPP_RELAY_ENABLED=true`.
 
 When Fapshi is enabled, its webhook must send the matching secret in the `x-wh-secret` request header. Leaving every AI key empty does not stop the API, but chat returns an unavailable/not-configured response. Leaving Fapshi unconfigured keeps its callback closed.
 
@@ -338,6 +342,7 @@ Verify that `api` has the exact DNS target Render displayed and remove only conf
 - [ ] Vercel `NEXT_PUBLIC_API_URL` ends in `/api/v1`
 - [ ] Vercel was redeployed after changing the public API URL
 - [ ] Supabase migrations and buckets were verified without recreating data blindly
+- [ ] WhatsApp migration 040 and API setup were completed before enabling the relay
 - [ ] Authentication, dashboards, email/SMS, uploads, and AI were smoke-tested
 - [ ] Fapshi remains in sandbox unless live operations are separately ready
 - [ ] Free sleep behavior is acceptable, or the service was upgraded
