@@ -74,7 +74,6 @@ export function HomeMarketplaceEcosystem() {
       <Reveal>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-3xl space-y-2">
-            <p className="section-eyebrow">Marketplace pulse</p>
             <h2 className="font-display text-[26px] leading-tight text-ink-900 md:text-[32px]">
               Live Cameroon supply with export-ready signals
             </h2>

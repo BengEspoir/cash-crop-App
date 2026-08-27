@@ -14,7 +14,6 @@ export function RegionalSpotlight() {
   return (
     <Reveal as="section" className="space-y-5 rounded-2xl border border-ink-200 bg-white p-5 shadow-soft lg:p-6">
       <SectionHeader
-        eyebrow="Regional Supply"
         title="Trade activity by region"
         description="Match crop availability with logistics priorities across Cameroon's main farming corridors and sourcing zones."
       />

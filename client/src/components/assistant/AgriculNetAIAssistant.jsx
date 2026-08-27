@@ -28,6 +28,15 @@ export function AgriculNetAIAssistant() {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    const handleOpenAssistant = (event) => {
+      if (event.detail?.prompt) setDraft(event.detail.prompt);
+      setIsOpen(true);
+    };
+    window.addEventListener("agriculnet:open-assistant", handleOpenAssistant);
+    return () => window.removeEventListener("agriculnet:open-assistant", handleOpenAssistant);
+  }, [setDraft]);
+
+  useEffect(() => {
     if (!isOpen) return undefined;
 
     const frame = window.requestAnimationFrame(() => inputRef.current?.focus());

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { resolveAuthUserRole, shouldRedirectSellerFromMarketplace } from "./lib/roleRouting";
 
 const SELLER_INTENT_COOKIE = "agriculnet_seller_intent";
 
@@ -49,28 +50,35 @@ export async function middleware(request) {
 
   const protectedEntry = Object.entries(protectedNamespaces)
     .find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  if (protectedEntry) {
+  const checksMarketplaceRole = pathname === "/"
+    || ["/browse", "/crops", "/farmers", "/find-farmers", "/request-quote", "/international", "/sell"]
+      .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+
+  if (protectedEntry || checksMarketplaceRole) {
     const { data: authData } = await supabase.auth.getUser();
-    if (!authData?.user) {
+    if (!authData?.user && protectedEntry) {
       const loginUrl = new URL("/auth/login", request.url);
       loginUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    const { data: appUser } = await supabase
-      .from("users")
-      .select("role")
-      .eq("auth_user_id", authData.user.id)
-      .single();
-    const role = appUser?.role;
-    const allowedRoles = protectedEntry[1];
-    if (!role || !allowedRoles.includes(role)) {
-      const roleHome = role === "admin" || role === "super_admin"
-        ? "/admin/dashboard"
-        : role === "farmer" || role === "reseller"
-          ? "/farmer/dashboard"
-          : "/buyer/dashboard";
-      return NextResponse.redirect(new URL(roleHome, request.url));
+    if (authData?.user) {
+      const role = resolveAuthUserRole(authData.user);
+      if (shouldRedirectSellerFromMarketplace(pathname, role)) {
+        return NextResponse.redirect(new URL("/farmer/dashboard", request.url));
+      }
+
+      if (protectedEntry) {
+        const allowedRoles = protectedEntry[1];
+        if (!role || !allowedRoles.includes(role)) {
+          const roleHome = role === "admin" || role === "super_admin"
+            ? "/admin/dashboard"
+            : role === "farmer" || role === "reseller"
+              ? "/farmer/dashboard"
+              : "/buyer/dashboard";
+          return NextResponse.redirect(new URL(roleHome, request.url));
+        }
+      }
     }
   }
 
@@ -96,5 +104,13 @@ export const config = {
     "/admin/:path*",
     "/buyer/:path*",
     "/farmer/:path*",
+    "/",
+    "/browse",
+    "/crops/:path*",
+    "/farmers/:path*",
+    "/find-farmers",
+    "/request-quote",
+    "/international",
+    "/sell/:path*",
   ],
 };

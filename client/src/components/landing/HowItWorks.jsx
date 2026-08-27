@@ -26,8 +26,7 @@ export function HowItWorks() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
         </div>
         <div className="p-6">
-          <p className="section-eyebrow">How It Works</p>
-          <h2 className="mt-2 font-display text-[24px] leading-[1.15] text-ink-800">
+          <h2 className="font-display text-[24px] leading-[1.15] text-ink-800">
             A clearer trade journey from inquiry to delivery.
           </h2>
           <p className="mt-3 text-[14px] leading-6 text-ink-700">

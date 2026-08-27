@@ -34,12 +34,13 @@ export default function BrowsePage() {
   const [sort, setSort] = useState("newest");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [exportReadyOnly, setExportReadyOnly] = useState(false);
-  const [region, setRegion] = useState("South West");
+  const [region, setRegion] = useState("");
   const [crop, setCrop] = useState("");
   const [country, setCountry] = useState(storedCountry || "CM");
 
   useEffect(() => {
     setQuery(searchParams.get("query") || "");
+    setCrop(searchParams.get("crop") || "");
     setCountry(searchParams.get("country") || storedCountry || "CM");
     const highlight = searchParams.get("highlight");
     if (highlight === "verified") setVerifiedOnly(true);

@@ -9,7 +9,6 @@ export function FeaturedFarmers() {
   return (
     <section className="space-y-5">
       <SectionHeader
-        eyebrow="Verified Network"
         title="Featured farmers"
         description="Meet verified sellers with consistent order history, buyer ratings, and crop readiness across the regions buyers search most often."
         actionLabel="Find farmers"

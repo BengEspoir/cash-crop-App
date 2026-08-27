@@ -7,7 +7,6 @@ import {
   Check,
   CreditCard,
   Heart,
-  MapPin,
   MessageSquare,
   Package,
   Search,
@@ -15,8 +14,7 @@ import {
   ShoppingBasket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SmartImage } from "@/components/media/SmartImage";
-import { resolveListingImage } from "@/lib/imagery";
+import { CropCard } from "@/components/crops/CropCard";
 import {
   WorkspaceButton,
   WorkspaceEmptyState,
@@ -180,33 +178,7 @@ export function BuyerEmptyState({ title, description, action }) {
 }
 
 export function BuyerBrowseCard({ listing }) {
-  const image = resolveListingImage(listing);
-  return (
-    <article className="group overflow-hidden rounded-2xl border border-ink-200 bg-white transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
-      <div className="relative h-52 overflow-hidden bg-ink-100">
-        <SmartImage src={image} alt={listing.crop} fill sizes="(min-width: 1280px) 30vw, (min-width: 768px) 50vw, 100vw" fallbackClassName={listing.imageClass} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-        <div className="absolute right-4 top-4 flex flex-wrap justify-end gap-2">
-          {listing.exportReady ? <BuyerStatusBadge status="transit">Export-ready</BuyerStatusBadge> : null}
-          {listing.farmerVerificationStatus === "verified" ? <BuyerStatusBadge status="verified">Verified</BuyerStatusBadge> : null}
-        </div>
-      </div>
-      <div className="p-6">
-        <h3 className="font-display text-[21px] font-bold text-ink-950 transition-colors group-hover:text-green-800">{listing.crop}</h3>
-        <p className="mt-2 inline-flex items-center gap-1.5 text-[15px] leading-6 text-ink-500">
-          <MapPin className="h-4 w-4" />
-          {listing.location} - {listing.quantityLabel || listing.quantity}
-        </p>
-        <div className="mt-6 flex items-end justify-between gap-4 border-t border-ink-100 pt-5">
-          <div>
-            <p className="text-[24px] font-bold text-green-800">{listing.price?.split("/")[0] || listing.price}</p>
-            <p className="text-[14px] text-ink-500">per {listing.price?.split("/")[1]?.trim() || "unit"}</p>
-          </div>
-          <BuyerButton href={`/crops/${listing.id}`} className="h-12 px-5">View Details</BuyerButton>
-        </div>
-      </div>
-    </article>
-  );
+  return <CropCard listing={listing} />;
 }
 
 export const buyerMetricIcons = {

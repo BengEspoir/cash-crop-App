@@ -22,7 +22,6 @@ export function PaymentsBanner() {
 
       <div className="relative grid gap-6 px-5 py-10 lg:grid-cols-12 lg:items-center lg:px-8 lg:py-12">
         <Reveal className="space-y-3 lg:col-span-5">
-          <p className="section-eyebrow text-gold-100">Protected Payments</p>
           <h2 className="font-display text-[26px] leading-[1.15] text-white">
             Payment flexibility built into the trade flow.
           </h2>

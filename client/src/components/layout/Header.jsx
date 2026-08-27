@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, Search, User } from "lucide-react";
+import { Bell, Camera, ChevronDown, Search, Sparkles, User } from "lucide-react";
 import { BrandLogo } from "../common/BrandLogo";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
@@ -10,6 +10,7 @@ import useAuth from "../../hooks/useAuth";
 import { useI18n } from "../../i18n/I18nProvider";
 import { startOAuth } from "../../lib/startOAuth";
 import { CountrySelector } from "../common/CountrySelector";
+import { cropSearchOptions, inferCropFromFilename } from "../../lib/cropSearch";
 
 const ROLE_HEADER_LINKS = {
   admin: {
@@ -77,7 +78,10 @@ function FacebookGlyph({ className }) {
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [query, setQuery] = useState("");
+  const [crop, setCrop] = useState("");
   const menuRootRef = useRef(null);
+  const imageInputRef = useRef(null);
   const { user, isAuthenticated, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
   const accountLinks = getHeaderLinks(user?.role);
@@ -107,6 +111,25 @@ export function Header() {
     };
   }, [openMenu]);
 
+  function openAssistant(prompt) {
+    window.dispatchEvent(new CustomEvent("agriculnet:open-assistant", { detail: { prompt } }));
+  }
+
+  function handleImageSearch(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const cropHint = inferCropFromFilename(file.name);
+    if (cropHint) {
+      setCrop(cropHint);
+      window.location.assign(`/browse?crop=${encodeURIComponent(cropHint)}`);
+    } else {
+      openAssistant(
+        "I selected a crop image for search. Visual recognition is not enabled yet, so help me identify it from the features I describe.",
+      );
+    }
+    event.target.value = "";
+  }
+
   return (
     <header
       className={cn(
@@ -132,11 +155,21 @@ export function Header() {
             action="/browse"
             method="get"
             role="search"
-            className="flex flex-1 items-center rounded-full border border-ink-300 bg-ink-50 p-1 transition-colors duration-200 focus-within:border-green-800 focus-within:bg-white"
+            className="flex min-h-12 flex-1 items-stretch overflow-hidden rounded-[10px] border border-ink-300 bg-white shadow-sm transition-colors duration-200 focus-within:border-green-800 focus-within:ring-4 focus-within:ring-green-800/10"
           >
-            <div className="hidden items-center border-r border-ink-200 px-3 text-[12px] font-medium text-ink-700 lg:flex">
-              <span>{t("common.allCrops")}</span>
-              <ChevronDown className="ml-2 h-3.5 w-3.5 text-ink-500" aria-hidden="true" />
+            <div className="relative hidden min-w-[128px] items-center border-r border-ink-200 bg-ink-50 lg:flex">
+              <select
+                name="crop"
+                value={crop}
+                onChange={(event) => setCrop(event.target.value)}
+                aria-label="Crop category"
+                className="h-full w-full appearance-none border-0 bg-transparent py-0 pl-4 pr-9 text-[12px] font-semibold text-ink-700 outline-none"
+              >
+                {cropSearchOptions.map((option) => (
+                  <option key={option} value={option === "All crops" ? "" : option}>{option}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-ink-500" aria-hidden="true" />
             </div>
             <div className="flex flex-1 items-center gap-2 px-3">
               <Search className="h-4 w-4 text-ink-500" aria-hidden="true" />
@@ -145,13 +178,33 @@ export function Header() {
                 name="query"
                 placeholder={t("header.searchPlaceholder")}
                 aria-label={t("header.searchPlaceholder")}
-                defaultValue=""
-                className="h-8 w-full border-0 bg-transparent p-0 text-[13px] text-ink-800 outline-none placeholder:text-ink-400"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-11 w-full border-0 bg-transparent p-0 text-[13px] text-ink-800 outline-none placeholder:text-ink-400"
               />
             </div>
+            <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSearch} className="sr-only" />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="inline-flex w-11 items-center justify-center border-l border-ink-200 text-ink-500 transition-colors hover:bg-green-50 hover:text-green-800"
+              aria-label="Search using a crop image"
+              title="Search using a crop image"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => openAssistant(query.trim() ? `Help me find crops matching: ${query.trim()}` : "Help me source a crop on AgriculNet.")}
+              className="inline-flex w-11 items-center justify-center border-l border-ink-200 text-green-800 transition-colors hover:bg-green-50"
+              aria-label="Ask AgriculNet AI"
+              title="Ask AgriculNet AI"
+            >
+              <Sparkles className="h-4 w-4" />
+            </button>
             <Button
               type="submit"
-              className="h-8 rounded-full border-0 bg-gold-400 px-4 text-[12px] font-semibold text-brand-secondaryFg shadow-sm hover:bg-gold-500"
+              className="m-1 min-h-10 rounded-[8px] border-0 bg-[#1E5E27] px-5 text-[12px] font-semibold text-white shadow-sm hover:bg-green-900"
             >
               {t("common.search")}
             </Button>
