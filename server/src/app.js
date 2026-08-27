@@ -88,6 +88,21 @@ app.use(morgan('dev'));
 // General rate limiter on all API routes
 app.use('/api', generalLimiter);
 
+const sendApiOverview = (req, res) => {
+  res.json({
+    success: true,
+    message: 'AgriculNet API is running',
+    version: '1.0.0',
+    apiBase: '/api/v1',
+    health: '/api/health'
+  });
+};
+
+// Service discovery endpoints. Business routes remain versioned under /api/v1.
+app.get('/', sendApiOverview);
+app.get('/api', sendApiOverview);
+app.get('/api/v1', sendApiOverview);
+
 // ── ROUTES ──────────────────────────────────────────────────
 // Public auth routes
 app.use('/api/v1/auth', authRoutes);
