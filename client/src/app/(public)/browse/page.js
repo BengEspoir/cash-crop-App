@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, Search, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { BuyerBrowseCard, BuyerEmptyState } from "@/components/buyer/BuyerDesignSystem";
 import { Card } from "@/components/ui/card";
 import { CountrySelector } from "@/components/common/CountrySelector";
+import { AgriculNetSearch } from "@/components/search/AgriculNetSearch";
 import { useListings } from "@/hooks/useListings";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSitePrefsStore } from "@/store/sitePrefsStore";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const regions = ["South West", "Littoral", "West", "North West", "Centre", "North", "Adamawa", "South"];
 const cropTypes = ["Cocoa", "Coffee", "Maize", "Plantain", "Pepper", "Cassava"];
+const RESULT_KEY = "agriculnet-marketplace-search-result";
 
 function FilterCheck({ active, label, count, onClick }) {
   return (
@@ -37,6 +39,7 @@ export default function BrowsePage() {
   const [region, setRegion] = useState("");
   const [crop, setCrop] = useState("");
   const [country, setCountry] = useState(storedCountry || "CM");
+  const [smartResult, setSmartResult] = useState(null);
 
   useEffect(() => {
     setQuery(searchParams.get("query") || "");
@@ -45,6 +48,15 @@ export default function BrowsePage() {
     const highlight = searchParams.get("highlight");
     if (highlight === "verified") setVerifiedOnly(true);
     if (highlight === "export-ready") setExportReadyOnly(true);
+    if (searchParams.get("smart") === "1") {
+      try {
+        const stored = JSON.parse(window.sessionStorage.getItem(RESULT_KEY) || "null");
+        if (stored?.items) setSmartResult(stored);
+        window.sessionStorage.removeItem(RESULT_KEY);
+      } catch {
+        setSmartResult(null);
+      }
+    }
   }, [searchParams, storedCountry]);
 
   const { listings, isLoading, error } = useListings({
@@ -52,9 +64,11 @@ export default function BrowsePage() {
     country: country && country !== "all" ? country : undefined,
   });
 
+  const sourceListings = smartResult?.items || listings;
+
   const filtered = useMemo(() => {
-    const base = listings.filter((listing) => {
-      if (verifiedOnly && listing.farmerVerificationStatus !== "verified") return false;
+    const base = sourceListings.filter((listing) => {
+      if (verifiedOnly && listing.sellerVerificationStatus !== "verified") return false;
       if (exportReadyOnly && !listing.exportReady) return false;
       if (region && !String(listing.location || "").toLowerCase().includes(region.toLowerCase())) return false;
       if (crop && !String(listing.crop || "").toLowerCase().includes(crop.toLowerCase())) return false;
@@ -69,7 +83,16 @@ export default function BrowsePage() {
       default:
         return base;
     }
-  }, [crop, exportReadyOnly, listings, region, sort, verifiedOnly]);
+  }, [crop, exportReadyOnly, region, sort, sourceListings, verifiedOnly]);
+
+  const regionCounts = useMemo(() => Object.fromEntries(regions.map(item => [
+    item,
+    sourceListings.filter(listing => String(listing.location || "").toLowerCase().includes(item.toLowerCase())).length,
+  ])), [sourceListings]);
+  const cropCounts = useMemo(() => Object.fromEntries(cropTypes.map(item => [
+    item,
+    sourceListings.filter(listing => String(listing.crop || "").toLowerCase().includes(item.toLowerCase())).length,
+  ])), [sourceListings]);
 
   const activeFilters = [
     region,
@@ -109,6 +132,15 @@ export default function BrowsePage() {
         </div>
       </div>
 
+      <AgriculNetSearch
+        initialQuery={query}
+        onStandardSearch={value => {
+          setQuery(value);
+          setSmartResult(null);
+        }}
+        onResults={setSmartResult}
+      />
+
       <div className="grid gap-7 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="h-fit overflow-hidden rounded-2xl border border-ink-200 bg-white">
           <div className="flex items-center justify-between border-b border-ink-100 px-7 py-6">
@@ -117,19 +149,6 @@ export default function BrowsePage() {
           </div>
 
           <div className="space-y-7 p-7">
-            <div>
-              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("common.search")}</p>
-              <div className="relative mt-4">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={t("browse.searchPlaceholder")}
-                  className="h-12 w-full rounded-lg border border-ink-200 bg-white pl-12 pr-4 text-[15px] outline-none focus:border-green-700 focus:ring-4 focus:ring-green-800/10"
-                />
-              </div>
-            </div>
-
             <div>
               <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("common.country")}</p>
               <CountrySelector
@@ -153,8 +172,8 @@ export default function BrowsePage() {
             <div>
               <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("browse.region")}</p>
               <div className="mt-4 space-y-2">
-                {regions.map((item, index) => (
-                  <FilterCheck key={item} active={region === item} label={item} count={[128, 94, 71, 88, 62, 54, 38, 47][index]} onClick={() => setRegion(region === item ? "" : item)} />
+                {regions.map((item) => (
+                  <FilterCheck key={item} active={region === item} label={item} count={regionCounts[item]} onClick={() => setRegion(region === item ? "" : item)} />
                 ))}
               </div>
             </div>
@@ -162,8 +181,8 @@ export default function BrowsePage() {
             <div>
               <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("browse.cropType")}</p>
               <div className="mt-4 space-y-2">
-                {cropTypes.map((item, index) => (
-                  <FilterCheck key={item} active={crop === item} label={item} count={[312, 187, 241, 84, 52, 130][index]} onClick={() => setCrop(crop === item ? "" : item)} />
+                {cropTypes.map((item) => (
+                  <FilterCheck key={item} active={crop === item} label={item} count={cropCounts[item]} onClick={() => setCrop(crop === item ? "" : item)} />
                 ))}
               </div>
             </div>
@@ -181,12 +200,12 @@ export default function BrowsePage() {
                 </span>
               )) : <span className="text-[15px] text-ink-400">{t("browse.none")}</span>}
             </div>
-            <p className="text-[15px] text-ink-400">{t("browse.showing", { from: filtered.length ? `1 - ${filtered.length}` : "0", total: listings.length })}</p>
+            <p className="text-[15px] text-ink-400">{t("browse.showing", { from: filtered.length ? `1 - ${filtered.length}` : "0", total: sourceListings.length })}</p>
           </div>
 
-          {isLoading ? (
+          {isLoading && !smartResult ? (
             <Card className="rounded-2xl p-8 text-center text-ink-500">{t("browse.loading")}</Card>
-          ) : error ? (
+          ) : error && !smartResult ? (
             <Card className="rounded-2xl p-8 text-center text-red-700">{t("browse.error")}</Card>
           ) : filtered.length ? (
             <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">

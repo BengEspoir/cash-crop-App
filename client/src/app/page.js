@@ -1,7 +1,7 @@
 import { HomeMarketplaceEcosystem } from "../components/landing/HomeMarketplaceEcosystem";
 import { AnnouncementStrip } from "../components/landing/AnnouncementStrip";
 import { HeroSection } from "../components/landing/HeroSection";
-import { HeroSearchBar } from "../components/landing/HeroSearchBar";
+import { MarketplaceHeroSearch } from "../components/landing/MarketplaceHeroSearch";
 import { TrustStrip } from "../components/landing/TrustStrip";
 import { CropGrid } from "../components/landing/CropGrid";
 import { RegionalSpotlight } from "../components/landing/RegionalSpotlight";
@@ -22,7 +22,7 @@ export default function HomePage() {
       <main>
         <HeroSection />
         <PageTransition className="content-shell space-y-8 py-8 lg:space-y-12 lg:py-10">
-          <HeroSearchBar />
+          <MarketplaceHeroSearch />
           <TrustStrip />
           <HomeMarketplaceEcosystem />
           <CropGrid />

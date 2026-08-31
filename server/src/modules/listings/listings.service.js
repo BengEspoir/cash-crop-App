@@ -26,6 +26,64 @@ const countryFilterTerms = (value) => {
   return [...new Set(terms)];
 };
 
+const normalizeQuantityUnit = value => {
+  const unit = normalize(value).replace(/s$/, '');
+  if (['mt', 'ton', 'tonne', 'metric ton'].includes(unit)) return 'mt';
+  if (['kg', 'kilogram'].includes(unit)) return 'kg';
+  if (unit === 'bag') return 'bag';
+  if (unit === 'bunch') return 'bunch';
+  return unit;
+};
+
+const quantityInKg = (value, unit) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return null;
+  const normalizedUnit = normalizeQuantityUnit(unit);
+  if (normalizedUnit === 'mt') return amount * 1000;
+  if (normalizedUnit === 'kg') return amount;
+  if (normalizedUnit === 'bag') return amount * 80;
+  return null;
+};
+
+const hasMinimumQuantity = (item, requestedValue, requestedUnit) => {
+  const minimum = Number(requestedValue);
+  if (!Number.isFinite(minimum)) return true;
+  const listingUnit = normalizeQuantityUnit(item.quantityUnit);
+  const targetUnit = normalizeQuantityUnit(requestedUnit);
+  if (!targetUnit || listingUnit === targetUnit) {
+    return Number(item.quantityValue || 0) >= minimum;
+  }
+  const listingKg = quantityInKg(item.quantityValue, listingUnit);
+  const targetKg = quantityInKg(minimum, targetUnit);
+  return listingKg !== null && targetKg !== null && listingKg >= targetKg;
+};
+
+const listingSearchText = item => normalize([
+  item.crop,
+  item.summary,
+  item.description,
+  item.grade,
+  item.deliveryWindow,
+  item.location,
+  item.country,
+  item.quantity,
+  item.price,
+  item.sellerType,
+  item.seller?.name,
+  item.seller?.displayName,
+  item.seller?.businessName,
+  item.seller?.cooperativeName,
+  item.seller?.region,
+  item.seller?.city,
+  item.seller?.country
+].filter(Boolean).join(' '));
+
+const queryTokens = value => normalize(value)
+  .split(/\s+/)
+  .map(token => token.replace(/[^a-z0-9À-ÿ-]/gi, ''))
+  .filter(token => token.length > 1)
+  .filter(token => !['find', 'show', 'me', 'with', 'from', 'the', 'and', 'available'].includes(token));
+
 const getFarmerProfileForUser = async (userId) => {
   const { data, error } = await supabaseAdmin
     .from('farmer_profiles')
@@ -173,21 +231,64 @@ const listPublicListings = async (filters = {}) => {
   if (filters.sellerId) {
     query = query.or(`farmer_id.eq.${filters.sellerId},reseller_id.eq.${filters.sellerId}`);
   }
-  if (filters.query) {
-    const term = `%${filters.query}%`;
-    query = query.or(`crop_name_fallback.ilike.${term},location_name.ilike.${term},summary.ilike.${term}`);
-  }
-
-  const { data, error } = await query.limit(Number(filters.limit || 80));
+  const requestedLimit = Math.min(100, Math.max(1, Number(filters.limit || 80)));
+  const { data, error } = await query.limit(requestedLimit);
   if (error) throw error;
 
   let items = await mapListings(data || []);
+  if (filters.query && !filters.crop && !filters.region) {
+    const tokens = queryTokens(filters.query);
+    items = items.filter((item) => {
+      const haystack = listingSearchText(item);
+      return tokens.length ? tokens.every(token => haystack.includes(token)) : true;
+    });
+  }
+  if (filters.crop) {
+    const crop = normalize(filters.crop);
+    items = items.filter(item => normalize(item.crop).includes(crop));
+  }
+  if (filters.region) {
+    const region = normalize(filters.region);
+    items = items.filter(item => listingSearchText(item).includes(region));
+  }
+  if (filters.sellerType) {
+    items = items.filter(item => item.sellerType === filters.sellerType);
+  }
+  if (filters.verifiedOnly) {
+    items = items.filter(item => item.sellerVerificationStatus === 'verified');
+  }
+  if (filters.exportReady) {
+    items = items.filter(item => item.exportReady);
+  }
+  if (filters.availability) {
+    items = items.filter(item => Number(item.quantityValue || 0) > 0);
+  }
+  if (filters.minQuantity !== undefined) {
+    items = items.filter(item => hasMinimumQuantity(
+      item,
+      filters.minQuantity,
+      filters.quantityUnit
+    ));
+  }
+  if (filters.maxPrice !== undefined) {
+    const maxPrice = Number(filters.maxPrice);
+    if (Number.isFinite(maxPrice)) {
+      items = items.filter(item => Number(item.priceValue || 0) <= maxPrice);
+    }
+  }
   if (filters.country && filters.country !== 'all') {
     const terms = countryFilterTerms(filters.country);
     items = items.filter((item) => {
       const haystack = normalize([item.country, item.location, item.seller?.country, item.farmer?.country].filter(Boolean).join(' '));
       return terms.some((term) => haystack.includes(term));
     });
+  }
+  if (filters.sort === 'price-asc') {
+    items.sort((a, b) => Number(a.priceValue || 0) - Number(b.priceValue || 0));
+  } else if (filters.sort === 'price-desc') {
+    items.sort((a, b) => Number(b.priceValue || 0) - Number(a.priceValue || 0));
+  } else {
+    items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }
   return { items, count: items.length };
 };

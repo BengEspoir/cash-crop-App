@@ -23,6 +23,7 @@ const preferencesRoutes = require('./modules/preferences/preferences.routes');
 const supportRoutes = require('./modules/support/support.routes');
 const uploadsRoutes = require('./modules/uploads/uploads.routes');
 const chatRoutes = require('./modules/chat/chat.routes');
+const searchRoutes = require('./modules/search/search.routes');
 const whatsappWebhookRoutes = require('../routes/whatsappWebhook');
 
 const app = express();
@@ -125,6 +126,7 @@ app.use('/api/v1/preferences', preferencesRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/uploads', uploadsRoutes);
 app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/search', searchRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
