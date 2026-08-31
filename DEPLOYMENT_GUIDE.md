@@ -13,13 +13,20 @@ Follow the backend section below for the Railway preset. For WhatsApp relay vari
 
 ## Frontend deployment
 
-1. Connect the repository to Vercel.
-2. Set the project root to `client`.
-3. Run `npm run build`.
-4. Set `NEXT_PUBLIC_API_URL` to the backend URL ending in `/api/v1`.
-5. Copy only explicitly public values from `client/.env.local.example`.
+The production frontend uses `https://agriculnet.farm`. Requests under
+`/api/*` are proxied by Vercel to the Railway backend, so the browser-visible
+API base is:
 
-Never expose administrator credentials, service-role credentials, JWT secrets, AI/provider keys, or Fapshi values through `NEXT_PUBLIC_` variables.
+```text
+https://agriculnet.farm/api/v1
+```
+
+For the exact environment-variable matrix, clean reset of the existing Vercel
+project, full new-project rebuild, Supabase redirect configuration, and smoke
+tests, follow `VERCEL_FRONTEND_REDEPLOYMENT_GUIDE.md`.
+
+Never expose administrator credentials, service-role credentials, JWT secrets,
+AI/provider keys, or Fapshi values through `NEXT_PUBLIC_` variables.
 
 ## Backend deployment
 

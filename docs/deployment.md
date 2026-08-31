@@ -1,16 +1,16 @@
-# AgriculNet Render/Vercel Deployment Notes
+# AgriculNet Railway/Vercel Deployment Notes
 
-Use Vercel for `client/`, one Render Web Service for `server/`, and the existing Supabase project for PostgreSQL and Storage. See `../RENDER_BACKEND_DEPLOYMENT_GUIDE.md` for the complete walkthrough.
+Use Vercel for `client/`, one Railway service for `server/`, and the existing Supabase project for PostgreSQL and Storage. See `../DEPLOYMENT_GUIDE.md` and `../VERCEL_FRONTEND_REDEPLOYMENT_GUIDE.md` for the current walkthroughs.
 
 ## Backend cutover
 
-1. Create a Git-backed Render Web Service with Root Directory `server`.
-2. Set Build Command to `npm ci --omit=dev` and Start Command to `npm start`.
-3. Select the Free instance and let Render provide `PORT` automatically.
-4. Leave Health Check Path blank so Render uses its default TCP probe; test `GET /api/health` manually.
-5. Add private values from `server/.env.example` through Render's Environment settings.
+1. Create a Git-backed Railway service with Root Directory `/server`.
+2. Keep Railpack and use Start Command `npm start`.
+3. Let Railway provide `PORT` automatically.
+4. Set Health Check Path to `/api/health`.
+5. Add private values from `server/.env.example` through Railway's Variables settings and deploy the staged changes.
 6. Set `NODE_ENV=production`, `CLIENT_URL`, `BASE_URL`, verification URLs, and storage bucket names.
-7. Confirm `GET /api/health` on the generated `onrender.com` domain.
+7. Confirm `GET /api/health` on `https://cash-crop-app-production-9f79.up.railway.app`.
 
 Do not configure an administrator route secret. Administrators use `/auth/login`, Supabase sessions, and the same JWT/RLS role boundary as other users.
 
@@ -41,7 +41,8 @@ The callback route is `POST /api/webhooks/fapshi`. Keep `FAPSHI_MODE=sandbox` un
 Set:
 
 ```text
-NEXT_PUBLIC_API_URL=https://<backend-domain>/api/v1
+API_PROXY_TARGET=https://cash-crop-app-production-9f79.up.railway.app
+NEXT_PUBLIC_API_URL=https://agriculnet.farm/api/v1
 ```
 
 Redeploy the frontend after changing the value. No server credential belongs in Vercel's public environment variables.
@@ -59,7 +60,7 @@ Redeploy the frontend after changing the value. No server credential belongs in 
 
 Keep the previous backend deployment and configuration available until smoke tests pass. To roll back, restore the prior `NEXT_PUBLIC_API_URL`, redeploy the frontend, and re-run health/auth checks.
 
-Render's Free instance sleeps after 15 minutes without inbound traffic and can take about one minute to wake. It is suitable for prototype testing, but the server's in-process scheduler cannot run while the instance is sleeping.
+The server's in-process scheduler runs only while the Railway service is active. Use a plan and restart policy appropriate for continuously scheduled execution, or move critical scheduled work to a durable job mechanism before production reliance.
 
 ## Scope statement
 
