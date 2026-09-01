@@ -13,7 +13,11 @@ const LOCATIONS = [
 
 const cleanText = value => String(value || '').trim();
 const normalize = value => cleanText(value).toLowerCase();
-const findMention = (query, values) => values.find(value => normalize(query).includes(normalize(value)));
+const escapePattern = value => value.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+const findMention = (query, values) => values.find(value => {
+  const pattern = escapePattern(normalize(value)).replace(/\s+/g, '\\s+');
+  return new RegExp(`\\b${pattern}\\b`, 'i').test(normalize(query));
+});
 
 const parseNumber = value => {
   const parsed = Number(String(value || '').replace(/,/g, ''));
@@ -40,7 +44,7 @@ const parseNaturalLanguage = query => {
     region: findMention(text, LOCATIONS),
     sellerType: /\b(reseller|aggregator|trader)\b/.test(lower)
       ? 'reseller'
-      : /\b(farmer|producer|farm)\b/.test(lower) ? 'farmer' : undefined,
+      : /\b(farmers?|producers?|farms?)\b/.test(lower) ? 'farmer' : undefined,
     verifiedOnly: /\bverified\b/.test(lower),
     exportReady: /\bexport(?:[- ]ready)?\b/.test(lower),
     availability: /\b(available|in stock|ready now|ready for inspection)\b/.test(lower),

@@ -39,10 +39,7 @@ vi.mock("@/hooks/useVoiceRecorder", () => ({
 }));
 vi.mock("browser-image-compression", () => ({ default: vi.fn(file => Promise.resolve(file)) }));
 vi.mock("next/image", () => ({
-  default: props => {
-    const { fill, unoptimized, ...imageProps } = props;
-    return <img {...imageProps} alt={props.alt} />;
-  },
+  default: () => null,
 }));
 
 describe("AgriculNetSearch", () => {
@@ -96,7 +93,7 @@ describe("AgriculNetSearch", () => {
       suggestions: [],
     });
 
-    render(<AgriculNetSearch />);
+    const { rerender } = render(<AgriculNetSearch />);
     fireEvent.click(screen.getByRole("tab", { name: "Voice" }));
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }));
 
@@ -105,6 +102,9 @@ describe("AgriculNetSearch", () => {
     });
     expect(mocks.ai).not.toHaveBeenCalled();
 
+    mocks.voice.isRecording = false;
+    mocks.voice.status = "idle";
+    rerender(<AgriculNetSearch />);
     fireEvent.click(screen.getByRole("button", { name: "Search marketplace" }));
     await waitFor(() => {
       expect(mocks.ai).toHaveBeenCalledWith("verified coffee in Bamenda");

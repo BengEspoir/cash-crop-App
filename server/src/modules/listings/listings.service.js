@@ -82,7 +82,7 @@ const queryTokens = value => normalize(value)
   .split(/\s+/)
   .map(token => token.replace(/[^a-z0-9À-ÿ-]/gi, ''))
   .filter(token => token.length > 1)
-  .filter(token => !['find', 'show', 'me', 'with', 'from', 'the', 'and', 'available'].includes(token));
+  .filter(token => !['find', 'show', 'me', 'with', 'from', 'the', 'and', 'available', 'in', 'at', 'to', 'of', 'for'].includes(token));
 
 const getFarmerProfileForUser = async (userId) => {
   const { data, error } = await supabaseAdmin

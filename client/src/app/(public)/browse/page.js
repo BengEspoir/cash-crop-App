@@ -51,7 +51,10 @@ export default function BrowsePage() {
     if (searchParams.get("smart") === "1") {
       try {
         const stored = JSON.parse(window.sessionStorage.getItem(RESULT_KEY) || "null");
-        if (stored?.items) setSmartResult(stored);
+        if (stored?.items) {
+          setSmartResult(stored);
+          setCountry("all");
+        }
         window.sessionStorage.removeItem(RESULT_KEY);
       } catch {
         setSmartResult(null);
@@ -103,6 +106,7 @@ export default function BrowsePage() {
   ].filter(Boolean);
 
   const clearAll = () => {
+    setSmartResult(null);
     setVerifiedOnly(false);
     setExportReadyOnly(false);
     setRegion("");
@@ -138,7 +142,10 @@ export default function BrowsePage() {
           setQuery(value);
           setSmartResult(null);
         }}
-        onResults={setSmartResult}
+        onResults={result => {
+          setSmartResult(result);
+          setCountry("all");
+        }}
       />
 
       <div className="grid gap-7 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
