@@ -29,7 +29,7 @@ export function AuthLayout({ children }) {
           variant={isRegistration ? "registration" : "signin"}
         />
       </div>
-      <div className="flex min-h-[calc(100vh-210px)] items-center justify-center bg-white px-5 py-10 sm:px-10 lg:min-h-screen lg:px-16 lg:py-12">
+      <div className="flex min-h-[calc(100dvh-210px)] items-center justify-center bg-white px-5 py-10 sm:px-10 lg:min-h-screen lg:px-16 lg:py-12">
         <PageTransition className="w-full max-w-[520px]">
           {children}
         </PageTransition>

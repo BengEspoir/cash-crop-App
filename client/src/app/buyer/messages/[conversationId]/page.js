@@ -31,7 +31,7 @@ export default function BuyerConversationPage({ params }) {
   }
 
   return (
-    <BuyerPage className="h-[calc(100vh-112px)] min-h-[720px]">
+    <BuyerPage className="h-[calc(100dvh-9rem)] min-h-[34rem] sm:h-[calc(100dvh-7rem)] sm:min-h-[40rem]">
       <div className="grid h-full overflow-hidden rounded-2xl border border-ink-200 bg-white xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="border-r border-ink-200">
           <div className="flex h-24 items-center gap-3 border-b border-ink-100 px-6">

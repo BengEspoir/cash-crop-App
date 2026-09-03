@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { Mail } from "lucide-react";
+import { FaFacebookF, FaLinkedinIn } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 import { BrandLogo } from "../common/BrandLogo";
 import { AdminSupportLink } from "../common/AdminSupportLink";
 import { useI18n } from "../../i18n/I18nProvider";
@@ -105,7 +107,7 @@ export function Footer() {
               className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-gold-100"
               aria-label="LinkedIn"
             >
-              <span className="text-[11px] font-bold">in</span>
+              <FaLinkedinIn className="h-4 w-4" aria-hidden="true" />
             </a>
             <a
               href="https://twitter.com"
@@ -114,7 +116,7 @@ export function Footer() {
               className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-gold-100"
               aria-label="X"
             >
-              <span className="text-[11px] font-bold">X</span>
+              <FaXTwitter className="h-4 w-4" aria-hidden="true" />
             </a>
             <a
               href="https://facebook.com"
@@ -123,7 +125,7 @@ export function Footer() {
               className="focus-ring inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-gold-100"
               aria-label="Facebook"
             >
-              <span className="text-[11px] font-bold">f</span>
+              <FaFacebookF className="h-4 w-4" aria-hidden="true" />
             </a>
           </div>
         </div>

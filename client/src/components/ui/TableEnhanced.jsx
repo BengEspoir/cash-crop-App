@@ -11,8 +11,8 @@ import { Skeleton } from "./skeleton";
 
 export function TableEnhanced({ children, className }) {
   return (
-    <div className={cn("w-full overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-soft", className)}>
-      <table className="w-full text-left text-[13px]">{children}</table>
+    <div className={cn("w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-ink-200 bg-white shadow-soft", className)}>
+      <table className="w-full min-w-[640px] text-left text-[13px]">{children}</table>
     </div>
   );
 }
@@ -149,8 +149,8 @@ export function useTableSort(data, initialKey = null, initialDir = "asc") {
  */
 export function TableSkeleton({ columns = 4, rows = 5 }) {
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-soft">
-      <table className="w-full">
+    <div className="w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-ink-200 bg-white shadow-soft">
+      <table className="w-full min-w-[640px]">
         <thead className="border-b border-ink-200 bg-ink-50">
           <tr>
             {Array.from({ length: columns }).map((_, i) => (

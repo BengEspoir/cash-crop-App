@@ -15,8 +15,10 @@ import { signInSchema } from "../../../lib/validators";
 import { getAuthNextRoute } from "../../../lib/authRoutes";
 import useAuthStore from "../../../store/authStore";
 import { useI18n } from "../../../i18n/I18nProvider";
-import { Apple, ArrowRight, Globe2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { startOAuth } from "../../../lib/startOAuth";
+import { OAuthProviderIcon } from "../../../components/auth/OAuthProviderIcon";
+import { TurnstileWidget } from "../../../components/security/TurnstileWidget";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -24,6 +26,8 @@ export default function SignInPage() {
   const { t } = useI18n();
   const { login } = useAuthStore();
   const [submitError, setSubmitError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const submittingRef = useRef(false);
   const {
     register,
@@ -50,11 +54,17 @@ export default function SignInPage() {
     submittingRef.current = true;
     setSubmitError("");
     try {
+      if (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken) {
+        setSubmitError("Complete the bot-protection check to continue.");
+        return;
+      }
       const identifier = values.mode === "phone" ? values.phone : values.email;
-      const result = await login(identifier, values.password, values.mode);
+      const result = await login(identifier, values.password, values.mode, turnstileToken);
 
       if (!result.success) {
         setSubmitError(result.error);
+        setTurnstileToken("");
+        setTurnstileResetKey((value) => value + 1);
         return;
       }
 
@@ -142,6 +152,10 @@ export default function SignInPage() {
           <span className="text-[11px] text-ink-500">A verification code may be required after sign in.</span>
         </StaggerItem>
 
+        <StaggerItem>
+          <TurnstileWidget action="login" onTokenChange={setTurnstileToken} resetKey={turnstileResetKey} />
+        </StaggerItem>
+
         {submitError ? (
           <StaggerItem>
             <p role="alert" aria-live="polite" className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitError}</p>
@@ -149,7 +163,7 @@ export default function SignInPage() {
         ) : null}
 
         <StaggerItem>
-          <Button type="submit" className="h-12 w-full bg-[#1E5E27] text-[14px] hover:bg-[#174B1F]" disabled={!isValid || isSubmitting}>
+          <Button type="submit" className="h-12 w-full bg-[#1E5E27] text-[14px] hover:bg-[#174B1F]" disabled={!isValid || isSubmitting || (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken)}>
             {isSubmitting ? t("auth.signingIn") : <>{t("auth.signInCta")} <ArrowRight className="h-4 w-4" /></>}
           </Button>
         </StaggerItem>
@@ -162,10 +176,10 @@ export default function SignInPage() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <button type="button" onClick={() => startOAuth("google")} className="inline-flex h-12 items-center justify-center gap-3 rounded-[9px] border border-[#E5E7EB] bg-white text-[13px] font-semibold text-[#374151] hover:bg-[#F9FAFB]">
-          <Globe2 className="h-4 w-4 text-[#1E5E27]" /> Google
+          <OAuthProviderIcon provider="google" /> Google
         </button>
         <button type="button" onClick={() => startOAuth("apple")} className="inline-flex h-12 items-center justify-center gap-3 rounded-[9px] border border-[#E5E7EB] bg-white text-[13px] font-semibold text-[#374151] hover:bg-[#F9FAFB]">
-          <Apple className="h-4 w-4 text-black" /> Apple
+          <OAuthProviderIcon provider="apple" className="text-black" /> Apple
         </button>
       </div>
       <p className="mt-9 text-center text-[11px] leading-5 text-[#6B7280]">

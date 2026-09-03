@@ -73,8 +73,8 @@ export default function BuyerPaymentsPage() {
         {isLoading ? (
           <div className="p-6 text-[16px] text-ink-500">Loading payment records...</div>
         ) : payments.length ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
+          <div className="overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[680px] text-left">
               <thead className="bg-ink-50 text-[12px] font-bold uppercase tracking-[0.16em] text-ink-400">
                 <tr>
                   <th className="px-6 py-4">Date</th>

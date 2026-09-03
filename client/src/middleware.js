@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { resolveAuthUserRole, shouldRedirectSellerFromMarketplace } from "./lib/roleRouting";
+import {
+  getRoleHome,
+  resolveAuthUserRole,
+  shouldRedirectWorkspaceRoleFromMarketplace,
+} from "./lib/roleRouting";
 
 const SELLER_INTENT_COOKIE = "agriculnet_seller_intent";
 
@@ -64,18 +68,14 @@ export async function middleware(request) {
 
     if (authData?.user) {
       const role = resolveAuthUserRole(authData.user);
-      if (shouldRedirectSellerFromMarketplace(pathname, role)) {
-        return NextResponse.redirect(new URL("/farmer/dashboard", request.url));
+      if (shouldRedirectWorkspaceRoleFromMarketplace(pathname, role)) {
+        return NextResponse.redirect(new URL(getRoleHome(role), request.url));
       }
 
       if (protectedEntry) {
         const allowedRoles = protectedEntry[1];
         if (!role || !allowedRoles.includes(role)) {
-          const roleHome = role === "admin" || role === "super_admin"
-            ? "/admin/dashboard"
-            : role === "farmer" || role === "reseller"
-              ? "/farmer/dashboard"
-              : "/buyer/dashboard";
+          const roleHome = getRoleHome(role);
           return NextResponse.redirect(new URL(roleHome, request.url));
         }
       }

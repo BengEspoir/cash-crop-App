@@ -12,11 +12,14 @@ import { Label } from "../../../components/ui/label";
 import { DevHintsPanel } from "../../../components/auth/DevHintsPanel";
 import { forgotPasswordSchema } from "../../../lib/validators";
 import useAuthStore from "../../../store/authStore";
+import { TurnstileWidget } from "../../../components/security/TurnstileWidget";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { forgotPassword, onboarding } = useAuthStore();
   const [feedback, setFeedback] = useState({ error: "", success: "" });
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const {
     register,
     handleSubmit,
@@ -29,11 +32,17 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (values) => {
     setFeedback({ error: "", success: "" });
+    if (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken) {
+      setFeedback({ success: "", error: "Complete the bot-protection check to continue." });
+      return;
+    }
 
-    const result = await forgotPassword({ identifier: values.email, method: "email" });
+    const result = await forgotPassword({ identifier: values.email, method: "email", turnstileToken });
 
     if (!result.success) {
       setFeedback({ success: "", error: result.error });
+      setTurnstileToken("");
+      setTurnstileResetKey((value) => value + 1);
       return;
     }
 
@@ -58,7 +67,9 @@ export default function ForgotPasswordPage() {
 
         <DevHintsPanel hints={onboarding?.devHints} />
 
-        <Button type="submit" className="w-full" disabled={!isValid || isSubmitting}>
+        <TurnstileWidget action="password_reset" onTokenChange={setTurnstileToken} resetKey={turnstileResetKey} />
+
+        <Button type="submit" className="w-full" disabled={!isValid || isSubmitting || (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken)}>
           {isSubmitting ? "Sending..." : "Send Reset Option"}
         </Button>
 

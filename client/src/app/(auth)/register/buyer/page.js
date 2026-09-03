@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
-import { Apple, ArrowLeft, ArrowRight, Globe2, Home } from "lucide-react";
+import { ArrowLeft, ArrowRight, Globe2, Home } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { Input } from "../../../../components/ui/input";
 import { Label } from "../../../../components/ui/label";
@@ -17,7 +17,9 @@ import { registerBuyerUnifiedSchema } from "../../../../lib/validators";
 import { getInternationalCountries, getCountryByCode } from "../../../../lib/countries";
 import { getAuthNextRoute } from "../../../../lib/authRoutes";
 import { startOAuth } from "../../../../lib/startOAuth";
+import { OAuthProviderIcon } from "../../../../components/auth/OAuthProviderIcon";
 import useAuthStore from "../../../../store/authStore";
+import { TurnstileWidget } from "../../../../components/security/TurnstileWidget";
 
 const fieldClassName = "h-12 border-transparent bg-[#F6F7F6] focus:border-[#1E5E27] focus:ring-2 focus:ring-[#1E5E27]/10";
 
@@ -50,6 +52,8 @@ export default function RegisterBuyerPage() {
   const [stage, setStage] = useState("selection");
   const [submitError, setSubmitError] = useState("");
   const [selectedCountryCode, setSelectedCountryCode] = useState("CM");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   const {
     register,
@@ -106,9 +110,15 @@ export default function RegisterBuyerPage() {
 
   const submit = async (values) => {
     setSubmitError("");
-    const result = await registerBuyer(values);
+    if (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken) {
+      setSubmitError("Complete the bot-protection check to continue.");
+      return;
+    }
+    const result = await registerBuyer({ ...values, turnstileToken });
     if (!result.success) {
       setSubmitError(result.details?.[0]?.message || result.error);
+      setTurnstileToken("");
+      setTurnstileResetKey((value) => value + 1);
       return;
     }
 
@@ -195,10 +205,10 @@ export default function RegisterBuyerPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => startOAuth("google")} className="inline-flex h-11 items-center justify-center gap-2 rounded-[9px] border border-[#E5E7EB] text-[12px] font-semibold text-[#374151] hover:bg-[#F9FAFB]">
-                <Globe2 className="h-4 w-4 text-[#1E5E27]" /> Google
+                <OAuthProviderIcon provider="google" /> Google
               </button>
               <button type="button" onClick={() => startOAuth("apple")} className="inline-flex h-11 items-center justify-center gap-2 rounded-[9px] border border-[#E5E7EB] text-[12px] font-semibold text-[#374151] hover:bg-[#F9FAFB]">
-                <Apple className="h-4 w-4 text-black" /> Apple
+                <OAuthProviderIcon provider="apple" className="text-black" /> Apple
               </button>
             </div>
           </>
@@ -304,7 +314,8 @@ export default function RegisterBuyerPage() {
 
         {submitError ? <p role="alert" className="rounded-[10px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitError}</p> : null}
 
-        <Button type="submit" disabled={!isValid || isSubmitting} className="h-12 w-full bg-[#1E5E27] hover:bg-[#174B1F]">
+        <TurnstileWidget action="register" onTokenChange={setTurnstileToken} resetKey={turnstileResetKey} />
+        <Button type="submit" disabled={!isValid || isSubmitting || (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken)} className="h-12 w-full bg-[#1E5E27] hover:bg-[#174B1F]">
           {isSubmitting ? "Creating account..." : <>Create Buyer Account <ArrowRight className="h-4 w-4" /></>}
         </Button>
       </form>

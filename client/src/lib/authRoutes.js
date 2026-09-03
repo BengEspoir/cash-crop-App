@@ -1,19 +1,7 @@
+import { getRoleHome, shouldRedirectWorkspaceRoleFromMarketplace } from "@/lib/roleRouting";
+
 export function getRoleDashboard(user) {
-  switch (user?.role) {
-    case "farmer":
-    case "reseller":
-      return "/farmer/dashboard";
-    case "local_buyer":
-    case "international_buyer":
-      return "/buyer/dashboard";
-    case "admin":
-    case "super_admin":
-      return "/admin/dashboard";
-    case "field_agent":
-      return "/agent/dashboard";
-    default:
-      return "/";
-  }
+  return getRoleHome(user?.role);
 }
 
 export function getSafeReturnPath(value) {
@@ -54,7 +42,7 @@ export function getAuthNextRoute(nextStep, user, returnTo) {
     case "pending_review":
       return "/pending";
     case "dashboard":
-      if (safeReturnTo) return safeReturnTo;
+      if (safeReturnTo && !shouldRedirectWorkspaceRoleFromMarketplace(safeReturnTo, user?.role)) return safeReturnTo;
       if (user?.role === "local_buyer" || user?.role === "international_buyer") {
         return "/browse";
       }

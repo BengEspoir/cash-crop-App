@@ -25,6 +25,26 @@ const MARKETPLACE_PATHS = [
   "/sell",
 ];
 
+const WORKSPACE_ROLES = new Set(["super_admin", "admin", "farmer", "reseller"]);
+
+export function getRoleHome(role) {
+  switch (role) {
+    case "farmer":
+    case "reseller":
+      return "/farmer/dashboard";
+    case "local_buyer":
+    case "international_buyer":
+      return "/buyer/dashboard";
+    case "admin":
+    case "super_admin":
+      return "/admin/dashboard";
+    case "field_agent":
+      return "/agent/dashboard";
+    default:
+      return "/";
+  }
+}
+
 export function resolveAuthUserRole(authUser) {
   const trustedRole = authUser?.app_metadata?.user_role ?? authUser?.app_metadata?.role;
   if (APP_ROLES.has(trustedRole)) return trustedRole;
@@ -46,3 +66,6 @@ export function shouldRedirectSellerFromMarketplace(pathname, role) {
   return isSellerRole(role) && isMarketplacePath(pathname);
 }
 
+export function shouldRedirectWorkspaceRoleFromMarketplace(pathname, role) {
+  return WORKSPACE_ROLES.has(role) && isMarketplacePath(pathname);
+}

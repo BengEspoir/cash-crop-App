@@ -246,8 +246,8 @@ export function AdminStatusPill({ status, label }) {
 
 export function AdminDataTable({ columns = [], rows = [], emptyTitle = "No live records yet", emptyDescription, rowKey = "id" }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse">
+    <div className="overflow-x-auto overscroll-x-contain">
+      <table className="min-w-[760px] border-collapse">
         <thead>
           <tr className="border-b border-ink-100 bg-ink-50/60">
             {columns.map((column) => (

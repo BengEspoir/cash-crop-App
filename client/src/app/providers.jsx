@@ -7,6 +7,7 @@ import { createQueryClient } from "@/lib/queryClient";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { AgriculNetAIAssistant } from "@/components/assistant/AgriculNetAIAssistant";
 import { SessionLifecycle } from "@/components/auth/SessionLifecycle";
+import { MaintenanceGate } from "@/components/system/MaintenanceGate";
 
 export function Providers({ children }) {
   const [queryClient] = useState(() => createQueryClient());
@@ -14,6 +15,7 @@ export function Providers({ children }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionLifecycle />
+      <MaintenanceGate />
       <I18nProvider>
         {children}
         <AgriculNetAIAssistant />

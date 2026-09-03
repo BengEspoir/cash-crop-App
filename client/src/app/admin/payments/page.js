@@ -18,11 +18,13 @@ import { useReleasePayment } from "@/hooks/usePayments";
 
 export default function AdminPaymentsPage() {
   const [isExporting, setIsExporting] = useState(false);
+  const [releaseTargetId, setReleaseTargetId] = useState(null);
   const releasePayment = useReleasePayment();
   const filterState = useDashboardFilters("payments");
   const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
   const payments = data?.payments || [];
-  const pending = payments.filter((payment) => String(payment.status || "").includes("pending")).length;
+  const pending = payments.filter((payment) => payment.status === "pending").length;
+  const releasablePayments = payments.filter((payment) => payment.releaseEligible);
 
   return (
     <section className="space-y-8">
@@ -86,10 +88,10 @@ export default function AdminPaymentsPage() {
           />
         </AdminCard>
 
-        <AdminCard title="Pending Payouts" action={<Button variant="secondary" size="sm" disabled={!pending || releasePayment.isPending}>Release ready payouts</Button>}>
+        <AdminCard title="Ready Payouts" action={<span className="text-[13px] font-semibold text-ink-500">{releasablePayments.length} eligible</span>}>
           <div className="divide-y divide-ink-100">
-            {payments.filter((payment) => String(payment.status || "").includes("pending")).length ? (
-              payments.filter((payment) => String(payment.status || "").includes("pending")).slice(0, 6).map((payment) => (
+            {releasablePayments.length ? (
+              releasablePayments.slice(0, 6).map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between gap-4 px-6 py-5">
                   <div>
                     <p className="font-bold text-ink-900">{payment.party}</p>
@@ -98,13 +100,17 @@ export default function AdminPaymentsPage() {
                   <Button
                     variant="accent-gold"
                     size="sm"
-                    isLoading={releasePayment.isPending}
+                    isLoading={releasePayment.isPending && releaseTargetId === payment.id}
+                    disabled={releasePayment.isPending}
                     onClick={async () => {
+                      setReleaseTargetId(payment.id);
                       try {
                         await releasePayment.mutateAsync(payment.id);
                         toast.success("Payment released.");
                       } catch (error) {
                         toast.error(error.response?.data?.message || "Payment could not be released.");
+                      } finally {
+                        setReleaseTargetId(null);
                       }
                     }}
                   >
@@ -113,7 +119,7 @@ export default function AdminPaymentsPage() {
                 </div>
               ))
             ) : (
-              <div className="p-6 text-[14px] text-ink-500">No pending payouts in live payment records.</div>
+              <div className="p-6 text-[14px] text-ink-500">No delivered orders currently have escrow ready for release.</div>
             )}
           </div>
         </AdminCard>

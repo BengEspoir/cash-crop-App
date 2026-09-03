@@ -126,4 +126,13 @@ describe("AgriculNetSearch", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Choose a JPG, PNG, or WebP image.");
     expect(mocks.image).not.toHaveBeenCalled();
   });
+
+  it("opens the dedicated image-search mode without invoking the AI assistant", () => {
+    render(<AgriculNetSearch initialMode="image" />);
+
+    expect(screen.getByRole("tab", { name: "Image" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: /Take or upload a crop photo/ })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mocks.ai).not.toHaveBeenCalled();
+  });
 });

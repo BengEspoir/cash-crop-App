@@ -1,7 +1,8 @@
 "use client";
 
-import { Apple, ArrowRight, Globe2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { startOAuth } from "@/lib/startOAuth";
+import { OAuthProviderIcon } from "./OAuthProviderIcon";
 
 const buttonClassName = "group inline-flex h-11 w-full items-center justify-center gap-3 rounded-[12px] border border-ink-200 bg-white px-4 text-[13px] font-semibold text-ink-800 shadow-soft transition-all duration-200 hover:-translate-y-[1px] hover:border-green-200 hover:shadow-lift";
 
@@ -15,17 +16,17 @@ export function RegistrationOAuthOptions() {
       </div>
       <div className="mt-4 space-y-2">
         <button type="button" onClick={() => startOAuth("google")} className={buttonClassName}>
-          <Globe2 className="h-4 w-4 text-green-800" aria-hidden="true" />
+          <OAuthProviderIcon provider="google" />
           Continue with Google
           <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" aria-hidden="true" />
         </button>
         <button type="button" onClick={() => startOAuth("apple")} className={buttonClassName}>
-          <Apple className="h-4 w-4" aria-hidden="true" />
+          <OAuthProviderIcon provider="apple" className="text-black" />
           Continue with Apple
           <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" aria-hidden="true" />
         </button>
         <button type="button" onClick={() => startOAuth("facebook")} className={buttonClassName}>
-          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">f</span>
+          <OAuthProviderIcon provider="facebook" className="text-[#1877F2]" />
           Continue with Facebook
           <ArrowRight className="h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" aria-hidden="true" />
         </button>

@@ -85,6 +85,7 @@ export const dictionaries = {
       helpCenter: "Help Center",
       sellOn: "Sell on AgriculNet",
       mobileApp: "Mobile App",
+      menuLabel: "Marketplace menu",
       popover: {
         browseHint: "Discover live crop supply with verification and export flags.",
         browseLinkMarket: "Marketplace grid",
@@ -368,6 +369,7 @@ export const dictionaries = {
       helpCenter: "Centre d'aide",
       sellOn: "Vendre sur AgriculNet",
       mobileApp: "Application mobile",
+      menuLabel: "Menu de la marketplace",
       popover: {
         browseHint: "Découvrez l'offre en direct avec statut de vérification et export.",
         browseLinkMarket: "Grille du marché",
@@ -651,6 +653,7 @@ export const dictionaries = {
       helpCenter: "Centro de ayuda",
       sellOn: "Vender en AgriculNet",
       mobileApp: "Aplicación móvil",
+      menuLabel: "Menu del marketplace",
       popover: {
         browseHint: "Descubra oferta activa con verificación y señales de exportación.",
         browseLinkMarket: "Cuadrícula del mercado",

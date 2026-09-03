@@ -15,6 +15,7 @@ import { PasswordStrength } from "../../../../components/auth/PasswordStrength";
 import { regions } from "../../../../constants/regions";
 import useAuthStore from "../../../../store/authStore";
 import toast from "react-hot-toast";
+import { TurnstileWidget } from "../../../../components/security/TurnstileWidget";
 
 const cameroonPhone = /^6[\d\s]{8,11}$/;
 const passwordSchema = z.string()
@@ -44,6 +45,8 @@ export default function RegisterResellerPage() {
   const router = useRouter();
   const { registerReseller } = useAuthStore();
   const [submitState, setSubmitState] = useState({ error: "" });
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const {
     register,
     handleSubmit,
@@ -72,10 +75,16 @@ export default function RegisterResellerPage() {
 
   const submit = async (values) => {
     setSubmitState({ error: "" });
-    const result = await registerReseller(values);
+    if (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken) {
+      setSubmitState({ error: "Complete the bot-protection check to continue." });
+      return;
+    }
+    const result = await registerReseller({ ...values, turnstileToken });
     if (!result.success) {
       const detailMessage = result.details?.[0]?.message;
       setSubmitState({ error: detailMessage || result.error });
+      setTurnstileToken("");
+      setTurnstileResetKey((value) => value + 1);
       return;
     }
 
@@ -175,11 +184,13 @@ export default function RegisterResellerPage() {
         </label>
         {errors.acceptedTerms ? <p className="-mt-3 text-[12px] text-[#922B21]">{errors.acceptedTerms.message}</p> : null}
 
+        <TurnstileWidget action="register" onTokenChange={setTurnstileToken} resetKey={turnstileResetKey} />
+
         {submitState.error ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitState.error}</p> : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-[13px] font-medium text-[#6B7280]">Farm details are not required for reseller onboarding.</span>
-          <Button type="submit" className="bg-[#1E5E27] hover:bg-[#174B20]" disabled={!isValid || isSubmitting}>
+          <Button type="submit" className="bg-[#1E5E27] hover:bg-[#174B20]" disabled={!isValid || isSubmitting || (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken)}>
             {isSubmitting ? "Processing..." : "Create Reseller Account"}
           </Button>
         </div>

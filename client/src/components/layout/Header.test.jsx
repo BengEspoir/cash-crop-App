@@ -155,4 +155,15 @@ describe("Header role-aware destinations", () => {
     );
     expect(within(accountMenu).queryByRole("link", { name: "Messages" })).not.toBeInTheDocument();
   });
+
+  test("keeps standard and image marketplace search separate from explicit AI actions", () => {
+    renderHeader();
+
+    const search = screen.getByRole("search");
+    expect(search).toHaveAttribute("action", "/browse");
+    expect(search).toHaveAttribute("method", "get");
+    expect(within(search).getByRole("button", { name: "Search" })).toHaveAttribute("type", "submit");
+    expect(within(search).getByRole("link", { name: "Search using a crop image" })).toHaveAttribute("href", "/browse?mode=image");
+    expect(within(search).getByRole("button", { name: "Ask AgriculNet AI" })).toHaveAttribute("type", "button");
+  });
 });

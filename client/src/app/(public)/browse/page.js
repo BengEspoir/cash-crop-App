@@ -138,6 +138,7 @@ export default function BrowsePage() {
 
       <AgriculNetSearch
         initialQuery={query}
+        initialMode={searchParams.get("mode") || "standard"}
         onStandardSearch={value => {
           setQuery(value);
           setSmartResult(null);

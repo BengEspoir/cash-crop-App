@@ -142,7 +142,7 @@ export function ProfilePhotoEditor({
                 className="block w-full rounded-lg border border-ink-200 p-3 text-[14px]"
               />
 
-              <div className="mx-auto flex h-72 w-72 items-center justify-center overflow-hidden rounded-full border-8 border-green-50 bg-ink-100">
+              <div className="mx-auto flex aspect-square h-auto w-full max-w-72 items-center justify-center overflow-hidden rounded-full border-8 border-green-50 bg-ink-100">
                 {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

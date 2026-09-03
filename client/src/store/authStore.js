@@ -175,12 +175,14 @@ const useAuthStore = create(
         return get().fetchMe();
       },
 
-      login: async (identifier, password, mode = "email") => {
+      login: async (identifier, password, mode = "email", turnstileToken = "") => {
         set({ isLoading: true });
         try {
           if (mode === "phone") {
             const phone = normalizeCameroonPhone(identifier);
-            const response = await api.post("/auth/login/phone", { phone, password });
+            const loginPayload = { phone, password };
+            if (turnstileToken) loginPayload.turnstileToken = turnstileToken;
+            const response = await api.post("/auth/login/phone", loginPayload);
             const authData = response.data.data;
             const { error: sessionError } = await supabase.auth.setSession({
               access_token: authData.session.accessToken,
@@ -189,7 +191,11 @@ const useAuthStore = create(
             if (sessionError) throw sessionError;
           } else {
             const email = String(identifier).trim().toLowerCase();
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            const { error } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+              ...(turnstileToken ? { options: { captchaToken: turnstileToken } } : {}),
+            });
             if (error) throw error;
           }
 
@@ -228,6 +234,7 @@ const useAuthStore = create(
             email,
             password: values.password,
             options: {
+              ...(values.turnstileToken ? { captchaToken: values.turnstileToken } : {}),
               emailRedirectTo: `${window.location.origin}/oauth/callback?flow=email-verification`,
               data: {
                 requested_role: role,
@@ -332,12 +339,13 @@ const useAuthStore = create(
         }
       },
 
-      forgotPassword: async ({ identifier }) => {
+      forgotPassword: async ({ identifier, turnstileToken }) => {
         try {
           const email = String(identifier || "").trim().toLowerCase();
           if (!email.includes("@")) throw new Error("Password recovery requires your verified email address.");
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/reset-password`,
+            ...(turnstileToken ? { captchaToken: turnstileToken } : {}),
           });
           if (error) throw error;
           get().setOnboarding({ identifier: email, recoveryMethod: "email", nextStep: "reset_password" });

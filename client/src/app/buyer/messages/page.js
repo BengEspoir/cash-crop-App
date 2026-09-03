@@ -50,7 +50,7 @@ export default function BuyerMessagesPage() {
   };
 
   return (
-    <BuyerPage className="h-[calc(100vh-118px)] min-h-[760px]">
+    <BuyerPage className="h-[calc(100dvh-9rem)] min-h-[34rem] sm:h-[calc(100dvh-7rem)] sm:min-h-[40rem]">
       <div className="grid h-full overflow-hidden rounded-[28px] border border-ink-200 bg-white xl:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-r border-ink-200">
           <div className="border-b border-ink-100 px-6 py-7">

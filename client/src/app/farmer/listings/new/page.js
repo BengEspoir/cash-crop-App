@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ArrowLeft, ArrowRight, Check, CloudOff, ImagePlus, MapPin, PackageCheck, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, Banana, Bean, Check, CloudOff, Coffee, ImagePlus, Leaf, MapPin, PackageCheck, Sprout, Wheat } from "lucide-react";
 import { AudioAssistButton } from "@/components/common/AudioAssistButton";
 import { ImageUploader } from "@/components/media/ImageUploader";
 import {
@@ -19,12 +19,12 @@ import { cn } from "@/lib/utils";
 const STORAGE_KEY = "agriculnet.active-listing-draft.v1";
 
 const cropOptions = [
-  { name: "Cocoa", icon: "🍫", note: "Beans and pods" },
-  { name: "Coffee", icon: "☕", note: "Arabica or Robusta" },
-  { name: "Maize", icon: "🌽", note: "Dry or fresh grain" },
-  { name: "Plantain", icon: "🍌", note: "Bunches or bulk" },
-  { name: "Cassava", icon: "🌱", note: "Roots or processed" },
-  { name: "Ginger", icon: "🫚", note: "Fresh or dried" },
+  { name: "Cocoa", icon: Bean, note: "Beans and pods" },
+  { name: "Coffee", icon: Coffee, note: "Arabica or Robusta" },
+  { name: "Maize", icon: Wheat, note: "Dry or fresh grain" },
+  { name: "Plantain", icon: Banana, note: "Bunches or bulk" },
+  { name: "Cassava", icon: Sprout, note: "Roots or processed" },
+  { name: "Ginger", icon: Leaf, note: "Fresh or dried" },
 ];
 
 const quantityPresets = [
@@ -211,6 +211,7 @@ export default function FarmerNewListingPage() {
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {cropOptions.map((crop) => {
                 const selected = form.crop === crop.name;
+                const Icon = crop.icon;
                 return (
                   <button
                     key={crop.name}
@@ -222,7 +223,9 @@ export default function FarmerNewListingPage() {
                       selected ? "border-green-700 bg-green-50 ring-2 ring-green-700/15" : "border-ink-150 bg-white hover:border-green-300",
                     )}
                   >
-                    <span className="text-[32px]" aria-hidden="true">{crop.icon}</span>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 text-green-800" aria-hidden="true">
+                      <Icon className="h-6 w-6" />
+                    </span>
                     <span className="mt-3 block text-[16px] font-bold text-ink-900">{crop.name}</span>
                     <span className="mt-1 block text-[12px] text-ink-500">{crop.note}</span>
                   </button>

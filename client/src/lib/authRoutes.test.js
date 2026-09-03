@@ -23,6 +23,11 @@ describe("auth return routes", () => {
     expect(getAuthNextRoute("dashboard", user, "/crops/coffee-1")).toBe("/crops/coffee-1");
   });
 
+  it("does not let seller or admin return paths override their workspace destination", () => {
+    expect(getAuthNextRoute("dashboard", { role: "farmer", email_verified: true }, "/browse")).toBe("/farmer/dashboard");
+    expect(getAuthNextRoute("dashboard", { role: "admin", email_verified: true }, "/crops/cocoa-1")).toBe("/admin/dashboard");
+  });
+
   it("preserves a safe return path for action-triggered phone verification", () => {
     expect(getPhoneVerificationRoute("/buyer/checkout?listing=coffee-1")).toBe(
       "/verify-phone?reason=marketplace-action&next=%2Fbuyer%2Fcheckout%3Flisting%3Dcoffee-1",

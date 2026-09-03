@@ -10,6 +10,7 @@ import { EditableProfilePanel } from "@/components/account/EditableProfilePanel"
 import { ProfilePhotoEditor } from "@/components/account/ProfilePhotoEditor";
 import { Input } from "@/components/ui/input";
 import useAuth from "@/hooks/useAuth";
+import { SystemMaintenancePanel } from "@/components/admin/SystemMaintenancePanel";
 
 export default function AdminSettingsPage() {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export default function AdminSettingsPage() {
       <AdminPageHeader
         title="System Settings"
         eyebrow="Admin > System > Settings"
-        description="Operational controls are presented as UI controls only in this pass. No live configuration writes are performed."
+        description="Manage administrator profile security, maintenance controls, and protected database operations."
         actionLabel={null}
       />
 
@@ -93,6 +94,8 @@ export default function AdminSettingsPage() {
           </div>
         </AdminCard>
       </div>
+
+      <SystemMaintenancePanel />
 
       <EditableProfilePanel title="Edit admin profile, photo, and credentials" />
     </section>

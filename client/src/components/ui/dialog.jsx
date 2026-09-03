@@ -33,7 +33,7 @@ export const DialogContent = React.forwardRef(function DialogContent(
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-[18px] border border-ink-200 bg-white p-6 shadow-lift outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 duration-move ease-enterprise",
+          "fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[720px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[18px] border border-ink-200 bg-white p-4 shadow-lift outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 duration-move ease-enterprise sm:p-6",
           className,
         )}
         {...props}
@@ -41,7 +41,7 @@ export const DialogContent = React.forwardRef(function DialogContent(
         {children}
         {showClose ? (
           <DialogClose
-            className="focus-ring absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-[10px] text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800"
+            className="focus-ring absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-[10px] text-ink-500 transition-colors hover:bg-ink-100 hover:text-ink-800 sm:right-4 sm:top-4"
             aria-label="Close"
           >
             <X className="h-4 w-4" />

@@ -17,6 +17,7 @@ import { registerFarmerSchemas, registerFarmerUnifiedSchema } from "../../../../
 import { regions } from "../../../../constants/regions";
 import useAuthStore from "../../../../store/authStore";
 import toast from "react-hot-toast";
+import { TurnstileWidget } from "../../../../components/security/TurnstileWidget";
 
 const steps = ["Personal", "Farm Details", "Payout Setup"];
 
@@ -25,6 +26,8 @@ export default function RegisterFarmerPage() {
   const { registerFarmer } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitState, setSubmitState] = useState({ error: "" });
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   // Use unified schema to prevent data loss between steps
   const {
     register,
@@ -112,10 +115,16 @@ export default function RegisterFarmerPage() {
       }
     }
 
-    const result = await registerFarmer(values);
+    if (process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken) {
+      setSubmitState({ error: "Complete the bot-protection check to continue." });
+      return;
+    }
+    const result = await registerFarmer({ ...values, turnstileToken });
     if (!result.success) {
       const detailMessage = result.details?.[0]?.message;
       setSubmitState({ error: detailMessage || result.error });
+      setTurnstileToken("");
+      setTurnstileResetKey((value) => value + 1);
       return;
     }
 
@@ -276,6 +285,10 @@ export default function RegisterFarmerPage() {
           </div>
         ) : null}
 
+        {currentStep === steps.length - 1 ? (
+          <TurnstileWidget action="register" onTokenChange={setTurnstileToken} resetKey={turnstileResetKey} />
+        ) : null}
+
         {submitState.error ? <p className="rounded-[12px] bg-[#FDECEA] px-4 py-3 text-[12px] text-[#922B21]">{submitState.error}</p> : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -287,7 +300,7 @@ export default function RegisterFarmerPage() {
             ) : null}
             <span className="font-medium text-[#6B7280]">Email verification starts after account creation.</span>
           </div>
-          <Button type="submit" className="bg-[#1E5E27] hover:bg-[#174B20]" disabled={!isValid || isSubmitting}>
+          <Button type="submit" className="bg-[#1E5E27] hover:bg-[#174B20]" disabled={!isValid || isSubmitting || (currentStep === steps.length - 1 && process.env.NEXT_PUBLIC_TURNSTILE_ENABLED === "true" && !turnstileToken)}>
             {isSubmitting ? "Processing..." : currentStep === steps.length - 1 ? "Create Farmer Account" : "Continue"}
           </Button>
         </div>

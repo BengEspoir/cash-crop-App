@@ -24,6 +24,19 @@ api.interceptors.response.use(
     const errorCode = error.response?.data?.error?.code;
 
     if (
+      error.response?.status === 503 &&
+      errorCode === 'SYSTEM_MAINTENANCE' &&
+      typeof window !== 'undefined'
+    ) {
+      window.dispatchEvent(new CustomEvent('agriculnet:maintenance', {
+        detail: {
+          message: error.response?.data?.message,
+          startedAt: error.response?.data?.error?.details?.startedAt
+        }
+      }));
+    }
+
+    if (
       error.response?.status === 403 &&
       errorCode === 'PHONE_NOT_VERIFIED' &&
       !original?.skipPhoneVerificationRedirect &&

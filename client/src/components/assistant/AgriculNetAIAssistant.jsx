@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, RotateCcw, Send, ShieldCheck, Sparkles, X } from "lucide-react";
+import { LoaderCircle, MessageCircle, RotateCcw, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAgriculNetAIChat } from "@/hooks/useAgriculNetAIChat";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownMessage } from "./MarkdownMessage";
 
 export function AgriculNetAIAssistant() {
   const { t } = useI18n();
@@ -94,8 +95,8 @@ export function AgriculNetAIAssistant() {
           aria-labelledby="agriculnet-ai-title"
           aria-describedby="agriculnet-ai-description"
           className={cn(
-            "fixed inset-x-3 bottom-36 z-[70] flex h-[min(38rem,calc(100dvh-10rem))] flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-[0_24px_70px_rgba(11,18,32,0.24)]",
-            "animate-fade-rise motion-reduce:animate-none sm:inset-x-auto sm:bottom-24 sm:right-6 sm:h-[min(38rem,calc(100dvh-7rem))] sm:w-[24rem]",
+            "fixed inset-x-2 bottom-24 z-[70] flex h-[calc(100dvh-7rem)] min-w-0 flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-[0_24px_70px_rgba(11,18,32,0.24)]",
+            "animate-fade-rise motion-reduce:animate-none sm:inset-x-auto sm:right-6 sm:h-[min(42rem,calc(100dvh-7rem))] sm:w-[28rem] lg:w-[34rem]",
           )}
         >
           <header className="flex shrink-0 items-center gap-3 bg-green-900 px-4 py-3.5 text-white">
@@ -113,7 +114,7 @@ export function AgriculNetAIAssistant() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 shrink-0 px-0 text-green-100 hover:bg-white/10 hover:text-white motion-reduce:transition-none"
+              className="h-11 w-11 shrink-0 px-0 text-green-100 hover:bg-white/10 hover:text-white motion-reduce:transition-none"
               onClick={resetConversation}
               aria-label={t("assistant.reset")}
               title={t("assistant.reset")}
@@ -123,7 +124,7 @@ export function AgriculNetAIAssistant() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 w-9 shrink-0 px-0 text-green-100 hover:bg-white/10 hover:text-white motion-reduce:transition-none"
+              className="h-11 w-11 shrink-0 px-0 text-green-100 hover:bg-white/10 hover:text-white motion-reduce:transition-none"
               onClick={closeAssistant}
               aria-label={t("assistant.close")}
             >
@@ -132,7 +133,7 @@ export function AgriculNetAIAssistant() {
           </header>
 
           <div
-            className="flex-1 space-y-4 overflow-y-auto bg-ink-50 px-4 py-4"
+            className="min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-ink-50 px-3 py-4 sm:px-4"
             role="log"
             aria-live="polite"
             aria-relevant="additions text"
@@ -149,16 +150,20 @@ export function AgriculNetAIAssistant() {
                 >
                   <div
                     className={cn(
-                      "max-w-[86%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-soft",
+                      "min-w-0 rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed shadow-soft",
                       isUser
-                        ? "rounded-br-md bg-green-800 text-white"
-                        : "rounded-bl-md border border-ink-200 bg-white text-ink-800",
+                        ? "max-w-[86%] rounded-br-md bg-green-800 text-white"
+                        : "max-w-[94%] rounded-bl-md border border-ink-200 bg-white text-ink-800 sm:max-w-[90%]",
                     )}
                   >
                     <span className="sr-only">
                       {isUser ? t("assistant.you") : t("assistant.title")}: {" "}
                     </span>
-                    <p className="whitespace-pre-wrap break-words">{content}</p>
+                    {isUser ? (
+                      <p className="whitespace-pre-wrap break-words">{content}</p>
+                    ) : (
+                      <MarkdownMessage content={content} />
+                    )}
                   </div>
                 </div>
               );
@@ -166,16 +171,10 @@ export function AgriculNetAIAssistant() {
 
             {isLoading && (
               <div className="flex justify-start" aria-label={t("assistant.typing")}>
-                <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-ink-200 bg-white px-4 py-3 shadow-soft">
-                  {[0, 1, 2].map((dot) => (
-                    <span
-                      key={dot}
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-700 motion-reduce:animate-none"
-                      style={{ animationDelay: `${dot * 120}ms` }}
-                      aria-hidden="true"
-                    />
-                  ))}
+                <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-ink-200 bg-white px-4 py-3 text-xs text-ink-600 shadow-soft">
+                  <LoaderCircle className="h-4 w-4 animate-spin text-green-700 motion-reduce:animate-none" aria-hidden="true" />
                   <span className="sr-only">{t("assistant.typing")}</span>
+                  <span aria-hidden="true">{t("assistant.typing")}</span>
                 </div>
               </div>
             )}
@@ -191,7 +190,7 @@ export function AgriculNetAIAssistant() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form className="shrink-0 border-t border-ink-200 bg-white p-3" onSubmit={handleSubmit}>
+          <form className="shrink-0 border-t border-ink-200 bg-white p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]" onSubmit={handleSubmit}>
             <div className="flex items-end gap-2">
               <Textarea
                 ref={inputRef}
@@ -227,7 +226,7 @@ export function AgriculNetAIAssistant() {
         ref={launcherRef}
         type="button"
         className={cn(
-          "fixed bottom-20 right-5 z-[71] flex h-14 w-14 items-center justify-center rounded-full bg-green-800 text-white shadow-[0_12px_32px_rgba(26,107,60,0.35)]",
+          "fixed bottom-4 right-5 z-[71] flex h-14 w-14 items-center justify-center rounded-full bg-green-800 text-white shadow-[0_12px_32px_rgba(26,107,60,0.35)]",
           "transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-700 hover:shadow-glow focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-800/25 focus-visible:ring-offset-2 active:scale-95",
           "motion-reduce:transform-none motion-reduce:transition-none sm:bottom-6 sm:right-6",
         )}

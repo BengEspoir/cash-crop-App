@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   isMarketplacePath,
+  getRoleHome,
   resolveAuthUserRole,
   shouldRedirectSellerFromMarketplace,
+  shouldRedirectWorkspaceRoleFromMarketplace,
 } from "@/lib/roleRouting";
 
 describe("role routing", () => {
@@ -23,10 +25,17 @@ describe("role routing", () => {
     expect(shouldRedirectSellerFromMarketplace("/farmer/listings", "farmer")).toBe(false);
   });
 
+  it("keeps administrators in the admin workspace while buyers retain marketplace access", () => {
+    expect(shouldRedirectWorkspaceRoleFromMarketplace("/browse", "admin")).toBe(true);
+    expect(shouldRedirectWorkspaceRoleFromMarketplace("/crops/cocoa-1", "super_admin")).toBe(true);
+    expect(shouldRedirectWorkspaceRoleFromMarketplace("/browse", "local_buyer")).toBe(false);
+    expect(getRoleHome("reseller")).toBe("/farmer/dashboard");
+    expect(getRoleHome("admin")).toBe("/admin/dashboard");
+  });
+
   it("recognizes the public marketplace surfaces", () => {
     expect(isMarketplacePath("/")).toBe(true);
     expect(isMarketplacePath("/sell/onboarding")).toBe(true);
     expect(isMarketplacePath("/about")).toBe(false);
   });
 });
-

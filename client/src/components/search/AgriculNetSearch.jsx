@@ -24,6 +24,8 @@ import { SearchModeTabs } from "./SearchModeTabs";
 import { SearchResultInsight } from "./SearchResultInsight";
 
 const DRAFT_KEY = "agriculnet-marketplace-search-draft";
+const SEARCH_MODES = new Set(["standard", "ai", "image", "voice"]);
+const normalizeMode = value => SEARCH_MODES.has(value) ? value : "standard";
 const CROPS = [
   "Cocoa",
   "Coffee",
@@ -70,13 +72,14 @@ const mutationError = (...mutations) => {
 
 export function AgriculNetSearch({
   initialQuery = "",
+  initialMode = "standard",
   onStandardSearch,
   onResults,
   compact = false,
   className,
 }) {
   const { user, isAuthenticated } = useAuth();
-  const [mode, setMode] = useState("standard");
+  const [mode, setMode] = useState(() => normalizeMode(initialMode));
   const [query, setQuery] = useState(initialQuery);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -92,7 +95,8 @@ export function AgriculNetSearch({
 
   useEffect(() => {
     setQuery(initialQuery || "");
-  }, [initialQuery]);
+    setMode(normalizeMode(initialMode));
+  }, [initialMode, initialQuery]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -114,7 +118,14 @@ export function AgriculNetSearch({
 
   const requireAuth = nextMode => {
     if (isAuthenticated) return false;
-    writeDraft({ mode: nextMode, query, productOverride });
+    writeDraft({
+      mode: nextMode,
+      query,
+      productOverride,
+      imageDataUrl: nextMode === "image" ? imagePreview : "",
+      imageName: nextMode === "image" ? imageFile?.name : "",
+      imageType: nextMode === "image" ? imageFile?.type : "",
+    });
     setAuthOpen(true);
     return true;
   };
