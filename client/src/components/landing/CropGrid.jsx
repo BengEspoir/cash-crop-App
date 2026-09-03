@@ -29,7 +29,7 @@ export function CropGrid() {
     <section className="space-y-5">
       <SectionHeader
         title="Browse active crop listings"
-        description="Explore recent supply from verified farmers across Cameroon and compare quantity, location, and trade readiness at a glance."
+        description="Explore current supply from farmers and resellers across Cameroon and compare quantity, location, and trade readiness at a glance."
         actionLabel="See all crops"
         actionHref={browseHref}
       />

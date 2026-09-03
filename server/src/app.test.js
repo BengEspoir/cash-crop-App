@@ -27,4 +27,16 @@ describe('API discovery routes', () => {
       error: { code: 'NOT_FOUND' }
     });
   });
+
+  test('allows an alternate local Next.js port without wildcard CORS', async () => {
+    const response = await request(app)
+      .options('/api/v1/listings')
+      .set('Origin', 'http://localhost:3001')
+      .set('Access-Control-Request-Method', 'GET')
+      .set('Access-Control-Request-Headers', 'content-type')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:3001');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
 });

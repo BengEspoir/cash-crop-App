@@ -3,7 +3,6 @@ import { AnnouncementStrip } from "../components/landing/AnnouncementStrip";
 import { HeroSection } from "../components/landing/HeroSection";
 import { MarketplaceHeroSearch } from "../components/landing/MarketplaceHeroSearch";
 import { TrustStrip } from "../components/landing/TrustStrip";
-import { CropGrid } from "../components/landing/CropGrid";
 import { RegionalSpotlight } from "../components/landing/RegionalSpotlight";
 import { FeaturedFarmers } from "../components/landing/FeaturedFarmers";
 import { HowItWorks } from "../components/landing/HowItWorks";
@@ -25,7 +24,6 @@ export default function HomePage() {
           <MarketplaceHeroSearch />
           <TrustStrip />
           <HomeMarketplaceEcosystem />
-          <CropGrid />
           <RegionalSpotlight />
           <FeaturedFarmers />
           <HowItWorks />

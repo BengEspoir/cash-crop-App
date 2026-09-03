@@ -21,7 +21,7 @@ import useAuth from "@/hooks/useAuth";
 const HELP_CARDS = [
   {
     title: "Buyer Protection",
-    description: "Learn how escrow, delivery confirmation, and disputes protect every buyer transaction.",
+    description: "Learn how protected payments, delivery confirmation, and disputes protect every buyer transaction.",
     icon: ShieldCheck,
     accent: "green",
   },

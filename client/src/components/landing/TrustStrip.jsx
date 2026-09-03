@@ -5,7 +5,7 @@ import { Card } from "../ui/card";
 import { Stagger, StaggerItem } from "../motion/Reveal";
 
 const items = [
-  { title: "Verified seller profiles", copy: "Farmer profiles are reviewed before listings go live for buyers.", icon: BadgeCheck },
+  { title: "Seller verification signals", copy: "Verification helps buyers identify reviewed suppliers and determines payout eligibility.", icon: BadgeCheck },
   { title: "Buyer protection", copy: "Inspection support, dispute handling, and trade assistance are built in.", icon: Shield },
   { title: "Coordinated logistics", copy: "Move from quote to shipment with export documentation support.", icon: Truck },
   { title: "Protected payouts", copy: "Use mobile money, cards, and transfer-ready settlement flows.", icon: WalletCards },

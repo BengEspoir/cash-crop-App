@@ -33,6 +33,12 @@ const app = express();
 const buildAllowedOrigins = () => {
   const configured = process.env.CLIENT_URL || 'http://localhost:3000';
   const origins = new Set([configured, 'http://localhost:3000', 'http://127.0.0.1:3000']);
+  if (process.env.NODE_ENV !== 'production') {
+    for (let port = 3001; port <= 3010; port += 1) {
+      origins.add(`http://localhost:${port}`);
+      origins.add(`http://127.0.0.1:${port}`);
+    }
+  }
   String(process.env.CLIENT_ALLOWED_ORIGINS || '')
     .split(',')
     .map((origin) => origin.trim())

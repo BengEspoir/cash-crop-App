@@ -78,8 +78,8 @@ export function HomeMarketplaceEcosystem() {
               Live Cameroon supply with export-ready signals
             </h2>
             <p className="text-[14px] leading-relaxed text-ink-600">
-              Real listings from AgriculNet — verification state, QC flags, and demand heat surfaced the same way
-              international desks evaluate Alibaba-class supply.
+              Current AgriculNet marketplace data — verification state, QC flags, and demand signals surfaced for
+              international sourcing teams.
             </p>
           </div>
           <Link
