@@ -11,6 +11,7 @@ import { useListings } from "@/hooks/useListings";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useSitePrefsStore } from "@/store/sitePrefsStore";
 import { cn } from "@/lib/utils";
+import { MarketplaceSearchNav } from "@/components/search/MarketplaceSearchNav";
 
 const regions = ["South West", "Littoral", "West", "North West", "Centre", "North", "Adamawa", "South"];
 const cropTypes = ["Cocoa", "Coffee", "Maize", "Plantain", "Pepper", "Cassava"];
@@ -136,6 +137,7 @@ export default function BrowsePage() {
         </div>
       </div>
 
+      <MarketplaceSearchNav />
       <AgriculNetSearch
         initialQuery={query}
         initialMode={searchParams.get("mode") || "standard"}

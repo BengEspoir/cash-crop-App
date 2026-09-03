@@ -32,7 +32,7 @@ export async function middleware(request) {
     return new NextResponse(null, { status: 204 });
   }
 
-  if (pathname === "/sign-in" || pathname === "/admin-portal") {
+  if (pathname === "/sign-in") {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 

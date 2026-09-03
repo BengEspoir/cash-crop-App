@@ -31,14 +31,14 @@ export default function AdminPaymentsPage() {
       <AdminPageHeader
         title="Payments & Commissions"
         eyebrow="Admin > Payments"
-        description="Track protected payment records, escrow state, and payout readiness from live records."
+        description="Track protected payment records, held funds, and payout readiness from live records."
         actionLabel={null}
       />
 
       <div className="grid gap-5 md:grid-cols-4">
         <AdminStatCard icon={Wallet} value={data?.metrics?.protectedVolume || "XAF 0"} label="Total Revenue" tag="+18% green" tone="blue" progress={78} />
         <AdminStatCard icon={CreditCard} value={pending} label="Pending Payouts" tag={`${pending} pending`} tone="gold" progress={35} />
-        <AdminStatCard icon={RefreshCw} value={payments.length} label="In Escrow" tag={`${payments.length} records`} tone="green" progress={58} />
+        <AdminStatCard icon={RefreshCw} value={payments.length} label="Payment Held" tag={`${payments.length} records`} tone="green" progress={58} />
         <AdminStatCard icon={Landmark} value="XAF 0" label="Commission Earned" tag="+22% green" tone="gold" progress={48} />
       </div>
 
@@ -61,7 +61,7 @@ export default function AdminPaymentsPage() {
                 { key: "status", label: "Status", options: [
                   { value: "all", label: "Status: All" },
                   { value: "pending", label: "Pending" },
-                  { value: "escrow", label: "Escrow" },
+                  { value: "held", label: "Payment Held" },
                   { value: "released", label: "Released" },
                   { value: "failed", label: "Failed" },
                 ] },
@@ -103,9 +103,14 @@ export default function AdminPaymentsPage() {
                     isLoading={releasePayment.isPending && releaseTargetId === payment.id}
                     disabled={releasePayment.isPending}
                     onClick={async () => {
+                      const reason = window.prompt("Enter the payout release reason (minimum 10 characters).");
+                      if (!reason || reason.trim().length < 10) {
+                        toast.error("A clear release reason is required.");
+                        return;
+                      }
                       setReleaseTargetId(payment.id);
                       try {
-                        await releasePayment.mutateAsync(payment.id);
+                        await releasePayment.mutateAsync({ id: payment.id, reason: reason.trim() });
                         toast.success("Payment released.");
                       } catch (error) {
                         toast.error(error.response?.data?.message || "Payment could not be released.");
@@ -119,7 +124,7 @@ export default function AdminPaymentsPage() {
                 </div>
               ))
             ) : (
-              <div className="p-6 text-[14px] text-ink-500">No delivered orders currently have escrow ready for release.</div>
+              <div className="p-6 text-[14px] text-ink-500">No delivered orders currently have payments eligible for release.</div>
             )}
           </div>
         </AdminCard>

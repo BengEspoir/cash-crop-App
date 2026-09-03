@@ -160,7 +160,7 @@ export default function InternationalPage() {
         </Reveal>
         <Reveal className="rounded-[28px] bg-[#0D4E2A] p-6 text-white shadow-lift">
           <h3 className="font-display text-[28px]">Secure payments - Cameroonian and international methods</h3>
-          <p className="mt-3 text-[15px] leading-7 text-white/80">All transactions are escrow-protected. AgriculNet only releases seller funds after the verified delivery workflow is complete.</p>
+          <p className="mt-3 text-[15px] leading-7 text-white/80">Buyer payments are recorded as protected, while seller payout remains held until delivery and the required release checks are complete.</p>
           <div className="mt-5 flex flex-wrap gap-2">
             {["MTN MoMo", "Orange Money", "Visa", "Mastercard", "Wire"].map((item) => (
               <span key={item} className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[12px] font-semibold text-white/90">{item}</span>

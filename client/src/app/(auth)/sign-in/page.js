@@ -28,6 +28,7 @@ export default function SignInPage() {
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [countryCode, setCountryCode] = useState("CM");
   const submittingRef = useRef(false);
   const {
     register,
@@ -59,7 +60,7 @@ export default function SignInPage() {
         return;
       }
       const identifier = values.mode === "phone" ? values.phone : values.email;
-      const result = await login(identifier, values.password, values.mode, turnstileToken);
+      const result = await login(identifier, values.password, values.mode, turnstileToken, countryCode);
 
       if (!result.success) {
         setSubmitError(result.error);
@@ -128,6 +129,10 @@ export default function SignInPage() {
                   onChange={field.onChange}
                   error={errors.phone?.message}
                   helper="Use the Cameroon number linked to your account."
+                  countryCode={countryCode}
+                  onCountryChange={setCountryCode}
+                  showCountrySelector
+                  includeAllCountries
                   appearance="reference"
                 />
               )}

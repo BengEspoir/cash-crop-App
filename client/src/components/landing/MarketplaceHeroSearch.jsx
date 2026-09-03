@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { AgriculNetSearch } from "@/components/search/AgriculNetSearch";
+import { MarketplaceSearchNav } from "@/components/search/MarketplaceSearchNav";
 
 const RESULT_KEY = "agriculnet-marketplace-search-result";
 
@@ -9,7 +10,9 @@ export function MarketplaceHeroSearch() {
   const router = useRouter();
 
   return (
-    <AgriculNetSearch
+    <section className="space-y-3">
+      <MarketplaceSearchNav />
+      <AgriculNetSearch
       compact
       onStandardSearch={query => {
         router.push(query ? `/browse?query=${encodeURIComponent(query)}` : "/browse");
@@ -22,6 +25,7 @@ export function MarketplaceHeroSearch() {
         }
         router.push("/browse?smart=1");
       }}
-    />
+      />
+    </section>
   );
 }

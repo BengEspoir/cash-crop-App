@@ -300,7 +300,7 @@ export function FarmerEmptyState({ title, description, action }) {
 export const farmerHelpCategories = [
   { title: "Getting Started", description: "Set up your farm profile, complete verification, and navigate the dashboard.", icon: HelpCircle },
   { title: "Managing Listings", description: "Add, edit, or remove crop listings while keeping buyer-facing details current.", icon: Leaf },
-  { title: "Payments & Earnings", description: "Understand payout status, escrow protection, and settlement methods.", icon: WalletCards },
+  { title: "Payments & Earnings", description: "Understand payout status, payment holds, and settlement methods.", icon: WalletCards },
   { title: "Export & Logistics", description: "Review export-ready requirements, inspection notes, and shipping coordination.", icon: Package },
 ];
 

@@ -37,7 +37,7 @@ const TESTIMONIALS = [
     org: "Regional buyer cohort",
   },
   {
-    quote: "Inspection-ready lots and escrow-style settlement give our procurement team operational confidence.",
+    quote: "Inspection-ready lots and protected payment release give our procurement team operational confidence.",
     name: "Sourcing Lead",
     org: "International desk",
   },

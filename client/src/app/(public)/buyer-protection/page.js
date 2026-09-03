@@ -9,6 +9,8 @@ const checkpoints = [
   "Protected payment milestones before dispatch and logistics release",
   "Inspection and document checkpoints before export or buyer pickup",
   "Dispute review workflow for delivery, packaging, or quality mismatches",
+  "Buyer receipt confirmation before an eligible seller payout can be released",
+  "Payout remains held when seller verification, account status, or dispute checks are incomplete",
 ];
 
 export default function BuyerProtectionPage() {

@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
 /**
  * Country data for phone validation and dropdowns
  * Cameroon is excluded from international buyer options
@@ -213,9 +215,8 @@ export const getCountryByDialCode = (dialCode) =>
 export const validatePhoneForCountry = (phone, countryCode) => {
   const country = getCountryByCode(countryCode);
   if (!country) return { valid: false, message: 'Invalid country' };
-  
-  const cleanPhone = phone.replace(/\D/g, '');
-  const valid = country.phoneFormat.test(cleanPhone);
+  const parsed = parsePhoneNumberFromString(String(phone || ''), countryCode);
+  const valid = Boolean(parsed?.isValid() && parsed.country === countryCode);
   
   return {
     valid,
@@ -226,11 +227,8 @@ export const validatePhoneForCountry = (phone, countryCode) => {
 
 // Format phone number with country code
 export const formatPhoneInternational = (phone, countryCode) => {
-  const country = getCountryByCode(countryCode);
-  if (!country) return null;
-  
-  const cleanPhone = phone.replace(/\D/g, '');
-  return `${country.dialCode}${cleanPhone}`;
+  const parsed = parsePhoneNumberFromString(String(phone || ''), countryCode);
+  return parsed?.isValid() ? parsed.number : null;
 };
 
 // Get placeholder for phone input based on country

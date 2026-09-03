@@ -12,7 +12,7 @@ const PAYMENT_METHODS = [
 const NOTIFICATION_OPTIONS = [
   ["orderUpdates", "Order Updates", "Confirmations, shipping, delivery alerts"],
   ["newMessages", "New Messages", "Farmer replies and sourcing inquiries"],
-  ["paymentNotifications", "Payment Notifications", "Hosted checkout and escrow updates"],
+  ["paymentNotifications", "Payment Notifications", "Hosted checkout and protected payment updates"],
   ["priceAlerts", "Price Alerts", "Saved crop price changes"],
   ["platformUpdates", "Platform Updates", "Features and announcements"],
 ];

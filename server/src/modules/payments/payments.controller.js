@@ -13,7 +13,10 @@ const createPayment = asyncHandler(async (req, res) => {
 });
 
 const releasePayment = asyncHandler(async (req, res) => {
-  const result = await service.releasePayment(req.user, req.params.id);
+  const result = await service.releasePayment(req.user, req.params.id, {
+    correlationId: req.headers['x-request-id'] || req.headers['x-correlation-id'] || null,
+    reason: req.body.reason
+  });
   sendSuccess(res, result, 'Payment released successfully');
 });
 

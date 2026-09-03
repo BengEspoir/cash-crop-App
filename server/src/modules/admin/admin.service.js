@@ -4,6 +4,7 @@ const AppError = require('../../utils/AppError');
 const { ERROR_CODES } = require('../../config/constants');
 const { mapFarmerProfile, mapResellerProfile, normalizeVerificationStatus } = require('../../utils/marketplace');
 const authService = require('../auth/auth.service');
+const { logAdminAudit } = require('../../utils/adminAudit');
 
 const isNotFound = (error) => error?.code === 'PGRST116';
 
@@ -181,9 +182,57 @@ const listAuditLogs = async (limit = 100) => {
   };
 };
 
+const changeAccountAvailability = async (admin, userId, nextStatus, reason, req) => {
+  const target = await getUserById(userId);
+  if (target.id === admin.id) {
+    throw new AppError('You cannot suspend or restore your own administrator account', 409, ERROR_CODES.VALIDATION_ERROR);
+  }
+  if (target.role === 'super_admin' && admin.role !== 'super_admin') {
+    throw new AppError('Only a super administrator can change another super administrator', 403, ERROR_CODES.FORBIDDEN);
+  }
+  if (target.role === 'super_admin' && nextStatus === 'suspended') {
+    const { count, error: countError } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'super_admin')
+      .eq('status', 'active');
+    if (countError) throw countError;
+    if ((count || 0) <= 1) {
+      throw new AppError('The last active super administrator cannot be suspended', 409, ERROR_CODES.VALIDATION_ERROR);
+    }
+  }
+
+  const update = nextStatus === 'suspended'
+    ? { status: nextStatus, banned_at: new Date().toISOString(), ban_reason: reason }
+    : { status: nextStatus, banned_at: null, ban_reason: null };
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .update(update)
+    .eq('id', target.id)
+    .select('id, role, status')
+    .single();
+  if (error) throw error;
+
+  await logAdminAudit(admin, req, nextStatus === 'suspended' ? 'ACCOUNT_SUSPENDED' : 'ACCOUNT_RESTORED', {
+    resourceType: 'user',
+    resourceId: target.id,
+    targetRole: target.role,
+    reason
+  });
+  return data;
+};
+
+const suspendUser = (admin, userId, reason, req) =>
+  changeAccountAvailability(admin, userId, 'suspended', reason, req);
+
+const restoreUser = (admin, userId, reason, req) =>
+  changeAccountAvailability(admin, userId, 'active', reason, req);
+
 module.exports = {
   listVerificationSubmissions,
   getVerificationSubmission,
   reviewVerificationSubmission,
-  listAuditLogs
+  listAuditLogs,
+  suspendUser,
+  restoreUser
 };

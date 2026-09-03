@@ -56,7 +56,10 @@ export const useConfirmCheckoutIntent = () => {
 export const useReleasePayment = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id) => unwrapData(await api.post(`/payments/${id}/release`)),
+    mutationFn: async ({ id, reason }) => unwrapData(await api.post(`/payments/${id}/release`, {
+      confirmation: "RELEASE PROTECTED PAYOUT",
+      reason,
+    })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });

@@ -21,9 +21,9 @@ export default function PrivacyPage() {
         <h2>1. What we collect</h2>
         <ul>
           <li>Account data: name, contact details, role (farmer / buyer / cooperative), preferred language.</li>
-          <li>Verification data: national ID references, cooperative membership, and inspection records.</li>
+          <li>Verification data: private national ID images, selfie evidence, cooperative membership, review status, and inspection records.</li>
           <li>Transactional data: listings, orders, payouts, communications, and support requests.</li>
-          <li>Device data: IP address, session identifiers, and minimal diagnostic telemetry.</li>
+          <li>Device data: IP address, session identifiers, minimal diagnostic telemetry, PWA draft ownership, and Web Push endpoint/encryption keys when you opt in.</li>
         </ul>
 
         <h2>2. How we use it</h2>
@@ -43,6 +43,12 @@ export default function PrivacyPage() {
         <p>
           Data in transit is encrypted. Access to sensitive records is least-privileged and audited. Two-factor
           authentication is available for all accounts and required for administrative roles.
+        </p>
+
+        <p>
+          Private identity files, payment data, messages, and administrator pages are excluded from the offline
+          service-worker cache. Offline drafts are stored per signed-in user on that device and removed for that user
+          on logout. Push notifications use generic lock-screen wording; sensitive details remain behind sign-in.
         </p>
 
         <h2>5. Your rights</h2>

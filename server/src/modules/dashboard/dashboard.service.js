@@ -172,12 +172,19 @@ const mapOrder = (row, listingById = {}, buyerProfiles = {}, farmerProfiles = {}
   };
 };
 
-const mapPayment = (row) => ({
+const mapPayment = (row, order = {}) => ({
   id: row.id,
   party: row.channel || 'Payment channel pending',
   amountLabel: formatCurrency(row.amount, row.currency || 'XAF'),
   status: row.status || 'pending',
   channel: row.channel || 'Not selected',
+  orderStatus: order.status || null,
+  releaseEligible: row.status === 'held_in_escrow'
+    && ['delivered', 'completed'].includes(order.status)
+    && order.buyer_receipt_status === 'received'
+    && Boolean(order.buyer_received_at),
+  buyerReceiptStatus: order.buyer_receipt_status || 'pending',
+  payoutHoldReason: order.payout_hold_reason || null,
   createdAt: row.created_at
 });
 
@@ -278,7 +285,15 @@ const fetchPayments = async (applyFilter = (query) => query, limit = 50) => {
     ),
     []
   );
-  return rows.map(mapPayment);
+  const orderIds = [...new Set(rows.map((row) => row.order_id).filter(Boolean))];
+  const orders = orderIds.length
+    ? await safeQuery(supabaseAdmin.from('orders').select('id, status').in('id', orderIds), [])
+    : [];
+  const orderById = orders.reduce((result, order) => {
+    result[order.id] = order;
+    return result;
+  }, {});
+  return rows.map((row) => mapPayment(row, orderById[row.order_id]));
 };
 
 const fetchQuotes = async (applyFilter = (query) => query, limit = 50) => {

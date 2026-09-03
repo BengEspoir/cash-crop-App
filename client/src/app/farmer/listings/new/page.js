@@ -15,8 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useCreateListing } from "@/hooks/useListings";
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "agriculnet.active-listing-draft.v1";
+import useAuth from "@/hooks/useAuth";
+import { deleteOfflineRecord, getOfflineDraftKey, getOfflineRecord, saveOfflineRecord } from "@/lib/offlineStore";
 
 const cropOptions = [
   { name: "Cocoa", icon: Bean, note: "Beans and pods" },
@@ -75,6 +75,7 @@ function ListingStepProgress({ step }) {
 
 export default function FarmerNewListingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(defaultForm);
   const [gallery, setGallery] = useState([]);
@@ -83,26 +84,36 @@ export default function FarmerNewListingPage() {
   const createListing = useCreateListing();
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
+    async function restoreDraft() {
+      try {
+        const storageKey = user?.id ? getOfflineDraftKey(user.id) : null;
+        const indexed = user?.id ? await getOfflineRecord("drafts", `${user.id}:listing:new`).catch(() => null) : null;
+        const saved = indexed?.payload || (storageKey ? window.localStorage.getItem(storageKey) : null);
+        if (saved) {
+          const parsed = typeof saved === "string" ? JSON.parse(saved) : saved;
         setForm((current) => ({ ...current, ...(parsed.form || {}) }));
         setGallery(Array.isArray(parsed.gallery) ? parsed.gallery : []);
         setStep(Math.min(4, Math.max(1, Number(parsed.step) || 1)));
         toast.success("Your saved listing progress was restored.");
+        }
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } finally {
+        setRestored(true);
       }
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setRestored(true);
     }
-  }, []);
+    void restoreDraft();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!restored) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ form, gallery, step }));
-  }, [form, gallery, restored, step]);
+    const payload = { form, gallery, step };
+    if (!user?.id) return;
+    window.localStorage.setItem(getOfflineDraftKey(user.id), JSON.stringify(payload));
+    if (user?.id) {
+      void saveOfflineRecord("drafts", { id: `${user.id}:listing:new`, userId: user.id, payload }).catch(() => undefined);
+    }
+  }, [form, gallery, restored, step, user?.id]);
 
   useEffect(() => {
     const updateStatus = () => setOnline(window.navigator.onLine);
@@ -177,7 +188,8 @@ export default function FarmerNewListingPage() {
         exportReady: false,
         images: gallery.map((item) => ({ url: item.url, alt: item.alt, publicId: item.publicId })),
       });
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(getOfflineDraftKey(user.id));
+      if (user?.id) await deleteOfflineRecord("drafts", `${user.id}:listing:new`).catch(() => undefined);
       toast.success(status === "draft" ? "Listing draft saved." : "Listing published.");
       router.push(`/farmer/listings/${listing.id}`);
     } catch (err) {

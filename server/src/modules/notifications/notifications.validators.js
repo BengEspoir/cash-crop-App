@@ -13,5 +13,25 @@ const createNotificationSchema = Joi.object({
 });
 
 module.exports = {
-  createNotificationSchema
+  createNotificationSchema,
+  pushSubscriptionSchema: Joi.object({
+    subscription: Joi.object({
+      endpoint: Joi.string().uri().required(),
+      expirationTime: Joi.number().allow(null).optional(),
+      keys: Joi.object({
+        p256dh: Joi.string().required(),
+        auth: Joi.string().required()
+      }).required()
+    }).required(),
+    preferences: Joi.object({
+      orders: Joi.boolean(),
+      messages: Joi.boolean(),
+      payments: Joi.boolean(),
+      verification: Joi.boolean(),
+      system: Joi.boolean()
+    }).optional()
+  }),
+  pushUnsubscribeSchema: Joi.object({
+    endpoint: Joi.string().uri().required()
+  })
 };

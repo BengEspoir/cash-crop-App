@@ -1,9 +1,14 @@
 const Joi = require('joi');
 const { CAMEROON_REGIONS, BUYER_TYPES } = require('../../config/constants');
 const { getCountryByCode, validatePhoneForCountry } = require('../../utils/countries');
+const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 const phonePattern = /^\+237[0-9]{9}$/;
+const e164Phone = Joi.string().custom((value, helpers) => {
+  const parsed = parsePhoneNumberFromString(String(value || ''));
+  return parsed?.isValid() && parsed.number === value ? value : helpers.error('any.invalid');
+}).messages({ 'any.invalid': 'Phone must be a valid international number, for example +237600000000' });
 const cameroonNationalPattern = /^6\d{8}$/;
 const acceptedTerms = Joi.boolean().valid(true);
 
@@ -186,7 +191,7 @@ const loginSchema = Joi.object({
 });
 
 const sendOtpSchema = Joi.object({
-  phone: Joi.string().pattern(phonePattern).optional(),
+  phone: e164Phone.optional(),
   userId: Joi.string().uuid().optional(),
   purpose: Joi.string().optional()
 }).xor('phone', 'userId').messages({
@@ -298,9 +303,7 @@ const recoveryContactConfirmSchema = Joi.object({
 }).or('token', 'otp');
 
 const phonePasswordLoginSchema = Joi.object({
-  phone: Joi.string().pattern(phonePattern).required().messages({
-    'string.pattern.base': 'Phone must be a valid Cameroon number (+237XXXXXXXXX)'
-  }),
+  phone: e164Phone.required(),
   password: Joi.string().min(1).max(128).required()
 });
 

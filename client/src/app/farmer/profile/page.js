@@ -34,7 +34,7 @@ export default function FarmerProfilePage() {
   const profile = data?.profile || {};
   const listings = data?.listings || [];
   const orders = data?.orders || [];
-  const verified = user?.status === "active";
+  const verified = (profile.identity_verification_status || profile.verificationStatus) === "verified";
 
   if (isLoading) {
     return <FarmerEmptyState title="Loading farmer profile" description="Fetching your live farmer account details." />;
@@ -88,7 +88,7 @@ export default function FarmerProfilePage() {
 
           <FarmerPanel title="Documents">
             <div className="space-y-3">
-              {["National ID Card", "Farm Ownership", "Cooperative Reference"].map((label) => (
+              {["National ID and selfie review"].map((label) => (
                 <div key={label} className="flex items-center justify-between gap-3 rounded-lg border border-ink-100 px-4 py-3">
                   <span className="inline-flex items-center gap-3 text-[15px] font-bold text-ink-950">
                     <FileText className="h-5 w-5 text-ink-300" />

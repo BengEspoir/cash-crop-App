@@ -22,6 +22,7 @@ const useAuth = () => {
 
   return {
     ...store,
+    ready: !store.isLoading,
     isAdmin,
     isFarmer,
     isReseller,

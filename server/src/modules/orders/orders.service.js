@@ -3,13 +3,13 @@ const AppError = require('../../utils/AppError');
 const { ERROR_CODES, USER_ROLES } = require('../../config/constants');
 const {
   isBuyerRole,
-  isVerifiedSellerProfile,
   mapFarmerProfile,
   mapResellerProfile,
   mapOrder,
   mapUserName
 } = require('../../utils/marketplace');
 const logisticsRepository = require('../logistics/logistics.repository');
+const { calculatePlatformFee } = require('../../utils/platformFee');
 
 const isNotFound = (error) => error?.code === 'PGRST116';
 
@@ -58,9 +58,9 @@ const getQuote = async (id) => {
 const ensureFarmerCanReceiveCommerce = async (farmerProfile) => {
   const users = await getUsersByIds([farmerProfile.user_id]);
   const farmerUser = users[farmerProfile.user_id];
-  if (!isVerifiedSellerProfile(farmerProfile, farmerUser)) {
+  if (!farmerUser || farmerUser.status !== 'active') {
     throw new AppError(
-      'You must complete National ID verification before accepting sales or receiving payments.',
+      'This seller account is not currently available for trade.',
       403,
       ERROR_CODES.FORBIDDEN
     );
@@ -250,7 +250,23 @@ const createOrder = async (user, payload) => {
   });
   if (error) throw error;
 
-  const [order] = await hydrateOrders([data]);
+  const fee = calculatePlatformFee(data.base_amount);
+  const { data: pricedOrder, error: pricingError } = await supabaseAdmin
+    .from('orders')
+    .update({
+      platform_commission: fee.platformFee,
+      seller_net_amount: fee.sellerNetAmount,
+      metadata: {
+        ...(data.metadata || {}),
+        platformFee: fee
+      }
+    })
+    .eq('id', data.id)
+    .select()
+    .single();
+  if (pricingError) throw pricingError;
+
+  const [order] = await hydrateOrders([pricedOrder]);
   return order;
 };
 
@@ -308,10 +324,35 @@ const updateOrderStatus = async (user, orderId, status) => {
   return mapped;
 };
 
+const confirmOrderReceipt = async (user, orderId) => {
+  if (!isBuyerRole(user.role)) {
+    throw new AppError('Only the purchasing buyer can confirm receipt', 403, ERROR_CODES.FORBIDDEN);
+  }
+  const order = await getOrderRowForAccess(user, orderId);
+  const { data, error } = await supabaseAdmin.rpc('confirm_marketplace_order_receipt', {
+    p_order_id: order.id,
+    p_buyer_user_id: user.id,
+    p_confirmed_at: new Date().toISOString()
+  });
+  if (error) {
+    const message = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+    if (message.includes('ORDER_NOT_READY_FOR_RECEIPT')) {
+      throw new AppError('Receipt can be confirmed only after delivery', 409, 'ORDER_NOT_READY_FOR_RECEIPT');
+    }
+    if (message.includes('ORDER_RECEIPT_BLOCKED_BY_PROBLEM')) {
+      throw new AppError('Resolve the reported problem before confirming receipt', 409, 'ORDER_RECEIPT_BLOCKED');
+    }
+    throw error;
+  }
+  const [mapped] = await hydrateOrders([data.order]);
+  return { order: mapped, confirmed: Boolean(data.confirmed) };
+};
+
 module.exports = {
   listOrders,
   createOrder,
   updateOrderStatus,
+  confirmOrderReceipt,
   getOrderRowForAccess,
   ensureFarmerCanReceiveCommerce,
   hydrateOrders

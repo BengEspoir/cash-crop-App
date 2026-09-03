@@ -31,7 +31,7 @@ export default function FarmerPaymentsPage() {
   const orders = data?.orders || [];
   const totalEarned = payments.reduce((sum, payment) => sum + parseAmount(payment.amountLabel), 0);
   const pending = payments.filter((payment) => String(payment.status).toLowerCase().includes("pending"));
-  const escrow = payments.filter((payment) => String(payment.status).toLowerCase().includes("escrow"));
+  const heldPayments = payments.filter((payment) => String(payment.status).toLowerCase() === "held_in_escrow");
 
   return (
     <FarmerPage>
@@ -41,7 +41,7 @@ export default function FarmerPaymentsPage() {
         <FarmerMetricCard icon={DollarSign} value={compactCurrency(totalEarned)} label="Total Earned" detail="From payment records" tag="all time" tone="green" />
         <FarmerMetricCard icon={CreditCard} value={compactCurrency(payments[0]?.amountLabel || 0)} label="Latest Payment" detail="Most recent payout record" tag="Live" tone="green" />
         <FarmerMetricCard icon={Hourglass} value={compactCurrency(pending.reduce((sum, item) => sum + parseAmount(item.amountLabel), 0))} label="Pending" detail={`${pending.length} records`} tone="gold" />
-        <FarmerMetricCard icon={WalletCards} value={compactCurrency(escrow.reduce((sum, item) => sum + parseAmount(item.amountLabel), 0))} label="In Escrow" detail={`${escrow.length || orders.length} open orders`} tone="cyan" />
+        <FarmerMetricCard icon={WalletCards} value={compactCurrency(heldPayments.reduce((sum, item) => sum + parseAmount(item.amountLabel), 0))} label="Payments Held" detail={`${heldPayments.length || orders.length} open orders`} tone="cyan" />
       </div>
 
       <FarmerFilters
@@ -62,7 +62,7 @@ export default function FarmerPaymentsPage() {
           { key: "status", label: "Status", options: [
             { value: "all", label: "Status: All" },
             { value: "pending", label: "Pending" },
-            { value: "escrow", label: "Escrow" },
+            { value: "held_in_escrow", label: "Payment held" },
             { value: "released", label: "Released" },
           ] },
           { key: "sort", label: "Sort", options: [

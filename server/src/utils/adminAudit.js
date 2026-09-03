@@ -30,6 +30,9 @@ const insertWithMissingColumnFallback = async (table, payload) => {
 
 const logAdminAudit = async (user, req, action, details = {}) => {
   try {
+    const correlationId = req?.headers?.['x-request-id']
+      || req?.headers?.['x-correlation-id']
+      || null;
     await insertWithMissingColumnFallback('audit_logs', {
       user_id: user?.id || null,
       actor_role: user?.role || null,
@@ -42,7 +45,8 @@ const logAdminAudit = async (user, req, action, details = {}) => {
       user_agent: req?.headers?.['user-agent'] || null,
       metadata: {
         ...details,
-        resourceId: details.resourceId || null
+        resourceId: details.resourceId || null,
+        correlationId
       }
     });
   } catch (error) {

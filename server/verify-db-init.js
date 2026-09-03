@@ -18,7 +18,9 @@ const REQUIRED_TABLES = [
   'tokens',
   'otps',
   'audit_logs',
-  'activity_events'
+  'activity_events',
+  'system_settings',
+  'system_operation_jobs'
 ];
 
 const REQUIRED_COLUMNS = [
@@ -45,7 +47,9 @@ const REQUIRED_COLUMNS = [
   ['buyer_profiles', 'destination_market', '022_profile_extensions.sql'],
   ['listings', 'reseller_id', '027_reseller_marketplace_foundation.sql'],
   ['inquiries', 'reseller_id', '027_reseller_marketplace_foundation.sql'],
-  ['orders', 'reseller_id', '027_reseller_marketplace_foundation.sql']
+  ['orders', 'reseller_id', '027_reseller_marketplace_foundation.sql'],
+  ['system_settings', 'maintenance_enabled', '041_system_maintenance_and_operation_jobs.sql'],
+  ['system_operation_jobs', 'private_storage_path', '041_system_maintenance_and_operation_jobs.sql']
 ];
 
 const REQUIRED_ENUM_VALUES = [
@@ -72,7 +76,9 @@ const REQUIRED_MIGRATIONS = [
   '036_atomic_logistics_transitions.sql',
   '037_core_rls_lockdown.sql',
   '038_uuid_generation_compatibility.sql',
-  '039_supabase_auth_and_rls_alignment.sql'
+  '039_supabase_auth_and_rls_alignment.sql',
+  '040_whatsapp_relay_and_message_realtime.sql',
+  '041_system_maintenance_and_operation_jobs.sql'
 ];
 
 const OPTIONAL_SEEDS = [

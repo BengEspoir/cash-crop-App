@@ -8,8 +8,8 @@ vi.mock("next/navigation", () => ({ redirect }));
 describe("AdminPortalPage", () => {
   beforeEach(() => redirect.mockReset());
 
-  it("redirects the retired hidden admin route to canonical Supabase login", () => {
+  it("keeps the dedicated admin entry path while using canonical Supabase login", () => {
     AdminPortalPage();
-    expect(redirect).toHaveBeenCalledWith("/auth/login");
+    expect(redirect).toHaveBeenCalledWith("/auth/login?next=%2Fadmin%2Fdashboard");
   });
 });

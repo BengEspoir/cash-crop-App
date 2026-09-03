@@ -3,8 +3,7 @@ const AppError = require('../../utils/AppError');
 const { ERROR_CODES, USER_STATUS } = require('../../config/constants');
 const { mapFarmerProfile, mapResellerProfile } = require('../../utils/marketplace');
 const listingsService = require('../listings/listings.service');
-
-const isNotFound = (error) => error?.code === 'PGRST116';
+const isNotFound = (error) => error?.code === 'PGRST116';
 
 const getUsersByIds = async (ids) => {
   const uniqueIds = [...new Set(ids.filter(Boolean))];
@@ -23,41 +22,55 @@ const getUsersByIds = async (ids) => {
 };
 
 const listFarmers = async (filters = {}) => {
-  let profileQuery = supabaseAdmin
-    .from('farmer_profiles')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const sellerType = filters.sellerType ? String(filters.sellerType).trim().toLowerCase() : '';
+  const includeFarmers = !sellerType || sellerType === 'farmer';
+  const includeResellers = !sellerType || sellerType === 'reseller';
 
-  if (filters.verificationStatus) {
-    profileQuery = profileQuery.eq('identity_verification_status', filters.verificationStatus);
+  let profiles = [];
+  if (includeFarmers) {
+    let profileQuery = supabaseAdmin
+      .from('farmer_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (filters.verificationStatus) {
+      profileQuery = profileQuery.eq('identity_verification_status', filters.verificationStatus);
+    }
+
+    const { data, error } = await profileQuery.limit(500);
+    if (error) throw error;
+    profiles = data || [];
   }
-
-  const { data: profiles, error } = await profileQuery.limit(500);
-  if (error) throw error;
 
   let resellerProfiles = [];
-  let resellerError = null;
-  let resellerQuery = supabaseAdmin
-    .from('reseller_profiles')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (filters.verificationStatus) {
-    resellerQuery = resellerQuery.eq('identity_verification_status', filters.verificationStatus);
+  if (includeResellers) {
+    let resellerQuery = supabaseAdmin
+      .from('reseller_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (filters.verificationStatus) {
+      resellerQuery = resellerQuery.eq('identity_verification_status', filters.verificationStatus);
+    }
+    const resellerResult = await resellerQuery.limit(500);
+    if (resellerResult.error) throw resellerResult.error;
+    resellerProfiles = resellerResult.data || [];
   }
-  const resellerResult = await resellerQuery.limit(500);
-  resellerProfiles = resellerResult.data || [];
-  resellerError = resellerResult.error;
-  if (resellerError) throw resellerError;
 
   const users = await getUsersByIds([
-    ...(profiles || []).map((profile) => profile.user_id),
+    ...profiles.map((profile) => profile.user_id),
     ...resellerProfiles.map((profile) => profile.user_id)
   ]);
   let items = [
-    ...(profiles || []).map((profile) => mapFarmerProfile(profile, users[profile.user_id] || {}, { sellerType: 'farmer' })),
+    ...profiles.map((profile) => mapFarmerProfile(profile, users[profile.user_id] || {}, { sellerType: 'farmer' })),
     ...resellerProfiles.map((profile) => mapResellerProfile(profile, users[profile.user_id] || {}, { sellerType: 'reseller' }))
   ]
     .filter((farmer) => ![USER_STATUS.SUSPENDED, USER_STATUS.DEACTIVATED].includes(users[farmer.userId]?.status));
+
+  if (['farmer', 'reseller'].includes(sellerType)) {
+    items = items.filter((farmer) => farmer.sellerType === sellerType);
+  } else if (sellerType) {
+    items = [];
+  }
 
   if (filters.query) {
     const q = String(filters.query).toLowerCase();

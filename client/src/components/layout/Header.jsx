@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Bell, Camera, ChevronDown, Search, Sparkles, User } from "lucide-react";
 import { BrandLogo } from "../common/BrandLogo";
 import { Button } from "../ui/button";
@@ -46,6 +47,7 @@ export function getHeaderLinks(role) {
   return ROLE_HEADER_LINKS.buyer;
 }
 export function Header() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const [query, setQuery] = useState("");
@@ -54,6 +56,7 @@ export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const { locale, setLocale, t } = useI18n();
   const accountLinks = getHeaderLinks(user?.role);
+  const pageOwnsPrimarySearch = pathname === "/" || pathname?.startsWith("/browse");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -106,7 +109,7 @@ export function Header() {
             />
           </div>
 
-          <form
+          {!pageOwnsPrimarySearch ? <form
             action="/browse"
             method="get"
             role="search"
@@ -161,7 +164,7 @@ export function Header() {
             >
               {t("common.search")}
             </Button>
-          </form>
+          </form> : <div className="hidden flex-1 lg:block" aria-hidden="true" />}
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             <div

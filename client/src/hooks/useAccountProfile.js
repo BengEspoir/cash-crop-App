@@ -9,11 +9,17 @@ const unwrapData = (response) => response.data?.data || {};
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  const { fetchMe } = useAuth();
+  const { fetchMe, user } = useAuth();
 
   return useMutation({
-    mutationFn: async (payload) => unwrapData(await api.patch("/auth/me", payload)),
-    onSuccess: async () => {
+    mutationFn: async (payload) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw new Error("Profile changes require an active connection.");
+      }
+      return unwrapData(await api.patch("/auth/me", payload));
+    },
+    onSuccess: async (result) => {
+      if (result?.queued) return;
       await fetchMe();
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },

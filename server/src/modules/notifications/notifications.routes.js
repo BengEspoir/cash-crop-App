@@ -5,14 +5,18 @@ const {
   listNotifications,
   createNotification,
   markNotificationRead,
-  markAllNotificationsRead
+  markAllNotificationsRead,
+  subscribePush,
+  unsubscribePush
 } = require('./notifications.controller');
-const { createNotificationSchema } = require('./notifications.validators');
+const { createNotificationSchema, pushSubscriptionSchema, pushUnsubscribeSchema } = require('./notifications.validators');
 
 router.use(authenticate, requireDashboardAccess);
 
 router.get('/', listNotifications);
 router.post('/', validate(createNotificationSchema), createNotification);
+router.post('/push/subscribe', validate(pushSubscriptionSchema), subscribePush);
+router.post('/push/unsubscribe', validate(pushUnsubscribeSchema), unsubscribePush);
 router.patch('/read-all', markAllNotificationsRead);
 router.patch('/:id/read', markNotificationRead);
 

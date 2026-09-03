@@ -17,8 +17,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Order status updated successfully');
 });
 
+const confirmOrderReceipt = asyncHandler(async (req, res) => {
+  const result = await service.confirmOrderReceipt(req.user, req.params.id);
+  sendSuccess(res, result, result.confirmed ? 'Order receipt confirmed' : 'Order receipt was already confirmed');
+});
+
 module.exports = {
   listOrders,
   createOrder,
-  updateOrderStatus
+  updateOrderStatus,
+  confirmOrderReceipt
 };

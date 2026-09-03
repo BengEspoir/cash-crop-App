@@ -62,8 +62,11 @@ Restore into a new or explicitly approved target. Back up existing data first. T
 36. `036_atomic_logistics_transitions.sql`
 37. `037_core_rls_lockdown.sql`
 38. `038_uuid_generation_compatibility.sql`
+39. `039_supabase_auth_and_rls_alignment.sql`
+40. `040_whatsapp_relay_and_message_realtime.sql`
+41. `041_system_maintenance_and_operation_jobs.sql`
 
-When restoring existing data rather than an empty target, migration 031 requires unique non-null payment references and one commission and logistics row per order. Resolve `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, or `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED` before retrying. Then reconcile duplicate order payments for 033, reissue proofs after 034, audit legacy stock for 035, and normalize shipment statuses for 036. Migration 037 requires `SUPABASE_SERVICE_ROLE_KEY` in every API environment, and migration 038 repairs UUID resolution for the restricted RPCs.
+When restoring existing data rather than an empty target, migration 031 requires unique non-null payment references and one commission and logistics row per order. Resolve `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, or `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED` before retrying. Then reconcile duplicate order payments for 033, reissue proofs after 034, audit legacy stock for 035, and normalize shipment statuses for 036. Migration 037 requires `SUPABASE_SERVICE_ROLE_KEY` in every API environment, migration 038 repairs UUID resolution for restricted RPCs, migrations 039-040 align Auth and messaging, and migration 041 adds protected maintenance/operation metadata.
 
 ## 2. Apply optional seeds
 

@@ -227,7 +227,7 @@ export default function BuyerCheckoutPage() {
           <p className="section-eyebrow">Buyer checkout</p>
           <h1 className="font-display text-[30px] text-ink-950 sm:text-[36px]">Protected payment and order confirmation</h1>
           <p className="mt-2 max-w-3xl text-[16px] text-ink-500">
-            AgriculNet keeps the payment protected in escrow until delivery and buyer confirmation are complete.
+            AgriculNet records the payment as protected and held until delivery, buyer receipt, seller eligibility, and dispute checks are complete.
           </p>
         </div>
         <BuyerStatusBadge status={order ? order.status : "pending_payment"}>
@@ -403,7 +403,7 @@ export default function BuyerCheckoutPage() {
             <div className="mt-5 space-y-3 rounded-2xl border border-ink-100 bg-ink-50 p-4">
               <p className="flex items-start gap-3 text-[14px] text-ink-600">
                 <ShieldCheck className="mt-0.5 h-4 w-4 text-green-800" />
-                Payment is recorded in AgriculNet escrow and only released after order completion.
+                Payment is recorded as protected and held until delivery, buyer receipt, seller eligibility, and dispute checks are complete.
               </p>
               <p className="flex items-start gap-3 text-[14px] text-ink-600">
                 <CreditCard className="mt-0.5 h-4 w-4 text-green-800" />

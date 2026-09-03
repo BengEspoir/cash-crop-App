@@ -90,6 +90,9 @@ const aiProviderTimeoutMs = Math.min(
 
 const allowDevDeliveryFallback = !isProduction && parseBooleanEnv(process.env.ALLOW_DEV_DELIVERY_FALLBACK, true);
 const exposeDevAuthHints = !isProduction && parseBooleanEnv(process.env.EXPOSE_DEV_AUTH_HINTS, true);
+const turnstileEnabled = parseBooleanEnv(process.env.TURNSTILE_ENABLED, false);
+const databaseBackupEnabled = parseBooleanEnv(process.env.DATABASE_BACKUP_ENABLED, false);
+const databaseRestoreEnabled = parseBooleanEnv(process.env.DATABASE_RESTORE_ENABLED, false);
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   (!isProduction ? process.env.SUPABASE_ANON_KEY : undefined);
@@ -97,6 +100,10 @@ const supabaseServiceRoleKey =
 if (isProduction && smsPrimaryProvider === 'twilio' &&
     !process.env.TWILIO_MESSAGING_SERVICE_SID && !process.env.TWILIO_PHONE_NUMBER) {
   throw new Error('Twilio requires TWILIO_MESSAGING_SERVICE_SID or TWILIO_PHONE_NUMBER');
+}
+
+if (turnstileEnabled && !process.env.TURNSTILE_SECRET_KEY) {
+  throw new Error('TURNSTILE_ENABLED requires TURNSTILE_SECRET_KEY');
 }
 
 module.exports = {
@@ -110,6 +117,28 @@ module.exports = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: supabaseServiceRoleKey,
+
+  // Cloudflare Turnstile. Production protection is opt-in and must never be
+  // considered active unless TURNSTILE_ENABLED and the secret are configured.
+  TURNSTILE_ENABLED: turnstileEnabled,
+  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY || '',
+  TURNSTILE_ALLOWED_HOSTNAMES: parseListEnv(process.env.TURNSTILE_ALLOWED_HOSTNAMES),
+  TURNSTILE_VERIFY_URL: process.env.TURNSTILE_VERIFY_URL || 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+
+  // Optional backend-managed logical database operations. Provider-managed
+  // Supabase backups remain preferred when these are disabled.
+  DATABASE_BACKUP_ENABLED: databaseBackupEnabled,
+  DATABASE_RESTORE_ENABLED: databaseRestoreEnabled,
+  DATABASE_URL: process.env.DATABASE_URL || '',
+  DATABASE_BACKUP_BUCKET: process.env.DATABASE_BACKUP_BUCKET || 'agriculnet-backups',
+  DATABASE_BACKUP_MAX_BYTES: parseBoundedIntegerEnv(
+    process.env.DATABASE_BACKUP_MAX_BYTES,
+    250 * 1024 * 1024,
+    1024 * 1024,
+    1024 * 1024 * 1024
+  ),
+  PG_DUMP_PATH: process.env.PG_DUMP_PATH || 'pg_dump',
+  PG_RESTORE_PATH: process.env.PG_RESTORE_PATH || 'pg_restore',
 
   // JWT
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
@@ -223,6 +252,11 @@ module.exports = {
     1000,
     30 * 1000
   ),
+
+  // Standards-based Web Push. Optional until all three VAPID values exist.
+  WEB_PUSH_PUBLIC_KEY: process.env.WEB_PUSH_PUBLIC_KEY || '',
+  WEB_PUSH_PRIVATE_KEY: process.env.WEB_PUSH_PRIVATE_KEY || '',
+  WEB_PUSH_SUBJECT: process.env.WEB_PUSH_SUBJECT || 'mailto:inf@agriculnet.farm',
 
   // Development helpers
   ALLOW_DEV_DELIVERY_FALLBACK: allowDevDeliveryFallback,

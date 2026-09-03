@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { EmptyState } from "../../../components/common/EmptyState";
@@ -12,6 +12,7 @@ import { useFarmers } from "../../../hooks/useFarmers";
 import { useStartConversation } from "../../../hooks/useMessages";
 import useAuth from "../../../hooks/useAuth";
 import { getLoginRoute } from "../../../lib/authRoutes";
+import { MarketplaceSearchNav } from "../../../components/search/MarketplaceSearchNav";
 
 const initialFilters = {
   query: "",
@@ -21,13 +22,24 @@ const initialFilters = {
   sort: "rating",
   page: 1,
   limit: 8,
+  sellerType: "",
 };
 
 export default function FindFarmersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isBuyer } = useAuth();
-  const [draftFilters, setDraftFilters] = useState(initialFilters);
-  const [filters, setFilters] = useState(initialFilters);
+  const typeParam = searchParams.get("type");
+  const initialSellerType = ["farmer", "reseller"].includes(typeParam) ? typeParam : "";
+  const [draftFilters, setDraftFilters] = useState({ ...initialFilters, sellerType: initialSellerType });
+  const [filters, setFilters] = useState({ ...initialFilters, sellerType: initialSellerType });
+
+  useEffect(() => {
+    const nextSellerType = ["farmer", "reseller"].includes(typeParam) ? typeParam : "";
+    setDraftFilters((current) => ({ ...current, sellerType: nextSellerType, page: 1 }));
+    setFilters((current) => ({ ...current, sellerType: nextSellerType, page: 1 }));
+  }, [typeParam]);
+
   const { farmers, count, page, totalPages, isLoading, error } = useFarmers(filters);
   const startConversation = useStartConversation();
 
@@ -56,15 +68,36 @@ export default function FindFarmersPage() {
     }
   };
 
+  const pageTitle = filters.sellerType === "reseller"
+    ? "Verified Resellers"
+    : filters.sellerType === "farmer"
+      ? "Verified Farmers"
+      : "Verified Suppliers";
+
+  const pageDescription = filters.sellerType === "reseller"
+    ? "Find trusted agricultural resellers and aggregators across Cameroon, verified for marketplace trade."
+    : filters.sellerType === "farmer"
+      ? "Find trusted farmers by crop and region, then review their verified marketplace profiles before starting a conversation."
+      : "Find trusted farmers and resellers by crop and region, then review their verified marketplace profiles before starting a conversation.";
+
+  const activeNav = filters.sellerType === "reseller"
+    ? "resellers"
+    : filters.sellerType === "farmer"
+      ? "farmers"
+      : "";
+
   return (
     <section className="mx-auto max-w-[1240px] space-y-7 py-4 sm:py-8">
       <header className="mx-auto max-w-[760px] text-center">
-        <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#1E5E27]">Farmer directory</p>
-        <h1 className="mt-3 font-display text-[38px] leading-[1.1] text-[#172019] sm:text-[48px]">Verified Farmers</h1>
+        <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-[#1E5E27]">
+          {filters.sellerType === "reseller" ? "Reseller directory" : "Farmer & supplier directory"}
+        </p>
+        <h1 className="mt-3 font-display text-[38px] leading-[1.1] text-[#172019] sm:text-[48px]">{pageTitle}</h1>
         <p className="mt-4 text-[15px] leading-7 text-[#68736B]">
-          Find trusted farmers by crop and region, then review their verified marketplace profiles before starting a conversation.
+          {pageDescription}
         </p>
       </header>
+      <MarketplaceSearchNav active={activeNav} />
 
       <form onSubmit={applyFilters} className="rounded-[14px] border border-[#DEE4DF] bg-white p-4 shadow-[0_7px_24px_rgba(20,48,25,0.04)]">
         <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-[#29342C]">
@@ -95,6 +128,11 @@ export default function FindFarmersPage() {
           </Button>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <select value={draftFilters.sellerType} onChange={(event) => updateDraft("sellerType", event.target.value)} className="h-9 rounded-[8px] border border-[#DCE2DD] bg-white px-3 text-[12px]">
+            <option value="">All suppliers</option>
+            <option value="farmer">Farmers</option>
+            <option value="reseller">Resellers</option>
+          </select>
           <label className="flex items-center gap-2 text-[13px] text-[#536057]">
             <input
               type="checkbox"
@@ -113,13 +151,17 @@ export default function FindFarmersPage() {
       </form>
 
       {isLoading ? (
-        <Card className="rounded-[14px] p-10 text-center text-[#68736B]">Loading farmer profiles...</Card>
+        <Card className="rounded-[14px] p-10 text-center text-[#68736B]">
+          Loading {filters.sellerType === "reseller" ? "reseller" : filters.sellerType === "farmer" ? "farmer" : "supplier"} profiles...
+        </Card>
       ) : error ? (
-        <Card className="rounded-[14px] p-10 text-center text-red-700">Farmers could not be loaded.</Card>
+        <Card className="rounded-[14px] p-10 text-center text-red-700">Profiles could not be loaded.</Card>
       ) : farmers.length ? (
         <>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[13px] text-[#68736B]">{count} farmer profile{count === 1 ? "" : "s"} found</p>
+            <p className="text-[13px] text-[#68736B]">
+              {count} {filters.sellerType === "reseller" ? "reseller" : filters.sellerType === "farmer" ? "farmer" : "supplier"} profile{count === 1 ? "" : "s"} found
+            </p>
             <span className="text-[12px] text-[#889189]">Page {page} of {totalPages}</span>
           </div>
           <div className="grid gap-5 lg:grid-cols-2">
@@ -141,7 +183,10 @@ export default function FindFarmersPage() {
           ) : null}
         </>
       ) : (
-        <EmptyState title="No farmers found" description="Try broadening the crop, region, or verification filters." />
+        <EmptyState
+          title={`No ${filters.sellerType === "reseller" ? "resellers" : filters.sellerType === "farmer" ? "farmers" : "suppliers"} found`}
+          description="Try broadening the crop, region, or verification filters."
+        />
       )}
     </section>
   );

@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 const HELP_CARDS = [
   {
     title: "Buyer Protection",
-    description: "Learn how escrow, delivery confirmation, and disputes protect every buyer transaction.",
+    description: "Learn how protected payments, delivery confirmation, and disputes protect every buyer transaction.",
     icon: ShieldCheck,
     accent: "green",
   },
@@ -60,7 +60,7 @@ export const BUYER_HELP_FAQS = [
   {
     category: "Payments",
     question: "How does AgriculNet buyer protection work?",
-    answer: "AgriculNet records the buyer payment in escrow and only releases it to the seller after order completion and buyer confirmation. Disputes can pause release while the support team reviews the order history.",
+    answer: "AgriculNet records the buyer payment as protected and keeps the seller payout held until order completion, buyer receipt confirmation, seller eligibility, and the required release checks. Disputes can pause release while the support team reviews the order history.",
   },
   {
     category: "Orders",

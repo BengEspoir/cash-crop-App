@@ -102,3 +102,20 @@ export function useAdminReviewUser() {
     },
   });
 }
+
+export function useAdminAccountModeration() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, action, reason }) => {
+      const { data } = await api.post(`/admin/users/${userId}/${action}`, {
+        confirmation: "CONFIRM ACCOUNT ACTION",
+        reason,
+      });
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "admin"] });
+    },
+  });
+}

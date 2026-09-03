@@ -24,13 +24,20 @@ const supportRoutes = require('./modules/support/support.routes');
 const uploadsRoutes = require('./modules/uploads/uploads.routes');
 const chatRoutes = require('./modules/chat/chat.routes');
 const searchRoutes = require('./modules/search/search.routes');
+const systemRoutes = require('./modules/system/system.routes');
 const whatsappWebhookRoutes = require('../routes/whatsappWebhook');
+const { maintenanceGuard } = require('./middleware/maintenance');
 
 const app = express();
 
 const buildAllowedOrigins = () => {
   const configured = process.env.CLIENT_URL || 'http://localhost:3000';
   const origins = new Set([configured, 'http://localhost:3000', 'http://127.0.0.1:3000']);
+  String(process.env.CLIENT_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .forEach((origin) => origins.add(origin));
 
   try {
     const parsed = new URL(configured);
@@ -105,6 +112,9 @@ app.get('/api', sendApiOverview);
 app.get('/api/v1', sendApiOverview);
 
 // ── ROUTES ──────────────────────────────────────────────────
+app.use('/api/v1/system', systemRoutes);
+app.use(maintenanceGuard);
+
 // Public auth routes
 app.use('/api/v1/auth', authRoutes);
 app.post('/api/webhooks/fapshi', handleFapshiWebhook);

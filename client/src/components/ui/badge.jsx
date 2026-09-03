@@ -43,7 +43,7 @@ const TIER_CONFIG = {
     text: "text-green-800",
     border: "border-green-200",
     ring: "ring-green-500/20",
-    tooltip: "Payments are held in escrow until delivery is confirmed.",
+    tooltip: "Payments are recorded as held until delivery and release checks are confirmed.",
   },
   government_verified: {
     label: "Government Verified",

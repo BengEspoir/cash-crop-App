@@ -42,4 +42,15 @@ describe('phone verification access policy', () => {
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
   });
+
+  test('does not require seller identity verification for marketplace access', () => {
+    const req = { user: { status: 'active', email_verified: true, phone_verified: true } };
+    const res = createResponse();
+    const next = jest.fn();
+
+    requireMarketplaceAccess(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
 });

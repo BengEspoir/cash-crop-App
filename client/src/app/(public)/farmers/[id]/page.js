@@ -85,7 +85,15 @@ export default function FarmerDetailPage({ params }) {
 
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.55fr)]">
         <div className="space-y-8">
-          <section>
+          <nav aria-label="Farmer profile sections" className="flex gap-2 overflow-x-auto border-b border-[#DDE5DE] pb-3">
+            {[
+              ["Overview", "#overview"],
+              ["Listings", "#active-listings"],
+              ["Reviews", "#reviews"],
+              ["Trade", "#trade-capability"],
+            ].map(([label, href]) => <Link key={label} href={href} className="rounded-full px-4 py-2 text-[13px] font-semibold text-[#526056] hover:bg-[#F0F7F1] hover:text-[#1E5E27]">{label}</Link>)}
+          </nav>
+          <section id="overview" className="scroll-mt-28">
             <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-[#1E5E27]">About</p>
             <h2 className="mt-2 font-display text-[30px] text-[#172019]">{farmer.farmName || farmer.businessName || "Seller profile"}</h2>
             <p className="mt-4 max-w-[760px] text-[14px] leading-7 text-[#5E6B62]">
@@ -121,10 +129,14 @@ export default function FarmerDetailPage({ params }) {
               </div>
             ) : <p className="mt-4 rounded-[12px] bg-[#F7F9F7] p-5 text-[14px] text-[#68736B]">This farmer has no active public listings yet.</p>}
           </section>
+          <section id="reviews" className="scroll-mt-28">
+            <h2 className="font-display text-[27px] text-[#172019]">Buyer reviews</h2>
+            <p className="mt-3 rounded-[12px] bg-[#F7F9F7] p-5 text-[14px] text-[#68736B]">{farmer.reviews > 0 ? `${farmer.reviews} review records contribute to the displayed rating.` : "No buyer reviews have been recorded yet."}</p>
+          </section>
         </div>
 
         <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
-          <Card className="rounded-[14px] border border-[#DDE5DE] p-5">
+          <Card id="trade-capability" className="scroll-mt-28 rounded-[14px] border border-[#DDE5DE] p-5">
             <h2 className="font-display text-[22px] text-[#172019]">Verification summary</h2>
             <div className="mt-4"><VerificationBadge status={farmer.verificationStatus} /></div>
             {farmer.verificationStatus === "verified" ? (

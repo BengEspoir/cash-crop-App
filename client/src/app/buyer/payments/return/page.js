@@ -23,7 +23,7 @@ export default function BuyerPaymentReturnPage() {
         if (!active) return;
         setResult(response);
         if (response?.status === "held_in_escrow") {
-          toast.success("Payment confirmed and placed in escrow.");
+          toast.success("Payment confirmed and recorded as protected.");
         } else if (response?.providerStatus === "FAILED" || response?.providerStatus === "EXPIRED") {
           toast.error("The payment was not completed.");
         }
@@ -55,7 +55,7 @@ export default function BuyerPaymentReturnPage() {
       <BuyerPanel title="Payment return">
         {!result ? (
           <div className="space-y-3">
-            <p className="text-[16px] text-ink-600">Refreshing the provider status and waiting for escrow confirmation.</p>
+            <p className="text-[16px] text-ink-600">Refreshing the provider status and waiting for protected payment confirmation.</p>
             <BuyerStatusBadge status="pending">Checking payment</BuyerStatusBadge>
           </div>
         ) : (
@@ -74,7 +74,7 @@ export default function BuyerPaymentReturnPage() {
               <BuyerButton href="/buyer/payments" variant="outline">Open payments</BuyerButton>
             </div>
             <p className="text-[13px] text-ink-400">
-              If the provider confirmed payment but the order still shows pending, refresh again in a moment. AgriculNet waits for the verified webhook before finalizing escrow.
+              If the provider confirmed payment but the order still shows pending, refresh again in a moment. AgriculNet waits for the verified webhook before recording the payment as held.
             </p>
           </div>
         )}

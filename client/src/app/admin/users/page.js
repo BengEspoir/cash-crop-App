@@ -15,6 +15,8 @@ import {
 } from "@/components/admin/AdminDesignSystem";
 import { Button } from "@/components/ui/button";
 import { exportDashboardCsv, useDashboardData, useDashboardFilters } from "@/hooks/useDashboardData";
+import { useAdminAccountModeration } from "@/hooks/useDashboardData";
+import toast from "react-hot-toast";
 import { AdminUserReviewDrawer } from "@/components/admin/AdminUserReviewDrawer";
 
 export default function AdminUsersPage() {
@@ -22,6 +24,7 @@ export default function AdminUsersPage() {
   const [isExporting, setIsExporting] = useState(false);
   const filterState = useDashboardFilters("users");
   const { data, isLoading } = useDashboardData("admin", filterState.queryFilters);
+  const moderateAccount = useAdminAccountModeration();
   const users = useMemo(() => data?.users || [], [data?.users]);
   const pending = users.filter((user) => String(user.status || "").includes("pending")).length;
   const active = users.filter((user) => user.status === "active").length;
@@ -114,6 +117,27 @@ export default function AdminUsersPage() {
                   <Button asChild variant="ghost" size="sm">
                     <Link href={`/admin/users/${user.id}`}>Open</Link>
                   </Button>
+                  {!["admin", "super_admin"].includes(user.role) ? (
+                    <Button
+                      type="button"
+                      variant={user.status === "suspended" ? "secondary" : "destructive"}
+                      size="sm"
+                      disabled={moderateAccount.isPending}
+                      onClick={async () => {
+                        const action = user.status === "suspended" ? "restore" : "suspend";
+                        const reason = window.prompt(`Enter the reason to ${action} this account (minimum 10 characters).`);
+                        if (!reason || reason.trim().length < 10) return;
+                        try {
+                          await moderateAccount.mutateAsync({ userId: user.id, action, reason: reason.trim() });
+                          toast.success(`Account ${action === "restore" ? "restored" : "suspended"}.`);
+                        } catch (error) {
+                          toast.error(error.response?.data?.message || "Account action failed.");
+                        }
+                      }}
+                    >
+                      {user.status === "suspended" ? "Restore" : "Suspend"}
+                    </Button>
+                  ) : null}
                 </div>
               ),
             },

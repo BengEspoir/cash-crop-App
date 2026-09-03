@@ -13,10 +13,32 @@ const {
   FAPSHI_REQUEST_TIMEOUT_MS
 } = require('../../config/env');
 const ordersService = require('../orders/orders.service');
+const logger = require('../../utils/logger');
 
 const FAPSHI_PROVIDER = 'fapshi';
 const FINAL_PROVIDER_STATUSES = new Set(['SUCCESSFUL', 'FAILED', 'EXPIRED']);
 const isNotFound = (error) => error?.code === 'PGRST116';
+
+const PAYMENT_RELEASE_ERRORS = {
+  PAYMENT_INTENT_NOT_FOUND: [404, ERROR_CODES.NOT_FOUND, 'Payment not found'],
+  PAYMENT_ORDER_NOT_FOUND: [404, ERROR_CODES.NOT_FOUND, 'Payment order not found'],
+  PAYMENT_ACTOR_FORBIDDEN: [403, ERROR_CODES.FORBIDDEN, 'You are not allowed to release this payment'],
+  PAYMENT_SELLER_NOT_ELIGIBLE: [422, 'PAYMENT_SELLER_NOT_ELIGIBLE', 'The seller is not eligible to receive this payout'],
+  PAYMENT_INVALID_TRANSITION: [409, 'PAYMENT_INVALID_STATE', 'Only funds held in escrow can be released'],
+  PAYMENT_ORDER_NOT_READY: [409, 'PAYMENT_ORDER_NOT_READY', 'The order must be delivered before escrow can be released'],
+  PAYMENT_BUYER_RECEIPT_REQUIRED: [409, 'PAYMENT_BUYER_RECEIPT_REQUIRED', 'The buyer must confirm receipt before payout can be released'],
+  PAYMENT_BLOCKED_BY_DISPUTE: [409, 'PAYMENT_BLOCKED_BY_DISPUTE', 'An active dispute blocks payout release'],
+  PAYMENT_INTENT_MISMATCH: [409, 'PAYMENT_STATE_CONFLICT', 'Payment details no longer match the order'],
+  PAYMENT_STATE_CHANGED: [409, 'PAYMENT_STATE_CONFLICT', 'Payment state changed while release was processing']
+};
+
+const mapPaymentReleaseError = (error) => {
+  const haystack = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ');
+  const match = Object.keys(PAYMENT_RELEASE_ERRORS).find((key) => haystack.includes(key));
+  if (!match) return error;
+  const [statusCode, errorCode, message] = PAYMENT_RELEASE_ERRORS[match];
+  return new AppError(message, statusCode, errorCode);
+};
 
 const requireFapshiConfiguration = () => {
   if (!FAPSHI_API_USER || !FAPSHI_API_KEY || !FAPSHI_BASE_URL) {
@@ -331,17 +353,66 @@ const handleFapshiWebhook = async (payload = {}) => {
   };
 };
 
-const releasePayment = async (user, paymentId) => {
+const releasePayment = async (user, paymentId, context = {}) => {
   if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
     throw new AppError('Only admins can release escrow payments', 403, ERROR_CODES.FORBIDDEN);
   }
-  const { data, error } = await supabaseAdmin.rpc('release_marketplace_escrow', {
-    p_payment_id: paymentId,
-    p_actor_user_id: user.id,
-    p_released_at: new Date().toISOString()
-  });
-  if (error) throw error;
-  return mapPayment(data.payment);
+
+  const logContext = {
+    event: 'PAYMENT_RELEASE',
+    correlationId: context.correlationId,
+    paymentId,
+    actorUserId: user.id,
+    actorRole: user.role
+  };
+
+  try {
+    const payment = await getPaymentById(paymentId);
+    const order = await getOrderById(payment.order_id);
+    Object.assign(logContext, {
+      orderId: order.id,
+      paymentStatusBefore: payment.status,
+      orderStatusBefore: order.status
+    });
+
+    if (payment.status === 'released') {
+      throw new AppError('Payment has already been released', 409, 'PAYMENT_ALREADY_RELEASED');
+    }
+    if (payment.status === 'refunded') {
+      throw new AppError('Refunded payments cannot be released', 409, 'PAYMENT_REFUNDED');
+    }
+    if (payment.status !== 'held_in_escrow') {
+      throw new AppError('Only funds held in escrow can be released', 409, 'PAYMENT_INVALID_STATE');
+    }
+    if (!['delivered', 'completed'].includes(order.status)) {
+      throw new AppError('The order must be delivered before escrow can be released', 409, 'PAYMENT_ORDER_NOT_READY');
+    }
+    if (order.buyer_receipt_status !== 'received' || !order.buyer_received_at) {
+      throw new AppError('The buyer must confirm receipt before payout can be released', 409, 'PAYMENT_BUYER_RECEIPT_REQUIRED');
+    }
+
+    const { data, error } = await supabaseAdmin.rpc('release_marketplace_escrow', {
+      p_payment_id: paymentId,
+      p_actor_user_id: user.id,
+      p_released_at: new Date().toISOString()
+    });
+    if (error) throw mapPaymentReleaseError(error);
+    if (!data?.released) {
+      throw new AppError('Payment has already been released', 409, 'PAYMENT_ALREADY_RELEASED');
+    }
+
+    const result = { ...mapPayment(data.payment), released: true };
+    logger.info({ ...logContext, releaseReason: context.reason, paymentStatusAfter: data.payment?.status, result: 'released' });
+    return result;
+  } catch (error) {
+    const mappedError = mapPaymentReleaseError(error);
+    logger.warn({
+      ...logContext,
+      result: 'rejected',
+      errorCategory: mappedError.errorCode || mappedError.code || 'PAYMENT_RELEASE_ERROR'
+    });
+    throw mappedError;
+  }
 };
 
 const requestWithdrawal = async (user) => {

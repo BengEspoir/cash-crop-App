@@ -7,6 +7,7 @@ import { Bell, CreditCard, Globe2, Lock, Save, ShieldCheck, UserCircle2 } from "
 import useAuth from "@/hooks/useAuth";
 import { useDashboardPreferences, useUpdateDashboardPreferences } from "@/hooks/useDashboardPreferences";
 import { BuyerButton, BuyerPage, BuyerPanel, BuyerStatusBadge } from "@/components/buyer/BuyerDesignSystem";
+import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
 
 const PAYMENT_METHODS = [
   { key: "mtn_momo", label: "MTN MoMo", detail: "Primary mobile money", live: true },
@@ -128,7 +129,7 @@ export default function BuyerSettingsPage() {
               {[
                 ["orderUpdates", "Order Updates", "Confirmations, shipping, delivery alerts"],
                 ["newMessages", "New Messages", "Farmer replies and sourcing inquiries"],
-                ["paymentNotifications", "Payment Notifications", "Hosted checkout and escrow updates"],
+                ["paymentNotifications", "Payment Notifications", "Hosted checkout and protected payment updates"],
                 ["priceAlerts", "Price Alerts", "Saved crop price changes"],
                 ["platformUpdates", "Platform Updates", "Features and announcements"],
               ].map(([key, title, description]) => (
@@ -154,6 +155,7 @@ export default function BuyerSettingsPage() {
               ))}
             </div>
           </BuyerPanel>
+          <PushNotificationSettings panel={BuyerPanel} button={BuyerButton} />
 
           <BuyerPanel title="Payment methods" action={<BuyerButton variant="outline" className="h-11 px-4" disabled>Add Method</BuyerButton>}>
             <div className="space-y-3">

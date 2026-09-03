@@ -2,6 +2,7 @@
 
 import { farmerSettingsSections, FarmerButton, FarmerHeader, FarmerPage, FarmerPanel } from "@/components/farmer/FarmerDesignSystem";
 import { Input } from "@/components/ui/input";
+import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
 
 export default function FarmerSettingsPage() {
   return (
@@ -66,6 +67,7 @@ export default function FarmerSettingsPage() {
               ))}
             </div>
           </FarmerPanel>
+          <PushNotificationSettings panel={FarmerPanel} button={FarmerButton} />
         </div>
       </div>
     </FarmerPage>

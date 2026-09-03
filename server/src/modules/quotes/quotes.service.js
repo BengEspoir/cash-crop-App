@@ -4,7 +4,6 @@ const { ERROR_CODES, USER_ROLES } = require('../../config/constants');
 const {
   FARMER_VERIFICATION_STATUS,
   isBuyerRole,
-  isVerifiedSellerProfile,
   mapFarmerProfile,
   mapResellerProfile,
   mapQuote,
@@ -235,19 +234,11 @@ const getQuote = async (user, quoteId) => {
 
 const updateQuoteStatus = async (user, quoteId, status) => {
   const row = await getQuoteRow(quoteId);
-  const { farmerProfile, resellerProfile } = await assertQuoteAccess(user, row);
+  await assertQuoteAccess(user, row);
 
   if (status === 'accepted') {
     if (![USER_ROLES.FARMER, USER_ROLES.RESELLER].includes(user.role)) {
       throw new AppError('Only sellers can accept or complete quote requests', 403, ERROR_CODES.FORBIDDEN);
-    }
-
-    if (!isVerifiedSellerProfile(farmerProfile || resellerProfile, user)) {
-      throw new AppError(
-        'You must complete National ID verification before accepting sales or receiving payments.',
-        403,
-        ERROR_CODES.FORBIDDEN
-      );
     }
   }
 

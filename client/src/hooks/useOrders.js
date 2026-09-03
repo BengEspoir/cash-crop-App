@@ -30,3 +30,15 @@ export const useCreateOrder = () => {
     },
   });
 };
+
+export const useConfirmOrderReceipt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => unwrapData(await api.post(`/orders/${id}/confirm-receipt`)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+};

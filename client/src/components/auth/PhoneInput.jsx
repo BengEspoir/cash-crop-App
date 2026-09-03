@@ -82,8 +82,7 @@ export function PhoneInput({
       ).trim();
     }
     
-    // Generic international format
-    return digits;
+    return digits.replace(/(\d{3})(?=\d)/g, "$1 ").trim();
   };
 
   const formattedValue = formatValue(value);
@@ -98,8 +97,7 @@ export function PhoneInput({
     setSelectedCountry(country);
     onCountryChange?.(country.code);
     setIsOpen(false);
-    // Clear phone when country changes
-    onChange("");
+    if (!value) onChange("");
   };
 
   const countries = showCountrySelector 
@@ -135,6 +133,9 @@ export function PhoneInput({
 
         {/* Phone Input */}
         <input
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
           value={formattedValue}
           onChange={handleChange}
           placeholder={phonePlaceholder}

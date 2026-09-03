@@ -4,6 +4,7 @@ import api from "@/lib/axios";
 import { supabase } from "@/lib/supabaseClient";
 import { maskIdentifier, normalizeCameroonPhone } from "@/lib/formatters";
 import { formatPhoneInternational } from "@/lib/countries";
+import { clearOfflineUserData } from "@/lib/offlineStore";
 
 const onboardingStorageKey = "agriculnet-onboarding";
 
@@ -175,11 +176,12 @@ const useAuthStore = create(
         return get().fetchMe();
       },
 
-      login: async (identifier, password, mode = "email", turnstileToken = "") => {
+      login: async (identifier, password, mode = "email", turnstileToken = "", countryCode = "CM") => {
         set({ isLoading: true });
         try {
           if (mode === "phone") {
-            const phone = normalizeCameroonPhone(identifier);
+            const phone = formatPhoneInternational(identifier, countryCode);
+            if (!phone) throw new Error("Enter a valid phone number for the selected country.");
             const loginPayload = { phone, password };
             if (turnstileToken) loginPayload.turnstileToken = turnstileToken;
             const response = await api.post("/auth/login/phone", loginPayload);
@@ -217,7 +219,9 @@ const useAuthStore = create(
       },
 
       logout: async () => {
+        const userId = get().user?.id;
         await supabase.auth.signOut();
+        await clearOfflineUserData(userId).catch(() => undefined);
         writeOnboardingState(null);
         set({ user: null, isAuthenticated: false, onboarding: null });
       },
@@ -383,7 +387,9 @@ const useAuthStore = create(
       },
 
       clearAuth: async () => {
+        const userId = get().user?.id;
         await supabase.auth.signOut();
+        await clearOfflineUserData(userId).catch(() => undefined);
         writeOnboardingState(null);
         set({ user: null, isAuthenticated: false, onboarding: null });
       },

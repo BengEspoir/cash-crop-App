@@ -48,9 +48,12 @@ Run all SQL files in `server/database/migrations/` in numeric order:
 036_atomic_logistics_transitions.sql
 037_core_rls_lockdown.sql
 038_uuid_generation_compatibility.sql
+039_supabase_auth_and_rls_alignment.sql
+040_whatsapp_relay_and_message_realtime.sql
+041_system_maintenance_and_operation_jobs.sql
 ```
 
-Do not skip intermediate files. Before 031, reconcile duplicate non-null payment references, duplicate commissions per order, and duplicate logistics rows per order; failures use `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, and `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Before later migrations, reconcile duplicate order payments for 033, reissue proofs invalidated by 034, audit inventory for 035, and normalize unknown shipment statuses for 036. Migration 037 makes application tables service-role-only, so `SUPABASE_SERVICE_ROLE_KEY` is required in every API environment. Migration 038 repairs UUID resolution in restricted RPCs.
+Do not skip intermediate files. Before 031, reconcile duplicate non-null payment references, duplicate commissions per order, and duplicate logistics rows per order; failures use `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, and `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Before later migrations, reconcile duplicate order payments for 033, reissue proofs invalidated by 034, audit inventory for 035, and normalize unknown shipment statuses for 036. Migration 037 makes application tables service-role-only, so `SUPABASE_SERVICE_ROLE_KEY` is required in every API environment. Migration 038 repairs UUID resolution in restricted RPCs; 039 aligns Supabase Auth identities; 040 adds WhatsApp relay bindings; and 041 adds maintenance settings plus operation-job metadata.
 
 Optional seeds live in `server/database/seeds/`. The administrator seed must be supplied private session settings in the same explicit SQL transaction; the tracked file contains no account or password hash.
 
@@ -61,7 +64,7 @@ Set-Location server
 node verify-db-init.js
 ```
 
-The verifier uses read-only table/column queries and the Supabase schema description to check representative tables, enums, and RPCs through migration 038. Run the SQL checks in `server/database/MIGRATION_GUIDE.md` separately to confirm RLS and grants. Verification does not validate live providers or prove end-to-end marketplace operation.
+The verifier uses read-only table/column queries and the Supabase schema description to check representative tables, enums, and RPCs through migration 041. Run the SQL checks in `server/database/MIGRATION_GUIDE.md` separately to confirm RLS and grants. Verification does not validate live providers, execute a database backup or restore, or prove end-to-end marketplace operation.
 
 ## 5. Start local services
 

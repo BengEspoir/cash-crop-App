@@ -22,9 +22,21 @@ const markAllNotificationsRead = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Notifications marked as read');
 });
 
+const subscribePush = asyncHandler(async (req, res) => {
+  const result = await service.subscribePush(req.user, req.body, req);
+  sendSuccess(res, result, 'Push subscription saved', 201);
+});
+
+const unsubscribePush = asyncHandler(async (req, res) => {
+  const result = await service.unsubscribePush(req.user, req.body.endpoint);
+  sendSuccess(res, result, 'Push subscription removed');
+});
+
 module.exports = {
   listNotifications,
   createNotification,
   markNotificationRead,
-  markAllNotificationsRead
+  markAllNotificationsRead,
+  subscribePush,
+  unsubscribePush
 };

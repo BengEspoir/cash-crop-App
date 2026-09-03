@@ -34,7 +34,7 @@ export default function BuyerPaymentsPage() {
       <BuyerHeader title="Payments" description="Review protected payment activity and sourced order value connected to your buyer account." />
 
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <BuyerMetricCard icon={ShieldCheck} value={compactBuyerCurrency(sourcedTotal)} label="Protected Order Value" detail={`${buyerOrders.length} buyer order records`} tag="Escrow aware" tone="green" />
+        <BuyerMetricCard icon={ShieldCheck} value={compactBuyerCurrency(sourcedTotal)} label="Protected Order Value" detail={`${buyerOrders.length} buyer order records`} tag="Payment held pending release" tone="green" />
         <BuyerMetricCard icon={CreditCard} value={compactBuyerCurrency(paymentTotal)} label="Payment Records" detail={`${payments.length} ledger records visible`} tag="Live" tone="gold" />
         <BuyerMetricCard icon={ShieldCheck} value={String(buyerOrders.length)} label="Orders Tracked" detail="Buyer dashboard contract" tone="blue" />
       </div>
@@ -63,7 +63,7 @@ export default function BuyerPaymentsPage() {
             <select value={filterState.filters.status} onChange={(event) => filterState.updateFilter("status", event.target.value)} className="h-12 rounded-lg border border-ink-200 px-3 text-[14px] font-medium text-ink-700 outline-none focus:border-green-700">
               <option value="all">Status: All</option>
               <option value="pending">Pending</option>
-              <option value="escrow">Escrow</option>
+              <option value="held_in_escrow">Payment held</option>
               <option value="released">Released</option>
               <option value="failed">Failed</option>
             </select>

@@ -45,7 +45,7 @@ export default function FarmerDashboardPage() {
         <FarmerMetricCard icon={Leaf} value={String(activeListings)} label="Active Listings" detail={`${listings.length} total crop records`} tag="Live" tone="green" />
         <FarmerMetricCard icon={Package} value={String(openOrders)} label="Open Orders" detail="Buyer demand requiring attention" tag={`${openQuotes} inquiries`} tone="blue" />
         <FarmerMetricCard icon={MessageSquare} value={String(metrics.unreadMessages ?? 0)} label="Unread Messages" detail="From buyer conversations" tag="Live inbox" tone="gold" />
-        <FarmerMetricCard icon={DollarSign} value={revenue} label="Protected Revenue" detail="Across current orders" tag="Escrow safe" tone="cyan" />
+        <FarmerMetricCard icon={DollarSign} value={revenue} label="Protected Revenue" detail="Across current orders" tag="Payout held until eligible" tone="cyan" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.7fr)]">

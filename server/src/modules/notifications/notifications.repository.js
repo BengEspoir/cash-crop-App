@@ -83,10 +83,55 @@ const markAllRead = async (userId) => {
   return (data || []).map(mapNotification);
 };
 
+const listPushSubscriptions = async (userId) => {
+  const { data, error } = await supabaseAdmin
+    .from('push_subscriptions')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return data || [];
+};
+
+const upsertPushSubscription = async (userId, subscription, preferences, userAgent) => {
+  const { data, error } = await supabaseAdmin
+    .from('push_subscriptions')
+    .upsert({
+      user_id: userId,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+      preferences,
+      user_agent: userAgent || null,
+      last_used_at: new Date().toISOString()
+    }, { onConflict: 'user_id,endpoint' })
+    .select('id, endpoint, preferences, created_at, updated_at')
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+const deletePushSubscription = async (userId, endpoint) => {
+  const { error } = await supabaseAdmin
+    .from('push_subscriptions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('endpoint', endpoint);
+  if (error) throw error;
+};
+
+const deletePushSubscriptionByEndpoint = async (endpoint) => {
+  const { error } = await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint);
+  if (error) throw error;
+};
+
 module.exports = {
   listByUser,
   create,
   markRead,
   markAllRead,
-  mapNotification
+  mapNotification,
+  listPushSubscriptions,
+  upsertPushSubscription,
+  deletePushSubscription,
+  deletePushSubscriptionByEndpoint
 };

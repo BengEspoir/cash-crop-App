@@ -19,8 +19,8 @@ const plans = [
   },
   {
     name: "Cooperative",
-    price: "2.5%",
-    priceLabel: "per protected order",
+    price: "Marginal",
+    priceLabel: "seller fee",
     description: "For cooperatives and aggregators coordinating multiple farmers and shipments.",
     bullets: ["Unlimited listings", "Team seats", "Inspection coordination", "Consolidated reporting"],
     highlighted: true,
@@ -28,8 +28,8 @@ const plans = [
   },
   {
     name: "Buyer",
-    price: "1%",
-    priceLabel: "per protected order",
+    price: "Free",
+    priceLabel: "to source",
     description: "For wholesalers, processors, and exporters sourcing verified supply at scale.",
     bullets: ["Verified farmer search", "Quote workflows", "Export documentation help", "Dedicated desk"],
     cta: { label: "Register as Buyer", href: "/register/buyer" },
@@ -90,6 +90,9 @@ export default function PricingPage() {
       </ContentSection>
 
       <ContentSection eyebrow="Notes" title="Fine print">
+        <p className="mb-4 rounded-xl border border-green-100 bg-green-50 p-4 text-[13px] leading-6 text-green-950">
+          The seller-paid platform fee has a XAF 2,000 minimum. Marginal bands are 5.00%, 5.25%, 5.50%, 5.75%, and 6.00%; each higher rate applies only inside its band.
+        </p>
         <ul className="space-y-2 text-[13px] leading-6 text-ink-700">
           <li>• Protected order fee is charged only on successful settlement. Cancelled or disputed orders are not charged.</li>
           <li>• Mobile money fees from providers are passed through at cost and shown before you confirm.</li>

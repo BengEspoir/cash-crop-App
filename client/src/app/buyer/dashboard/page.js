@@ -45,7 +45,7 @@ export default function BuyerDashboardPage() {
         <BuyerMetricCard icon={Package} value={String(activeOrders)} label="Active Orders" detail={`From ${orders.length} order records`} tag="In transit" tone="blue" />
         <BuyerMetricCard icon={Heart} value={String(savedListings)} label="Saved Crops" detail="Monitoring live prices" tag="+3 this week" tone="green" />
         <BuyerMetricCard icon={MessageSquare} value={String(unreadMessages)} label="Unread Messages" detail="Direct chats with farmers" tag="Requires reply" tone="gold" />
-        <BuyerMetricCard icon={CreditCard} value={compactBuyerCurrency(sourcedTotal)} label="Total Sourced" detail="Completed trade volume" tag="Escrow Protected" tone="gold" />
+        <BuyerMetricCard icon={CreditCard} value={compactBuyerCurrency(sourcedTotal)} label="Total Sourced" detail="Completed trade volume" tag="Protected Payment" tone="gold" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">

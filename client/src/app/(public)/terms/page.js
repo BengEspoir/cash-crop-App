@@ -41,9 +41,10 @@ export default function TermsPage() {
 
         <h2>4. Payments & fees</h2>
         <p>
-          Protected orders are settled only after delivery confirmation or authorised inspection. Our fees are
-          published on the Pricing page and taken only from successful protected orders. Mobile money or bank
-          charges from providers are passed through at cost.
+          Provider-backed payments may be recorded as held while an order is in progress. Seller payout requires
+          delivery, explicit receipt confirmation by the owning buyer, an active identity-verified seller, and no
+          blocking dispute. Seller-paid marginal platform fees are published on the Pricing page. AgriculNet is not
+          representing this workflow as a regulated escrow or banking service.
         </p>
 
         <h2>5. Prohibited conduct</h2>
@@ -57,7 +58,8 @@ export default function TermsPage() {
         <p>
           We may suspend or terminate accounts that repeatedly breach these terms. Where possible, we provide a
           cure window to correct the issue. Fraud or illegal activity leads to immediate suspension and, where
-          appropriate, referral to authorities.
+          appropriate, referral to authorities. Suspended sessions remain blocked from protected API operations
+          until an audited administrator restores the account.
         </p>
 
         <h2>7. Changes</h2>

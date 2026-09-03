@@ -43,9 +43,13 @@ Run each file separately in the Supabase SQL Editor, in this exact order:
 37. `037_core_rls_lockdown.sql` — forced RLS and service-role-only application tables
 38. `038_uuid_generation_compatibility.sql` — UUID resolution for restricted payment, order, and logistics RPCs
 
+39. `039_supabase_auth_and_rls_alignment.sql` — Supabase Auth identity and RLS alignment
+40. `040_whatsapp_relay_and_message_realtime.sql` — WhatsApp relay bindings and authorized message realtime
+41. `041_system_maintenance_and_operation_jobs.sql` — maintenance settings and database-operation job metadata
+
 Migration files are ordered dependencies, not optional feature flags. Record the applied version per environment.
 
-## Upgrade prerequisites for migrations 033-038
+## Upgrade prerequisites for migrations 033-041
 
 - Before 031, reconcile duplicate non-null `payments.transaction_ref` values (`MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`), duplicate `commissions.order_id` rows (`MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`), and duplicate `logistics.order_id` rows (`MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`). The migration deliberately fails before creating its unique indexes.
 - Before 033, reconcile legacy duplicate `payments.order_id` rows; its unique index deliberately fails closed. Migrations 031/033 use order-before-payment locking. Cancellation or late provider success marks affected funds `reconciliation_required`/refund-required and cancels commission rather than reopening the order. Escrow release is service-role mediated, admin-authorized, and limited to delivered/completed orders.
@@ -54,6 +58,9 @@ Migration files are ordered dependencies, not optional feature flags. Record the
 - Migration 036 adds no columns and depends on the logistics/truck/position fields from 030 plus the order guards from 035. Before applying it, normalize unknown historical shipment statuses. It fails with `MIGRATION_036_LOGISTICS_STATUS_RECONCILIATION_REQUIRED`; historical invalid GPS rows do not block installation because the coordinate constraint is initially `NOT VALID`. Its service-role-only `transition_logistics_shipment` RPC applies shipment, GPS/history, and related order changes atomically.
 - Migration 037 forces RLS and revokes table privileges from `PUBLIC`, `anon`, and `authenticated`. Configure `SUPABASE_SERVICE_ROLE_KEY` in every API environment; no anonymous-key fallback is supported.
 - Migration 038 must follow 031, 035, and 036. It repairs already-installed restricted RPCs when Supabase keeps `uuid-ossp` outside the `public` search path.
+- Migration 039 aligns application users with Supabase Auth identities. Reconcile duplicate or missing auth mappings before relying on its RLS policies.
+- Migration 040 stores server-only WhatsApp relay bindings and updates the authorized realtime publication. Keep all Meta credentials server-side.
+- Migration 041 creates service-role-only maintenance and operation-job tables. Apply it before enabling admin maintenance, backup, or restore controls.
 
 ## Administrator bootstrap
 
@@ -75,7 +82,7 @@ Set-Location server
 node verify-db-init.js
 ```
 
-The script performs read-only representative schema checks through migration 038. It reads tables/columns and the service-role OpenAPI description; it does not invoke mutating RPCs. Independently verify representative function signatures in SQL Editor:
+The script performs read-only representative schema checks through migration 041. It reads tables/columns and the service-role OpenAPI description; it does not invoke mutating RPCs, backups, or restores. Independently verify representative function signatures in SQL Editor:
 
 ```sql
 SELECT

@@ -3,6 +3,7 @@ const validate = require('../../middleware/validate');
 const { authenticate } = require('../../middleware/auth');
 const { identityUpload } = require('../../middleware/upload');
 const { authLimiter, otpSendLimiter } = require('../../middleware/rateLimiter');
+const { verifyTurnstile } = require('../../middleware/turnstile');
 
 const {
   sendOtpSchema,
@@ -32,7 +33,7 @@ const {
   loginWithPhone
 } = require('./auth.controller');
 
-router.post('/login/phone', authLimiter, validate(phonePasswordLoginSchema), loginWithPhone);
+router.post('/login/phone', authLimiter, verifyTurnstile('login'), validate(phonePasswordLoginSchema), loginWithPhone);
 router.post('/verify-phone/send', otpSendLimiter, validate(sendOtpSchema), sendPhoneOtp);
 router.post('/verify-phone/confirm', validate(confirmOtpSchema), confirmPhoneOtp);
 router.get('/me', authenticate, getMe);

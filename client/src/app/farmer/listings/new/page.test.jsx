@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import FarmerNewListingPage from "./page";
+import { getOfflineDraftKey } from "@/lib/offlineStore";
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
@@ -16,6 +17,12 @@ vi.mock("react-hot-toast", () => ({
 }));
 vi.mock("@/hooks/useListings", () => ({
   useCreateListing: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
+}));
+vi.mock("@/hooks/useAuth", () => ({
+  default: () => ({
+    user: { id: "farmer-1", role: "farmer" },
+    isAuthenticated: true,
+  }),
 }));
 vi.mock("@/components/media/ImageUploader", () => ({
   ImageUploader: () => <div>Image uploader</div>,
@@ -52,13 +59,13 @@ describe("farmer listing wizard", () => {
 
     expect(screen.getByLabelText("Step 2 of 4")).toBeInTheDocument();
     await waitFor(() => {
-      const saved = JSON.parse(window.localStorage.getItem("agriculnet.active-listing-draft.v1"));
+      const saved = JSON.parse(window.localStorage.getItem(getOfflineDraftKey("farmer-1")));
       expect(saved).toMatchObject({ step: 2, form: { crop: "Cocoa" } });
     });
   });
 
   it("restores an interrupted mobile session from local storage", async () => {
-    window.localStorage.setItem("agriculnet.active-listing-draft.v1", JSON.stringify({
+    window.localStorage.setItem(getOfflineDraftKey("farmer-1"), JSON.stringify({
       step: 3,
       form: {
         crop: "Coffee",

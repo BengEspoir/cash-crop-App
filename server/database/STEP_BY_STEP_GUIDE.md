@@ -21,11 +21,14 @@ Run all files in `server/database/migrations/` one at a time in numeric order, s
 036_atomic_logistics_transitions.sql
 037_core_rls_lockdown.sql
 038_uuid_generation_compatibility.sql
+039_supabase_auth_and_rls_alignment.sql
+040_whatsapp_relay_and_message_realtime.sql
+041_system_maintenance_and_operation_jobs.sql
 ```
 
 Do not skip the earlier marketplace migrations merely because an authentication-only flow starts successfully.
 
-For an existing database, complete migration 031's payment-reference, commission, and shipment uniqueness preflight plus the 033 duplicate-payment, 034 proof-reissue, 035 inventory-audit, and 036 shipment-status prerequisites in `MIGRATION_GUIDE.md`. Resolve its exact `MIGRATION_031_*_RECONCILIATION_REQUIRED` failure before retrying. Migration 037 requires a backend-only service-role key in every environment; migration 038 repairs UUID resolution in already-installed restricted RPCs.
+For an existing database, complete migration 031's payment-reference, commission, and shipment uniqueness preflight plus the 033 duplicate-payment, 034 proof-reissue, 035 inventory-audit, and 036 shipment-status prerequisites in `MIGRATION_GUIDE.md`. Resolve its exact `MIGRATION_031_*_RECONCILIATION_REQUIRED` failure before retrying. Migration 037 requires a backend-only service-role key in every environment; migration 038 repairs UUID resolution in already-installed restricted RPCs; migrations 039-040 align Auth and messaging; and migration 041 adds protected maintenance/operation metadata.
 
 ## 3. Run optional seeds
 

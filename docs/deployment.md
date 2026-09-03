@@ -16,14 +16,22 @@ Do not configure an administrator route secret. Administrators use `/auth/login`
 
 ## Database cutover
 
-For the existing Supabase project, identify the applied versions and run only missing migrations through `039_supabase_auth_and_rls_alignment.sql`, always in numeric order. Do not rerun the full schema blindly. Then run:
+For the existing Supabase project, identify the applied versions and run only missing migrations through `041_system_maintenance_and_operation_jobs.sql`, always in numeric order. Do not rerun the full schema blindly. Then run:
 
 ```powershell
 Set-Location server
 node verify-db-init.js
 ```
 
-Before 031, reconcile duplicate non-null payment references, commissions per order, and logistics rows per order. The explicit failures are `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, and `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Then reconcile duplicate order payments for 033, reissue proofs invalidated by 034, audit legacy stock for 035, and normalize unknown shipment statuses for 036. Migration 037 forces RLS and requires `SUPABASE_SERVICE_ROLE_KEY` in every API environment; migration 038 repairs UUID resolution in restricted RPCs. Schema verification does not prove live provider operation.
+Before 031, reconcile duplicate non-null payment references, commissions per order, and logistics rows per order. The explicit failures are `MIGRATION_031_DUPLICATE_PAYMENT_REFERENCE_RECONCILIATION_REQUIRED`, `MIGRATION_031_DUPLICATE_COMMISSION_RECONCILIATION_REQUIRED`, and `MIGRATION_031_DUPLICATE_SHIPMENT_RECONCILIATION_REQUIRED`. Then reconcile duplicate order payments for 033, reissue proofs invalidated by 034, audit legacy stock for 035, and normalize unknown shipment statuses for 036. Migration 037 forces RLS and requires `SUPABASE_SERVICE_ROLE_KEY` in every API environment; migration 038 repairs UUID resolution in restricted RPCs; migration 039 aligns Supabase Auth identities; migration 040 adds WhatsApp relay bindings; and migration 041 adds maintenance settings and durable operation-job metadata. Schema verification does not prove live provider operation.
+
+## Maintenance and database operations
+
+Migration 041 must be applied before the admin maintenance panel is used. Create a private Supabase Storage bucket for database archives, then configure Railway with `DATABASE_BACKUP_BUCKET` matching that bucket. Keep `DATABASE_URL` and all database credentials on Railway only.
+
+Logical backups are disabled by default. Enable `DATABASE_BACKUP_ENABLED=true` only when the Railway image has compatible `pg_dump` and `pg_restore` executables and a direct PostgreSQL connection. Enable `DATABASE_RESTORE_ENABLED=true` only after testing restore into a disposable target. Restore requests require maintenance mode, an internally recorded successful backup, checksum verification, and the exact confirmation phrase. Provider-managed Supabase backups remain the preferred production disaster-recovery mechanism.
+
+Operation metadata is durable in the database, but the current backup worker runs inside the API process and is not a restart-resumable job queue. Do not represent a queued or interrupted job as a completed backup.
 
 ## Fapshi backend values
 
@@ -65,3 +73,6 @@ The server's in-process scheduler runs only while the Railway service is active.
 ## Scope statement
 
 AgriculNet remains a prototype. Authentication and selected persisted workflows are implemented, while live settlement, payouts, carrier operations, inspection/certification, export documentation, and impact claims require further implementation and operational validation.
+# PWA and push addenda
+
+For the app subdomain, service-worker boundaries, and offline acceptance checks, see [APP_SUBDOMAIN_PWA_SETUP.md](APP_SUBDOMAIN_PWA_SETUP.md). For VAPID keys and notification testing, see [WEB_PUSH_SETUP.md](WEB_PUSH_SETUP.md). Apply migrations 042 and 043 before deploying the dependent server release.

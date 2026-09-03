@@ -29,10 +29,22 @@ const reviewVerificationSubmission = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Verification review saved successfully');
 });
 
+const suspendUser = asyncHandler(async (req, res) => {
+  const result = await adminService.suspendUser(req.user, req.params.userId, req.body.reason, req);
+  sendSuccess(res, result, 'Account suspended');
+});
+
+const restoreUser = asyncHandler(async (req, res) => {
+  const result = await adminService.restoreUser(req.user, req.params.userId, req.body.reason, req);
+  sendSuccess(res, result, 'Account restored');
+});
+
 module.exports = {
   getActivity,
   getAuditLogs,
   listVerificationSubmissions,
   getVerificationSubmission,
-  reviewVerificationSubmission
+  reviewVerificationSubmission,
+  suspendUser,
+  restoreUser
 };

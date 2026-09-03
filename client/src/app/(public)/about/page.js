@@ -26,7 +26,7 @@ const values = [
 const milestones = [
   ["2022", ["Platform formed in Kumba", "First 12 farmers onboarded", "Initial field verification model"]],
   ["2023", ["Payments and sourcing flows piloted", "RFQ workflow introduced", "Regional farmer outreach expanded"]],
-  ["2024", ["Buyer protection escrow added", "Export-ready listing path launched", "Multi-region farmer verification"]],
+  ["2024", ["Protected buyer payment flow added", "Export-ready listing path launched", "Multi-region farmer verification"]],
   ["2025", ["ONCC / MINADER alignment formalized", "Compliance content and support expanded", "Cross-border sourcing lane activated"]],
   ["2026", ["API and public marketplace matured", "Mobile money checkout added", "Institutional and export partnerships scaled"]],
 ];

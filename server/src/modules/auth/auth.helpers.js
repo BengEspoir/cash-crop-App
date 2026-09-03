@@ -1,18 +1,15 @@
 const { USER_ROLES, USER_STATUS } = require('../../config/constants');
+const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
-const normalizePhone = (phone) => {
-  const cleaned = phone.replace(/[\s-]/g, '');
-  if (!cleaned.startsWith('+')) {
-    if (cleaned.startsWith('237')) {
-      return '+' + cleaned;
-    }
-    return '+237' + cleaned;
-  }
-  return cleaned;
+const normalizePhone = (phone, defaultCountry = 'CM') => {
+  const raw = String(phone || '').trim();
+  const parsed = parsePhoneNumberFromString(raw.startsWith('237') ? `+${raw}` : raw, defaultCountry);
+  return parsed?.isValid() ? parsed.number : raw.replace(/[\s()-]/g, '');
 };
 
 const isPhone = (identifier) => {
-  return /^\+237[0-9]{9}$/.test(identifier);
+  const parsed = parsePhoneNumberFromString(String(identifier || ''));
+  return Boolean(parsed?.isValid());
 };
 
 const isEmail = (identifier) => {
