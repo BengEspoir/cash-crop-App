@@ -342,6 +342,9 @@ const confirmOrderReceipt = async (user, orderId) => {
     if (message.includes('ORDER_RECEIPT_BLOCKED_BY_PROBLEM')) {
       throw new AppError('Resolve the reported problem before confirming receipt', 409, 'ORDER_RECEIPT_BLOCKED');
     }
+    if (message.includes('ORDER_PAYMENT_NOT_CONFIRMED')) {
+      throw new AppError('Receipt can be confirmed only after payment succeeds', 409, 'ORDER_PAYMENT_NOT_CONFIRMED');
+    }
     throw error;
   }
   const [mapped] = await hydrateOrders([data.order]);
