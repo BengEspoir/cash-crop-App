@@ -41,7 +41,7 @@ export default function SignInPage() {
     resolver: zodResolver(signInSchema),
     mode: "onChange",
     defaultValues: {
-      mode: "phone",
+      mode: searchParams.get("mode") === "email" ? "email" : "phone",
       phone: "",
       email: "",
       password: "",

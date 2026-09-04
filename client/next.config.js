@@ -12,11 +12,11 @@ const apiProxyOrigin = (() => {
 })();
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
-  "style-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com https://static.cloudflareinsights.com https://vercel.live`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  `connect-src 'self' ${apiProxyOrigin} https://challenges.cloudflare.com https://*.supabase.co wss://*.supabase.co https://res.cloudinary.com`,
+  `connect-src 'self' ${apiProxyOrigin} https://challenges.cloudflare.com https://static.cloudflareinsights.com https://vercel.live https://*.supabase.co wss://*.supabase.co https://res.cloudinary.com`,
   "frame-src https://challenges.cloudflare.com",
   "object-src 'none'",
   "base-uri 'self'",

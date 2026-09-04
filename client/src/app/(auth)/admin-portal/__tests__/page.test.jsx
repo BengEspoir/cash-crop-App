@@ -10,6 +10,6 @@ describe("AdminPortalPage", () => {
 
   it("keeps the dedicated admin entry path while using canonical Supabase login", () => {
     AdminPortalPage();
-    expect(redirect).toHaveBeenCalledWith("/auth/login?next=%2Fadmin%2Fdashboard");
+    expect(redirect).toHaveBeenCalledWith("/auth/login?next=%2Fadmin%2Fdashboard&mode=email");
   });
 });
