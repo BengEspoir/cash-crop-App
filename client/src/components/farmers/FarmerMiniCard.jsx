@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CheckCircle2, MapPin, MessageCircle, Star } from "lucide-react";
+import { MapPin, MessageCircle, Star } from "lucide-react";
 import { Card } from "../ui/card";
 import { FarmerAvatar } from "./FarmerAvatar";
-import { VerificationBadge } from "./VerificationBadge";
+import { FarmerVerificationTick } from "./FarmerVerificationTick";
 
 export function FarmerMiniCard({ farmer, onChat, chatDisabled = false }) {
   const crops = [...new Set([farmer.primaryCrop, ...(farmer.cropsGrown || [])].filter(Boolean))].slice(0, 4);
@@ -15,7 +15,7 @@ export function FarmerMiniCard({ farmer, onChat, chatDisabled = false }) {
           <FarmerAvatar initials={farmer.initials} id={farmer.id} src={farmer.avatarSrc} size="xl" />
           {farmer.verificationStatus === "verified" ? (
             <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#1E5E27] text-white" aria-label="Verified farmer">
-              <CheckCircle2 className="h-3.5 w-3.5" />
+              <FarmerVerificationTick className="h-5 w-5" />
             </span>
           ) : null}
         </div>
@@ -33,7 +33,11 @@ export function FarmerMiniCard({ farmer, onChat, chatDisabled = false }) {
               </span>
             ) : null}
           </div>
-          <div className="mt-3"><VerificationBadge status={farmer.verificationStatus} /></div>
+          {farmer.verificationStatus === "verified" ? (
+            <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#1E5E27]">
+              <FarmerVerificationTick className="h-5 w-5" /> Verified farmer
+            </div>
+          ) : null}
         </div>
       </div>
 

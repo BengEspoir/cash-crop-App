@@ -4,7 +4,14 @@ import { SmartImage } from "../media/SmartImage";
 import { Reveal, Stagger, StaggerItem } from "../motion/Reveal";
 import { landingImagery } from "../../lib/imagery";
 
-const methods = ["MTN MoMo", "Orange Money", "Visa", "Mastercard", "Flutterwave", "Wire Transfer"];
+const methods = [
+  { name: "MTN MoMo", src: "/Last-images/MTN_MOMOPAY-cartdna-shopify-featured_agjcib.webp" },
+  { name: "Orange Money", src: "/Last-images/Orange-Money-logo.png" },
+  { name: "Mastercard", src: "/Last-images/mastercard.jpg" },
+  { name: "Flutterwave", src: "/Last-images/flutterwave.png" },
+  { name: "Fapshi", src: "/Last-images/fapshi.jpg" },
+  { name: "Wire Transfer", src: "/Last-images/wiretransfer.png" },
+];
 
 export function PaymentsBanner() {
   return (
@@ -33,10 +40,11 @@ export function PaymentsBanner() {
         <Stagger className="grid gap-3 sm:grid-cols-2 lg:col-span-7 xl:grid-cols-3" stagger={0.06}>
           {methods.map((method) => (
             <StaggerItem
-              key={method}
-              className="glass-surface rounded-[12px] px-4 py-3 text-center text-[13px] font-semibold text-white transition-colors duration-200 hover:border-gold-400/60 hover:bg-white/15"
+              key={method.name}
+              className="glass-surface flex min-h-[78px] items-center justify-center gap-3 rounded-[12px] px-4 py-3 text-center text-[13px] font-semibold text-white transition-colors duration-200 hover:border-gold-400/60 hover:bg-white/15"
             >
-              {method}
+              <SmartImage src={method.src} alt="" width={72} height={32} className="max-h-8 w-auto max-w-[72px] object-contain" />
+              <span>{method.name}</span>
             </StaggerItem>
           ))}
         </Stagger>

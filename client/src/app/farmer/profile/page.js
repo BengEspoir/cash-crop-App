@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import {
   FarmerButton,
   FarmerEmptyState,
@@ -16,6 +16,7 @@ import useAuth from "@/hooks/useAuth";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { EditableProfilePanel } from "@/components/account/EditableProfilePanel";
 import { ProfilePhotoEditor } from "@/components/account/ProfilePhotoEditor";
+import { FarmerVerificationTick } from "@/components/farmers/FarmerVerificationTick";
 
 const valueOrEmpty = (value) => value || "";
 
@@ -64,7 +65,7 @@ export default function FarmerProfilePage() {
               <p className="mt-2 text-[17px] text-ink-500">{[profile.city || user?.city, profile.region || user?.region].filter(Boolean).join(", ") || "Location pending"}</p>
               <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4">
                 <p className="inline-flex items-center gap-2 text-[18px] font-bold text-green-800">
-                  <BadgeCheck className="h-5 w-5" />
+                  {verified ? <FarmerVerificationTick className="h-6 w-6" /> : null}
                   {verified ? "Verified Farmer" : "Verification Pending"}
                 </p>
                 <p className="mt-2 text-[14px] text-ink-500">Current account status: {user?.status || "unknown"}</p>

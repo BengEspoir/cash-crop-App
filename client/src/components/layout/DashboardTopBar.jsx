@@ -8,6 +8,7 @@ import { farmerDisplayName, farmerInitials } from "../farmer/FarmerDesignSystem"
 import { buyerDisplayName, buyerInitials } from "../buyer/BuyerDesignSystem";
 import { MediaAvatar } from "../media/Avatar";
 import { ProfilePhotoEditor } from "../account/ProfilePhotoEditor";
+import { FarmerVerificationTick } from "../farmers/FarmerVerificationTick";
 import { CountrySelector } from "../common/CountrySelector";
 import { useI18n } from "../../i18n/I18nProvider";
 
@@ -225,7 +226,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
 
   if (variant === "farmer") {
     const unreadNotifications = dashboardData?.notifications?.filter((item) => item.status !== "verified").length || 0;
-    const verified = user?.status === "active";
+    const verified = (dashboardData?.profile?.identity_verification_status || dashboardData?.profile?.verificationStatus) === "verified";
 
     return (
       <header className="sticky top-0 z-30 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-4 backdrop-blur lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
@@ -247,7 +248,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
             />
             <span className="inline-flex h-10 items-center gap-2 rounded-full bg-green-100 px-5 text-[15px] font-bold text-green-800">
               <span className="h-2 w-2 rounded-full bg-green-800" />
-              {verified ? "Verified Farmer" : "Verification Pending"}
+              {verified ? <><FarmerVerificationTick className="h-5 w-5" /> Verified Farmer</> : "Verification Pending"}
             </span>
           </div>
         </div>
@@ -258,7 +259,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
 
   if (variant === "buyer") {
     const unreadNotifications = dashboardData?.notifications?.filter((item) => item.status !== "verified").length || 0;
-    const verified = user?.status === "active";
+    const accountActive = user?.status === "active";
 
     return (
       <header className="sticky top-0 z-30 -mx-4 border-b border-ink-200 bg-white/95 px-4 py-4 backdrop-blur lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
@@ -287,7 +288,7 @@ export function DashboardTopBar({ title, description, user, onLogout, variant = 
             />
             <span className="inline-flex h-10 items-center gap-2 rounded-full bg-green-100 px-5 text-[15px] font-bold text-green-800">
               <span className="h-2 w-2 rounded-full bg-green-800" />
-              {verified ? "Verified Buyer" : "Verification Pending"}
+              {accountActive ? "Account Active" : "Account Setup Pending"}
             </span>
           </div>
         </div>

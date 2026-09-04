@@ -7,6 +7,7 @@ import { BrandLogo } from "../common/BrandLogo";
 import { FarmerButton, farmerDisplayName, farmerInitials } from "../farmer/FarmerDesignSystem";
 import { BuyerButton, buyerDisplayName, buyerInitials } from "../buyer/BuyerDesignSystem";
 import { ProfilePhotoEditor } from "../account/ProfilePhotoEditor";
+import { FarmerVerificationTick } from "../farmers/FarmerVerificationTick";
 
 function navBadgeCount(item, data) {
   if (!data || item.id === "dashboard" || item.id === "settings" || item.id === "helpSupport") return null;
@@ -168,7 +169,8 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
     const profile = dashboardData?.profile || {};
     const listingsCount = dashboardData?.listings?.length || 0;
     const location = [profile.city || user?.city, profile.region || user?.region].filter(Boolean).join(", ") || "Farm location pending";
-    const statusText = user?.status === "active" ? "Verified Farmer" : "Verification pending";
+    const verified = (profile.identity_verification_status || profile.verificationStatus) === "verified";
+    const statusText = verified ? "Verified Farmer" : "Verification pending";
     const mainItems = navigation.filter((item) => !["profile", "settings", "helpSupport"].includes(item.id));
     const accountItems = navigation.filter((item) => ["profile", "settings", "helpSupport"].includes(item.id));
 
@@ -222,7 +224,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
             <p className="mt-1 text-[15px] text-white/70">{location}</p>
             <p className="mt-1 text-[15px] text-white/70">{profile.rating ? `${profile.rating} rating` : "Rating pending"}</p>
             <span className="mt-3 inline-flex rounded-full bg-white px-4 py-1.5 text-[14px] font-bold text-[#0D3D22]">
-              {statusText}
+              {verified ? <span className="inline-flex items-center gap-1.5"><FarmerVerificationTick className="h-5 w-5" /> {statusText}</span> : statusText}
             </span>
           </div>
 
@@ -255,7 +257,7 @@ export function SidebarPanel({ heading, navigation, pathname, resolveLabel, vari
     const listingsCount = dashboardData?.listings?.length || 0;
     const location = [user?.city, user?.region].filter(Boolean).join(", ") || profile.destination_market || "Sourcing location pending";
     const company = profile.company_name || profile.business_name || "Buyer account";
-    const statusText = user?.status === "active" ? "Verified Buyer" : "Verification pending";
+    const statusText = user?.status === "active" ? "Account active" : "Account setup pending";
     const mainItems = navigation.filter((item) => !["profile", "settings", "helpSupport"].includes(item.id));
     const accountItems = navigation.filter((item) => ["profile", "settings", "helpSupport"].includes(item.id));
 
